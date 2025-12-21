@@ -109,36 +109,6 @@ export const useSyncEngine = (config: Ref<SessionConfig>) => {
     }
   }
 
-  const migrate = async (localConfig: SessionConfig) => {
-    if (!isAuthenticated.value || !online.value) return false
-
-    status.value = 'syncing'
-    try {
-      const cleanData = clonePlain(localConfig)
-      const response = await $fetch<{ success: boolean, updatedAt: number }>('/api/session/migrate', {
-        method: 'POST',
-        body: { config: cleanData },
-        headers: {
-          'x-auth-token': token.value || ''
-        }
-      })
-
-      if (response.success) {
-        config.value = localConfig
-        await saveToCache(localConfig, response.updatedAt)
-        lastSyncedAt.value = response.updatedAt
-        status.value = 'synced'
-        return true
-      }
-    } catch (e: unknown) {
-      if (!handleAuthError(e)) {
-        status.value = 'error'
-        const err = e as { message?: string }
-        error.value = err.message || 'Migration failed'
-      }
-    }
-    return false
-  }
 
   // Sync on online/offline changes
   watch(online, (isOnline) => {
@@ -160,7 +130,6 @@ export const useSyncEngine = (config: Ref<SessionConfig>) => {
     error,
     pull,
     push,
-    migrate,
     loadFromCache,
     isAuthenticated
   }

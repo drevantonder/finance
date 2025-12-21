@@ -15,8 +15,6 @@ import { useStockPrices } from '~/composables/useStockPrices'
 import { useAuthToken } from '~/composables/useAuthToken'
 import { useSyncEngine } from '~/composables/useSyncEngine'
 
-const STORAGE_KEY = 'house-progress-config-v5'
-const MIGRATION_KEY = 'hp_migrated_v5'
 
 export const useSessionStore = defineStore('session', () => {
   const stockPrices = useStockPrices()
@@ -139,85 +137,7 @@ export const useSessionStore = defineStore('session', () => {
     if (idx !== -1) config.value.incomeSources.splice(idx, 1)
   }
 
-  function migrateFromV4(old: any): SessionConfig {
-    const people: Person[] = []
-    const personMap = new Map<string, string>() // Name -> ID
 
-    const getOrAddPerson = (name: string): string => {
-      const firstPart = (name || 'Applicant').split(' ')[0] || 'Applicant'
-      const normalized = firstPart.replace("'s", "").replace("'","")
-      if (personMap.has(normalized)) {
-        return personMap.get(normalized)!
-      }
-      const id = crypto.randomUUID()
-      people.push({ id, name: normalized })
-      personMap.set(normalized, id)
-      return id
-    }
-
-    // Pass 1: Identify people and HECS
-    const incomeSources: IncomeSource[] = (old.incomeSources || []).map((s: any) => {
-      const personId = getOrAddPerson(s.name)
-      const hecsBalance = s.tmn?.hecsBalance || s.salary?.hecsBalance || 0
-      const hasHecsDebt = s.tmn?.hasHecsDebt || s.salary?.hasHecsDebt || false
-
-      if (hasHecsDebt && hecsBalance > 0) {
-        const person = people.find(p => p.id === personId)!
-        if (!person.hecsDebt) {
-          person.hecsDebt = {
-            balance: hecsBalance,
-            balanceAsOfDate: new Date().toISOString().split('T')[0] as string,
-            indexationRate: 0.04
-          }
-        }
-      }
-
-      // Clean the income source
-      const cleaned: IncomeSource = {
-        ...s,
-        personId,
-      }
-      if (cleaned.tmn) {
-        delete (cleaned.tmn as any).hasHecsDebt
-        delete (cleaned.tmn as any).hecsBalance
-      }
-      if (cleaned.salary) {
-        delete (cleaned.salary as any).hasHecsDebt
-        delete (cleaned.salary as any).hecsBalance
-      }
-      if (cleaned.centrelink) {
-        cleaned.centrelink.taxable = cleaned.centrelink.paymentType === 'JobSeeker' || cleaned.centrelink.paymentType === 'Youth Allowance'
-      }
-
-      return cleaned
-    })
-
-    // Fallback if no people were created
-    if (people.length === 0) {
-      people.push({ id: crypto.randomUUID(), name: 'Applicant 1' })
-    }
-
-    return {
-      ...old,
-      people,
-      incomeSources
-    }
-  }
-
-  function migrateFromV2(old: any): SessionConfig {
-    // cascade V2 -> V3/V4 -> V5
-    const v4 = {
-      ...old,
-      budget: {
-        budgetItems: old.deposit?.budgetItems || [],
-        oneOffExpenses: old.deposit?.oneOffExpenses || [],
-        oneOffDeposits: old.deposit?.oneOffDeposits || [],
-        emergencyFloor: 2000,
-        emergencyTarget: 4000,
-      }
-    }
-    return migrateFromV4(v4)
-  }
 
   async function initialise() {
     // 1. Check for token in URL
@@ -226,21 +146,6 @@ export const useSessionStore = defineStore('session', () => {
     if (!isAuthenticated.value) return
 
     try {
-      // 2. Check if we need to migrate from localStorage
-      const isMigrated = localStorage.getItem(MIGRATION_KEY)
-      const rawV5 = localStorage.getItem(STORAGE_KEY)
-      
-      if (!isMigrated && rawV5) {
-        console.log('Migrating localStorage to DB...')
-        const localData = JSON.parse(rawV5)
-        const success = await sync.migrate(localData)
-        if (success) {
-          localStorage.setItem(MIGRATION_KEY, 'true')
-          // Optional: we keep STORAGE_KEY for a while as a safety backup
-          return
-        }
-      }
-
       // 3. Try to load from sync engine (cache first, then pull)
       const cached = await sync.loadFromCache()
       if (cached) {
@@ -308,61 +213,7 @@ export const useSessionStore = defineStore('session', () => {
     }
   }
 
-  function migrateFromV1(old: any): any {
-    const incomeSources: any[] = []
-    
-    // Migrate primary TMN income
-    if (old.income) {
-      incomeSources.push({
-        id: crypto.randomUUID(),
-        name: 'Applicant 1',
-        type: 'tmn',
-        startDate: null,
-        endDate: null,
-        tmn: {
-          currentAmount: old.deposit?.currentTmn ?? old.income.tmn,
-          targetAmount: old.income.tmn,
-          partnerCommitments: old.deposit?.currentTmn ?? old.income.tmn,
-          increaseIntervalMonths: old.deposit?.tmnIncreaseIntervalMonths ?? 6,
-          mmr: old.income.mmr ?? 0,
-          giving: old.income.giving ?? 0,
-          postTaxSuper: old.income.postTaxSuper ?? 0,
-          hasHecsDebt: old.income.hasHecsDebt ?? false,
-          hecsBalance: old.income.hecsBalance ?? 0,
-        }
-      })
-    }
-    
-    // Migrate spouse salary
-    if (old.spouse?.grossSalary > 0) {
-      incomeSources.push({
-        id: crypto.randomUUID(),
-        name: 'Applicant 2',
-        type: 'salary',
-        startDate: null,
-        endDate: null,
-        salary: {
-          grossAnnual: old.spouse.grossSalary,
-          hasHecsDebt: (old.spouse.hecsDebt ?? 0) > 0,
-          hecsBalance: old.spouse.hecsDebt ?? 0,
-        }
-      })
-    }
 
-    // Return the parts that need updating
-    return {
-      incomeSources,
-      deposit: {
-        ...old.deposit,
-        // Remove old fields that are now in incomeSources
-        currentTmn: undefined,
-        tmnIncreaseIntervalMonths: undefined,
-        spouseBudgetIncome: undefined
-      },
-      loan: old.loan,
-      costs: old.costs
-    }
-  }
 
   const smartResult = computed(() => {
     return calculateSmartProjection(

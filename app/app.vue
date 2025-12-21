@@ -10,12 +10,10 @@
       </div>
     </div>
     
-    <template v-else>
-      <TokenGate />
-      <NuxtLayout>
-        <NuxtPage />
-      </NuxtLayout>
-    </template>
+    <TokenGate />
+    <NuxtLayout>
+      <NuxtPage />
+    </NuxtLayout>
   </UApp>
 </template>
 
