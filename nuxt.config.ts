@@ -23,6 +23,12 @@ export default defineNuxtConfig({
     preset: "cloudflare_module",
     cloudflare: {
       nodeCompat: true,
+      wrangler: {
+        observability: {
+          logs: {
+            enabled: true,
+          }
+        }
     }
   }
 })
