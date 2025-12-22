@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import { ref, computed, onMounted } from 'vue'
 import { useExpenses } from '~/composables/useExpenses'
 import { formatCurrency } from '~/composables/useFormatter'
 import type { Expense } from '~/types'
@@ -18,155 +19,193 @@ onMounted(() => {
   fetchExpenses()
 })
 
-const isEditorOpen = ref(false)
-const selectedExpense = ref<Expense | null>(null)
+// Selection State
+const selectedId = ref<string | null>(null)
+const selectedExpense = computed(() => 
+  expenses.value.find(e => e.id === selectedId.value) || null
+)
 
-function openExpense(expense: Expense) {
-  selectedExpense.value = expense
-  isEditorOpen.value = true
+// Computed Layout
+const isDetailOpen = computed(() => !!selectedId.value)
+
+// Actions
+function selectExpense(expense: Expense) {
+  selectedId.value = expense.id
+}
+
+function closeDetail() {
+  selectedId.value = null
 }
 
 async function handleCaptured({ image, capturedAt }: { image: string, capturedAt: string }) {
   try {
     const newExpense = await uploadReceipt(image, capturedAt)
-    openExpense(newExpense)
+    selectExpense(newExpense)
   } catch (err) {
     // Error handled in composable
   }
 }
 
 async function handleUpdate(updates: Partial<Expense>) {
-  if (!selectedExpense.value) return
-  await updateExpense(selectedExpense.value.id, updates)
-  // Re-fetch or update local state is handled in composable
-  // selectedExpense.value remains current via watch in editor or explicit update here if needed
+  if (!selectedId.value) return
+  await updateExpense(selectedId.value, updates)
 }
 
 async function handleDelete() {
-  if (!selectedExpense.value) return
-  if (confirm('Are you sure you want to delete this expense and receipt?')) {
-    await deleteExpense(selectedExpense.value.id)
-    isEditorOpen.value = false
-    selectedExpense.value = null
+  if (!selectedId.value) return
+  if (confirm('Are you sure you want to delete this expense?')) {
+    await deleteExpense(selectedId.value)
+    closeDetail()
   }
 }
 
 async function handleReprocess() {
-  if (!selectedExpense.value) return
-  const updated = await processExpense(selectedExpense.value.id)
-  selectedExpense.value = updated
-}
-
-function getStatusIcon(status: string) {
-  switch (status) {
-    case 'complete': return 'i-heroicons-check-circle'
-    case 'processing': return 'i-heroicons-arrow-path'
-    case 'error': return 'i-heroicons-exclamation-circle'
-    default: return 'i-heroicons-clock'
+  if (!selectedId.value) return
+  const updated = await processExpense(selectedId.value)
+  // Ensure we stay selected on the updated item
+  if (updated) {
+    // Usually existing object is mutated in place by composable, but safe check
   }
 }
 
+// Helpers
 function getStatusColor(status: string) {
   switch (status) {
-    case 'complete': return 'text-green-500'
-    case 'processing': return 'text-blue-500 animate-spin'
-    case 'error': return 'text-red-500'
-    default: return 'text-gray-500'
+    case 'complete': return 'bg-green-50 text-green-700 ring-green-600/20'
+    case 'processing': return 'bg-blue-50 text-blue-700 ring-blue-600/20 animate-pulse'
+    case 'error': return 'bg-red-50 text-red-700 ring-red-600/20'
+    default: return 'bg-gray-50 text-gray-600 ring-gray-500/10'
   }
 }
 </script>
 
 <template>
-  <div class="max-w-4xl mx-auto space-y-6 pb-20">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-      <div>
-        <h1 class="text-3xl font-bold text-gray-900">Expenses</h1>
-        <p class="text-gray-500">Track your actual spending by capturing receipts.</p>
-      </div>
-      
-      <ReceiptCapture :is-loading="isLoading" @captured="handleCaptured" />
-    </div>
-
-    <UAlert
-      v-if="error"
-      color="red"
-      variant="soft"
-      icon="i-heroicons-exclamation-triangle"
-      :title="error"
-    />
-
-    <UCard class="overflow-hidden">
-      <div v-if="expenses.length === 0 && !isLoading" class="text-center py-12 text-gray-400">
-        <UIcon name="i-heroicons-receipt-refund" class="text-5xl mb-4" />
-        <p>No receipts captured yet.</p>
-        <p class="text-sm">Click the button above to add your first one.</p>
+  <div class="h-[calc(100vh-4rem)] flex flex-col md:flex-row bg-white overflow-hidden">
+    
+    <!-- Left Pane: Expense List -->
+    <div 
+      class="flex flex-col border-r border-gray-200 transition-all duration-300 ease-in-out bg-white z-10"
+      :class="[
+        isDetailOpen ? 'w-full md:w-[380px] shrink-0 absolute inset-0 md:relative' : 'w-full max-w-4xl mx-auto border-x border-gray-100',
+        // Hide list on mobile when detail is open
+        isDetailOpen ? 'hidden md:flex' : 'flex' 
+      ]"
+    >
+      <!-- Header -->
+      <div class="p-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white/95 backdrop-blur z-20">
+        <div>
+          <h1 class="text-xl font-bold text-gray-900 tracking-tight">Expenses</h1>
+          <p class="text-xs text-gray-500 mt-0.5">
+            {{ expenses.length }} {{ expenses.length === 1 ? 'receipt' : 'receipts' }}
+          </p>
+        </div>
+        <ReceiptCapture :is-loading="isLoading" @captured="handleCaptured" />
       </div>
 
-      <div v-else class="divide-y divide-gray-100">
+      <!-- Loading State -->
+      <div v-if="isLoading && expenses.length === 0" class="p-8 text-center">
+        <UIcon name="i-heroicons-arrow-path" class="text-2xl animate-spin text-gray-400 mx-auto mb-2" />
+        <p class="text-sm text-gray-500">Loading expenses...</p>
+      </div>
+
+      <!-- Empty State -->
+      <div v-else-if="expenses.length === 0" class="flex-1 flex flex-col items-center justify-center p-8 text-center text-gray-500">
+        <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
+          <UIcon name="i-heroicons-receipt-refund" class="text-2xl text-gray-400" />
+        </div>
+        <h3 class="font-medium text-gray-900 mb-1">No receipts yet</h3>
+        <p class="text-sm max-w-[200px]">Upload a receipt to start tracking your expenses.</p>
+      </div>
+
+      <!-- List -->
+      <div v-else class="flex-1 overflow-y-auto divide-y divide-gray-100">
         <div
           v-for="expense in expenses"
           :key="expense.id"
-          class="p-4 hover:bg-gray-50 cursor-pointer transition-colors group flex items-center gap-4"
-          @click="openExpense(expense)"
+          class="p-4 cursor-pointer transition-all hover:bg-gray-50 border-l-4"
+          :class="[
+            selectedId === expense.id 
+              ? 'bg-blue-50/50 border-blue-500' 
+              : 'border-transparent bg-white'
+          ]"
+          @click="selectExpense(expense)"
         >
-          <div class="h-12 w-12 bg-gray-100 rounded-lg flex-shrink-0 flex items-center justify-center overflow-hidden">
-             <UIcon v-if="expense.status !== 'complete'" name="i-heroicons-photo" class="text-gray-400" />
-             <img v-else :src="`/api/expenses/${expense.id}/image`" class="object-cover h-full w-full" />
+          <div class="flex items-start justify-between gap-3 mb-1">
+            <span class="font-semibold text-gray-900 truncate flex-1 text-sm">
+              {{ expense.merchant || 'Processing...' }}
+            </span>
+            <span class="font-mono font-bold text-gray-900 text-sm">
+              {{ expense.total ? formatCurrency(expense.total, { decimals: 2 }) : '---' }}
+            </span>
           </div>
-
-          <div class="flex-1 min-w-0">
-            <div class="flex items-center justify-between mb-1">
-              <h4 class="font-bold text-gray-900 truncate">
-                {{ expense.merchant || 'Processing...' }}
-              </h4>
-              <span class="font-black text-gray-900">
-                {{ expense.total ? formatCurrency(expense.total) : '---' }}
+          
+          <div class="flex items-center justify-between">
+            <div class="flex items-center gap-2 text-xs text-gray-500">
+              <span>{{ expense.date ? new Date(expense.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'No date' }}</span>
+              <span v-if="expense.category" class="px-1.5 py-0.5 bg-gray-100 rounded text-gray-600 font-medium">
+                {{ expense.category }}
               </span>
             </div>
             
-            <div class="flex items-center justify-between text-xs text-gray-500">
-              <div class="flex items-center gap-2">
-                <span>{{ expense.date || new Date(expense.capturedAt).toLocaleDateString() }}</span>
-                <span v-if="expense.category" class="px-1.5 py-0.5 bg-gray-100 rounded text-gray-600">
-                  {{ expense.category }}
-                </span>
-              </div>
-              
-              <div class="flex items-center gap-1">
-                <UIcon :name="getStatusIcon(expense.status)" :class="getStatusColor(expense.status)" />
-                <span class="capitalize">{{ expense.status }}</span>
-              </div>
-            </div>
+            <span 
+              class="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium ring-1 ring-inset uppercase tracking-wider"
+              :class="getStatusColor(expense.status)"
+            >
+              {{ expense.status }}
+            </span>
           </div>
-          
-          <UIcon name="i-heroicons-chevron-right" class="text-gray-300 group-hover:text-primary-500 transition-colors" />
         </div>
       </div>
-    </UCard>
+    </div>
 
-    <!-- Editor Modal -->
-    <UModal v-model="isEditorOpen" fullscreen>
-      <UCard :ui="{ base: 'h-full flex flex-col', body: { base: 'flex-1 overflow-hidden' }, ring: '', divide: 'divide-y divide-gray-100' }">
-        <template #header>
-          <div class="flex items-center justify-between">
-            <h3 class="text-base font-semibold leading-6 text-gray-900">
-              Edit Receipt
-            </h3>
-            <UButton color="gray" variant="ghost" icon="i-heroicons-x-mark" class="-my-1" @click="isEditorOpen = false" />
-          </div>
-        </template>
+    <!-- Right Pane: Detail Editor (Mailbox View) -->
+    <div 
+      v-if="selectedExpense"
+      class="flex-1 flex flex-col min-w-0 bg-white transition-all duration-300"
+      :class="[
+        // Mobile: Fixed overlay
+        'fixed inset-0 z-50 md:static md:z-auto',
+      ]"
+    >
+      <ExpenseEditor
+        :expense="selectedExpense"
+        @update="handleUpdate"
+        @delete="handleDelete"
+        @reprocess="handleReprocess"
+        @close="closeDetail"
+      />
+    </div>
 
-        <div class="h-full p-4">
-          <ExpenseEditor
-            v-if="selectedExpense"
-            :expense="selectedExpense"
-            @update="handleUpdate"
-            @delete="handleDelete"
-            @reprocess="handleReprocess"
-          />
+    <!-- Empty Detail State (Desktop only) -->
+    <div 
+      v-else-if="expenses.length > 0"
+      class="hidden md:flex flex-1 items-center justify-center bg-gray-50/50"
+    >
+      <div class="text-center">
+        <div class="w-16 h-16 bg-white shadow-sm ring-1 ring-gray-900/5 rounded-2xl flex items-center justify-center mx-auto mb-4">
+          <UIcon name="i-heroicons-cursor-arrow-rays" class="text-2xl text-gray-400" />
         </div>
-      </UCard>
-    </UModal>
+        <h3 class="text-sm font-semibold text-gray-900">Select an expense</h3>
+        <p class="text-sm text-gray-500 mt-1">View details, edit line items, or verify receipts.</p>
+      </div>
+    </div>
+
   </div>
 </template>
 
+<style scoped>
+/* Hide scrollbar for clean look in list */
+.overflow-y-auto::-webkit-scrollbar {
+  width: 6px;
+}
+.overflow-y-auto::-webkit-scrollbar-track {
+  background: transparent;
+}
+.overflow-y-auto::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.05);
+  border-radius: 20px;
+}
+.overflow-y-auto:hover::-webkit-scrollbar-thumb {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+</style>

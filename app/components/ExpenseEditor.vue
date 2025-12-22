@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { ref, computed, watch } from 'vue'
 import type { Expense, ExpenseItem } from '~/types'
+import { useExpenses } from '~/composables/useExpenses'
 import { formatCurrency } from '~/composables/useFormatter'
 
 const props = defineProps<{
@@ -10,146 +12,390 @@ const emit = defineEmits<{
   (e: 'update', updates: Partial<Expense>): void
   (e: 'delete'): void
   (e: 'reprocess'): void
+  (e: 'close'): void
 }>()
 
 const { getImageUrl } = useExpenses()
 
+// Form State
 const form = ref({
-  merchant: props.expense.merchant || '',
-  total: props.expense.total || 0,
-  tax: props.expense.tax || 0,
-  date: props.expense.date || '',
-  category: props.expense.category || '',
-  notes: props.expense.notes || '',
+  merchant: '',
+  total: 0,
+  tax: 0,
+  date: '',
+  category: '',
+  notes: '',
 })
 
-// Update local form when prop changes
+// Line Items State
+const lineItems = ref<ExpenseItem[]>([])
+
+// Initialize from props
 watch(() => props.expense, (newVal) => {
   form.value = {
     merchant: newVal.merchant || '',
     total: newVal.total || 0,
     tax: newVal.tax || 0,
-    date: newVal.date || '',
+    date: newVal.date ? new Date(newVal.date).toISOString().split('T')[0] : '',
     category: newVal.category || '',
     notes: newVal.notes || '',
   }
-}, { deep: true })
-
-const items = computed<ExpenseItem[]>(() => {
-  if (!props.expense.items) return []
+  
   try {
-    return JSON.parse(props.expense.items)
+    lineItems.value = newVal.items ? JSON.parse(newVal.items) : []
   } catch {
-    return []
+    lineItems.value = []
   }
+}, { immediate: true, deep: true })
+
+// Derived State
+const lineItemsTotal = computed(() => {
+  return lineItems.value.reduce((sum, item) => sum + (item.qty * item.price), 0)
 })
 
 const isDirty = computed(() => {
+  const currentItemsJson = JSON.stringify(lineItems.value)
+  const propItemsJson = props.expense.items || '[]'
+  
   return form.value.merchant !== (props.expense.merchant || '') ||
-         form.value.total !== (props.expense.total || 0) ||
-         form.value.tax !== (props.expense.tax || 0) ||
-         form.value.date !== (props.expense.date || '') ||
+         Math.abs(form.value.total - (props.expense.total || 0)) > 0.001 ||
+         Math.abs(form.value.tax - (props.expense.tax || 0)) > 0.001 ||
+         form.value.date !== (props.expense.date ? new Date(props.expense.date).toISOString().split('T')[0] : '') ||
          form.value.category !== (props.expense.category || '') ||
-         form.value.notes !== (props.expense.notes || '')
+         form.value.notes !== (props.expense.notes || '') ||
+         currentItemsJson !== propItemsJson
 })
 
-function save() {
-  emit('update', { ...form.value })
+// Actions
+function addLineItem() {
+  lineItems.value.push({ name: 'New Item', qty: 1, price: 0 })
 }
+
+function removeLineItem(index: number) {
+  lineItems.value.splice(index, 1)
+}
+
+function updateTotalFromItems() {
+  form.value.total = lineItemsTotal.value
+}
+
+function save() {
+  emit('update', {
+    ...form.value,
+    items: JSON.stringify(lineItems.value)
+  })
+}
+
+// Image handling
+const imageError = ref(false)
+function handleImageError() {
+  imageError.value = true
+}
+
+// Zoom handling
+const imageRef = ref<HTMLElement | null>(null)
+const isZoomed = ref(false)
+const zoomPos = ref({ x: 50, y: 50 })
+
+function handleImageMove(e: MouseEvent) {
+  if (!imageRef.value) return
+  const rect = imageRef.value.getBoundingClientRect()
+  const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100))
+  const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100))
+  
+  zoomPos.value = { x, y }
+  isZoomed.value = true
+}
+
+function handleImageLeave() {
+  isZoomed.value = false
+  // Reset to center for smooth zoom out animation
+  setTimeout(() => {
+    if (!isZoomed.value) zoomPos.value = { x: 50, y: 50 }
+  }, 200)
+}
+
+// Categories
+const CATEGORIES = ['Groceries', 'Utilities', 'Eating Out', 'Transport', 'Healthcare', 'Entertainment', 'Home', 'Tech', 'Other']
 </script>
 
 <template>
-  <div class="grid grid-cols-1 md:grid-cols-2 gap-6 h-full">
-    <!-- Receipt View -->
-    <div class="bg-gray-100 rounded-xl overflow-hidden flex items-center justify-center min-h-[400px]">
-      <img :src="getImageUrl(expense.id)" class="max-w-full max-h-[80vh] object-contain" />
-    </div>
-
-    <!-- Edit Form -->
-    <div class="space-y-6 overflow-y-auto pr-2">
-      <div class="flex items-center justify-between">
-        <h3 class="text-xl font-bold text-gray-900">Expense Details</h3>
+  <div class="flex flex-col h-full bg-white">
+    <!-- Toolbar -->
+    <div class="h-16 border-b border-gray-200 flex items-center justify-between px-6 bg-white shrink-0">
+      <div class="flex items-center gap-3">
+        <UButton
+          color="neutral"
+          variant="ghost"
+          icon="i-heroicons-x-mark"
+          class="lg:hidden"
+          @click="$emit('close')"
+        />
+        <div class="flex flex-col">
+          <h2 class="text-sm font-semibold text-gray-900 line-clamp-1">
+            {{ form.merchant || 'Untitled Expense' }}
+          </h2>
+          <span class="text-xs text-gray-500 font-mono">
+            {{ expense.id.slice(0, 8) }}
+          </span>
+        </div>
         <UBadge
-          :color="expense.status === 'complete' ? 'success' : expense.status === 'processing' ? 'primary' : expense.status === 'error' ? 'error' : 'neutral'"
+          :color="expense.status === 'complete' ? 'success' : expense.status === 'processing' ? 'info' : 'error'"
           variant="subtle"
+          size="sm"
         >
-          {{ expense.status.toUpperCase() }}
+          {{ expense.status }}
         </UBadge>
       </div>
 
-      <div class="space-y-4">
-        <UFormGroup label="Merchant / Shop">
-          <UInput v-model="form.merchant" placeholder="e.g. Woolworths" icon="i-heroicons-building-storefront" />
-        </UFormGroup>
+      <div class="flex items-center gap-2">
+        <UButton
+          v-if="isDirty"
+          color="primary"
+          icon="i-heroicons-check"
+          size="sm"
+          @click="save"
+        >
+          Save Changes
+        </UButton>
+        
+        <UButton
+          color="neutral"
+          variant="ghost"
+          icon="i-heroicons-arrow-path"
+          size="sm"
+          @click="emit('reprocess')"
+        >
+          Reprocess
+        </UButton>
 
-        <div class="grid grid-cols-2 gap-4">
-          <UFormGroup label="Total Amount">
-            <UInput v-model="form.total" type="number" step="0.01" icon="i-heroicons-currency-dollar" />
-          </UFormGroup>
-          <UFormGroup label="Tax (GST)">
-            <UInput v-model="form.tax" type="number" step="0.01" icon="i-heroicons-receipt-tax" />
-          </UFormGroup>
-        </div>
+        <UButton
+          color="error"
+          variant="ghost"
+          icon="i-heroicons-trash"
+          size="sm"
+          @click="emit('delete')"
+        >
+          Delete
+        </UButton>
+      </div>
+    </div>
 
-        <div class="grid grid-cols-2 gap-4">
-          <UFormGroup label="Date">
-            <UInput v-model="form.date" type="date" icon="i-heroicons-calendar" />
-          </UFormGroup>
-          <UFormGroup label="Category">
-            <USelect
-              v-model="form.category"
-              :items="['Groceries', 'Utilities', 'Eating Out', 'Transport', 'Healthcare', 'Entertainment', 'Other']"
-              icon="i-heroicons-tag"
-            />
-          </UFormGroup>
-        </div>
+    <!-- Content Split -->
+    <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+      
+      <!-- Left: Form -->
+      <div class="flex-1 overflow-y-auto p-6 lg:p-8 space-y-8 border-b lg:border-b-0 lg:border-r border-gray-200 min-w-0">
+        
+        <!-- Primary Details -->
+        <section class="space-y-6">
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div class="space-y-1.5">
+              <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Merchant</label>
+              <UInput 
+                v-model="form.merchant" 
+                icon="i-heroicons-building-storefront" 
+                size="md"
+                class="w-full"
+              />
+            </div>
+            
+            <div class="space-y-1.5">
+              <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Date</label>
+              <UInput 
+                v-model="form.date" 
+                type="date" 
+                icon="i-heroicons-calendar" 
+                size="md"
+                class="w-full"
+              />
+            </div>
 
-        <UFormGroup label="Notes">
-          <UTextarea v-model="form.notes" placeholder="Optional notes..." />
-        </UFormGroup>
-
-        <!-- Line Items (Read Only for now) -->
-        <div v-if="items.length > 0" class="space-y-2">
-          <label class="text-sm font-medium text-gray-700">Line Items</label>
-          <div class="bg-gray-50 rounded-lg border border-gray-200 divide-y divide-gray-200">
-            <div v-for="(item, idx) in items" :key="idx" class="p-2 flex justify-between text-xs">
-              <span class="text-gray-600">{{ item.qty }}x {{ item.name }}</span>
-              <span class="font-medium text-gray-900">{{ formatCurrency(item.price) }}</span>
+            <div class="space-y-1.5">
+              <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Category</label>
+              <USelect
+                v-model="form.category"
+                :items="CATEGORIES"
+                icon="i-heroicons-tag"
+                size="md"
+                class="w-full"
+              />
+            </div>
+            
+            <div class="space-y-1.5">
+              <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tax (GST)</label>
+              <UInput 
+                v-model="form.tax" 
+                type="number" 
+                step="0.01" 
+                icon="i-heroicons-receipt-percent" 
+                size="md"
+                class="w-full"
+              />
             </div>
           </div>
-        </div>
 
-        <div class="flex flex-col gap-3 pt-4">
-          <UButton
-            color="primary"
-            block
-            icon="i-heroicons-check"
-            :disabled="!isDirty"
-            label="Save Changes"
-            @click="save"
-          />
-          
-          <div class="flex gap-2">
-            <UButton
-              color="white"
-              variant="outline"
-              class="flex-1"
-              icon="i-heroicons-arrow-path"
-              label="Re-process with AI"
-              :loading="expense.status === 'processing'"
-              @click="emit('reprocess')"
-            />
-            <UButton
-              color="red"
-              variant="ghost"
-              icon="i-heroicons-trash"
-              label="Delete"
-              @click="emit('delete')"
+          <div class="space-y-1.5">
+            <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Notes</label>
+            <UTextarea 
+              v-model="form.notes" 
+              placeholder="Add details..." 
+              :rows="2" 
+              class="w-full"
             />
           </div>
+        </section>
+
+        <hr class="border-gray-100" />
+
+        <!-- Line Items -->
+        <section class="space-y-4">
+          <div class="flex items-center justify-between">
+            <h3 class="text-sm font-bold text-gray-900">Line Items</h3>
+            <UButton 
+              size="xs" 
+              color="neutral" 
+              variant="ghost" 
+              icon="i-heroicons-plus" 
+              label="Add Item"
+              @click="addLineItem" 
+            />
+          </div>
+
+          <div v-if="lineItems.length > 0" class="space-y-2">
+            <div 
+              v-for="(item, idx) in lineItems" 
+              :key="idx" 
+              class="flex items-start gap-2 p-3 bg-gray-50 rounded-lg group border border-transparent hover:border-gray-200 transition-colors"
+            >
+              <div class="w-16 flex-shrink-0">
+                <UInput 
+                  v-model="item.qty" 
+                  type="number" 
+                  size="xs" 
+                  placeholder="Qty" 
+                  :ui="{ base: 'text-center' }"
+                />
+              </div>
+              
+              <div class="flex-1 min-w-0">
+                <UInput 
+                  v-model="item.name" 
+                  size="xs" 
+                  placeholder="Item name" 
+                  class="w-full"
+                />
+              </div>
+              
+              <div class="w-24 flex-shrink-0">
+                <UInput 
+                  v-model="item.price" 
+                  type="number" 
+                  step="0.01" 
+                  size="xs" 
+                  placeholder="Price"
+                  :ui="{ base: 'text-right' }"
+                >
+                  <template #leading>
+                    <span class="text-gray-500 text-xs">$</span>
+                  </template>
+                </UInput>
+              </div>
+
+              <UButton
+                color="red"
+                variant="ghost"
+                icon="i-heroicons-x-mark"
+                size="xs"
+                class="opacity-0 group-hover:opacity-100 transition-opacity"
+                @click="removeLineItem(idx)"
+              />
+            </div>
+          </div>
+          
+          <div v-else class="text-center py-8 border-2 border-dashed border-gray-100 rounded-lg">
+            <p class="text-sm text-gray-400">No items detected</p>
+          </div>
+
+          <!-- Total Calculation -->
+          <div class="flex items-center justify-between p-4 bg-gray-900 text-white rounded-lg shadow-sm">
+            <div class="flex items-center gap-2">
+              <span class="text-sm font-medium text-gray-300">Total</span>
+              <div v-if="Math.abs(lineItemsTotal - form.total) > 0.01" class="flex items-center gap-2">
+                <span class="text-xs text-warning-500 font-medium">
+                  Mismatch: {{ formatCurrency(lineItemsTotal - form.total, { decimals: 2 }) }}
+                </span>
+                <UButton 
+                  size="xs" 
+                  color="warning" 
+                  variant="subtle" 
+                  label="Sync Total"
+                  @click="updateTotalFromItems" 
+                />
+              </div>
+            </div>
+            <div class="flex items-center gap-2">
+              <span class="text-gray-400 text-sm">$</span>
+              <UInput 
+                v-model="form.total" 
+                type="number" 
+                step="0.01"
+                variant="none"
+                class="w-32 text-right font-bold text-xl !p-0"
+                :ui="{ base: 'text-white placeholder-gray-500' }"
+              />
+            </div>
+          </div>
+        </section>
+      </div>
+
+      <!-- Right: Image -->
+      <div class="flex-1 bg-gray-50/50 flex flex-col items-center justify-center p-4 relative group overflow-hidden">
+        <div v-if="!imageError" class="relative w-full h-full flex items-center justify-center overflow-hidden rounded-lg">
+          <img 
+            ref="imageRef"
+            :src="getImageUrl(expense.id)" 
+            class="max-w-full max-h-full object-contain shadow-sm transition-transform duration-200 cursor-zoom-in" 
+            :class="{ 'cursor-zoom-out': isZoomed }"
+            :style="{ 
+              transform: isZoomed ? 'scale(2.5)' : 'scale(1)',
+              transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`
+            }"
+            @mousemove="handleImageMove"
+            @mouseleave="handleImageLeave"
+            @error="handleImageError"
+            alt="Receipt"
+          />
+          <a 
+            :href="getImageUrl(expense.id)" 
+            target="_blank"
+            class="absolute bottom-4 right-4 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur text-xs px-3 py-1.5 rounded-full shadow-sm hover:bg-white flex items-center gap-1.5 font-medium text-gray-700 z-10"
+          >
+            <UIcon name="i-heroicons-arrow-top-right-on-square" />
+            Open Original
+          </a>
+        </div>
+        
+        <div v-else class="text-center text-gray-400 p-8">
+          <UIcon name="i-heroicons-photo" class="text-6xl mb-4 opacity-20" />
+          <p class="text-sm font-medium">Image unavailable</p>
         </div>
       </div>
+
     </div>
   </div>
 </template>
 
+<style scoped>
+/* Chrome, Safari, Edge, Opera */
+input::-webkit-outer-spin-button,
+input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+/* Firefox */
+input[type=number] {
+  -moz-appearance: textfield;
+}
+</style>
