@@ -1,75 +1,26 @@
-# Nuxt Minimal Starter
+# André's Finance App
 
-Look at the [Nuxt documentation](https://nuxt.com/docs/getting-started/introduction) to learn more.
+This is a personal/ministry app for André. You may be able to find some useful stuff here. It's better than anything I could find out there.
 
-## Setup
+## Usage
 
-Make sure to install dependencies:
-
-```bash
-# npm
-npm install
-
-# pnpm
-pnpm install
-
-# yarn
-yarn install
-
-# bun
-bun install
+### Setup
+1. Run the following commands. In
 ```
+pnpm i
+cp .env.example .env
+```
+2. Set `NUXT_AUTH_SECRET` to >32 chars. Save this somewhere safe.
 
-## Development Server
-
-Start the development server on `http://localhost:3000`:
-
+### Run locally / develop
 ```bash
-# npm
-npm run dev
-
-# pnpm
 pnpm dev
-
-# yarn
-yarn dev
-
-# bun
-bun run dev
 ```
 
-## Production
+### Deploy
+Built on [NuxtHub](https://hub.nuxt.com/) for easy deployment/dev. I deploy to Cloudflare.
 
-Build the application for production:
+See [NuxtHub docs: Deploy Nuxt](https://hub.nuxt.com/docs/getting-started/deploy)
 
-```bash
-# npm
-npm run build
-
-# pnpm
-pnpm build
-
-# yarn
-yarn build
-
-# bun
-bun run build
-```
-
-Locally preview production build:
-
-```bash
-# npm
-npm run preview
-
-# pnpm
-pnpm preview
-
-# yarn
-yarn preview
-
-# bun
-bun run preview
-```
-
-Check out the [deployment documentation](https://nuxt.com/docs/getting-started/deployment) for more information.
+### Accessing the app
+Go to your deployed Url / `localhost:3000`. Enter your secret token.
