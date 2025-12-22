@@ -32,6 +32,12 @@ export default defineNuxtConfig({
           }
         }
       }
+    },
+    // Polyfill __dirname/__filename for packages that use them (yahoo-finance2 -> @deno/shim-deno)
+    rollupConfig: {
+      output: {
+        intro: 'const __dirname = "";const __filename = "";'
+      }
     }
   }
 })
