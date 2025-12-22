@@ -1,21 +1,17 @@
 export default defineNuxtConfig({
   modules: ['@nuxt/ui', '@pinia/nuxt', '@vueuse/nuxt', '@nuxthub/core'],
-  runtimeConfig: {
-    authSecret: '', // Set via NUXT_AUTH_SECRET env var
-    public: {
-      // Stock API handled via server routes (Yahoo Finance)
+
+  hub: {
+    db: {
+      dialect: 'sqlite',
+      driver: 'd1',
+      connection: { databaseId: process.env.NUXT_HUB_DB_DATABASE_ID }
     }
   },
-  hub: {
-    db: 'sqlite'
-  },
-  colorMode: {
-    preference: 'light',
-    fallback: 'light',
-    classSuffix: ''
-  },
-  ui: {
-    colorMode: true // Ensure it's enabled but controlled
+
+  runtimeConfig: {
+    authSecret: '', // Set via NUXT_AUTH_SECRET env var
+    public: {}
   },
   css: ['~/assets/css/main.css'],
   typescript: {

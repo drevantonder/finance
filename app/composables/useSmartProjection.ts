@@ -317,7 +317,7 @@ export function calculateSmartProjection(
       const availableToInvest = cashPool - budget.emergencyTarget
       const minInvestment = strategy?.minimumInvestment ?? 500
       const brokerFee = strategy?.brokerFee ?? 2
-      const allocations = strategy?.allocations ?? [{ symbol: 'IVV.AU', weight: 1.0 }]
+      const allocations = strategy?.allocations ?? [{ symbol: 'IVV.AX', weight: 1.0 }]
       
       if (availableToInvest >= minInvestment) {
         for (const alloc of allocations) {

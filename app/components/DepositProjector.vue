@@ -503,7 +503,7 @@ function removeHolding(index: number) {
 const strategy = computed({
   get: () => {
     return localConfig.value.investmentStrategy || {
-      allocations: [{ symbol: 'IVV.AU', weight: 1.0 }],
+      allocations: [{ symbol: 'IVV.AX', weight: 1.0 }],
       brokerFee: 2,
       minimumInvestment: 500,
       reviewCadence: 'fortnightly'
@@ -558,7 +558,7 @@ onMounted(async () => {
     localConfig.value = {
       ...localConfig.value,
       investmentStrategy: {
-         allocations: [{ symbol: 'IVV.AU', weight: 1.0 }],
+         allocations: [{ symbol: 'IVV.AX', weight: 1.0 }],
          brokerFee: 2,
          minimumInvestment: 500,
          reviewCadence: 'fortnightly'

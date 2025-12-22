@@ -112,7 +112,7 @@ export interface StockHolding {
 }
 
 export interface StockAllocation {
-  symbol: string           // e.g., "IVV.AU"
+  symbol: string           // e.g., "IVV.AX"
   weight: number           // 0-1 (e.g., 0.7 = 70%) - must sum to 1.0 across all allocations
 }
 

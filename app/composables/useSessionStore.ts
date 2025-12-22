@@ -40,7 +40,7 @@ export const useSessionStore = defineStore('session', () => {
       targetDate: new Date(new Date().setFullYear(new Date().getFullYear() + 2)).toISOString().split('T')[0] || '',
       journeyStartDate: new Date().toISOString().split('T')[0],
       investmentStrategy: {
-        allocations: [{ symbol: 'IVV.AU', weight: 1.0 }],
+        allocations: [{ symbol: 'IVV.AX', weight: 1.0 }],
         brokerFee: 2,
         minimumInvestment: 500,
         reviewCadence: 'fortnightly'
@@ -198,7 +198,7 @@ export const useSessionStore = defineStore('session', () => {
       // Pass 3: Add default investment strategy if missing
       if (!config.value.deposit.investmentStrategy) {
         config.value.deposit.investmentStrategy = {
-          allocations: [{ symbol: 'IVV.AU', weight: 1.0 }],
+          allocations: [{ symbol: 'IVV.AX', weight: 1.0 }],
           brokerFee: 2,
           minimumInvestment: 500,
           reviewCadence: 'fortnightly'
