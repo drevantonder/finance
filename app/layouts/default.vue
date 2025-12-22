@@ -7,7 +7,7 @@
           <!-- Logo/Title -->
           <div class="flex items-center gap-3">
             <UIcon name="i-heroicons-home" class="h-6 w-6 text-primary-600" />
-            <h1 class="text-xl font-semibold text-gray-900">House Progress</h1>
+            <h1 class="text-xl font-semibold text-gray-900">Personal Finance</h1>
           </div>
 
           <!-- Session Info -->
