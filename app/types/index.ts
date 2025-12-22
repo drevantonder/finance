@@ -300,3 +300,28 @@ export interface ScenarioResult {
     }>
   }
 }
+
+export type ExpenseStatus = 'pending' | 'processing' | 'complete' | 'error'
+
+export interface ExpenseItem {
+  name: string
+  qty: number
+  price: number
+}
+
+export interface Expense {
+  id: string
+  imageKey: string
+  status: ExpenseStatus
+  capturedAt: string | Date
+  total: number | null
+  tax: number | null
+  merchant: string | null
+  date: string | null // ISO date
+  items: string | null // JSON string of ExpenseItem[]
+  category: string | null
+  notes: string | null
+  rawExtraction: string | null // JSON string
+  createdAt: string | Date
+  updatedAt: string | Date
+}
