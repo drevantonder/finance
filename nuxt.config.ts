@@ -24,6 +24,8 @@ export default defineNuxtConfig({
     cloudflare: {
       nodeCompat: true,
       wrangler: {
+        compatibility_date: '2025-12-22',
+        compatibility_flags: ['nodejs_compat'],
         observability: {
           logs: {
             enabled: true,
