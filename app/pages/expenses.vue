@@ -28,6 +28,42 @@ const selectedExpense = computed(() =>
 // Computed Layout
 const isDetailOpen = computed(() => !!selectedId.value)
 
+// Sorting
+type SortOption = 'date-desc' | 'date-asc' | 'amount-desc' | 'amount-asc' | 'merchant-asc'
+const sortOption = ref<SortOption>('date-desc')
+
+const sortOptions = [
+  { label: 'Date: Newest', value: 'date-desc' as const },
+  { label: 'Date: Oldest', value: 'date-asc' as const },
+  { label: 'Amount: High to Low', value: 'amount-desc' as const },
+  { label: 'Amount: Low to High', value: 'amount-asc' as const },
+  { label: 'Merchant: A-Z', value: 'merchant-asc' as const }
+]
+
+const sortedExpenses = computed(() => {
+  return [...expenses.value].sort((a, b) => {
+    switch (sortOption.value) {
+      case 'date-asc':
+        return new Date(a.date || a.capturedAt || 0).getTime() - new Date(b.date || b.capturedAt || 0).getTime()
+      case 'amount-desc':
+        return (b.total || 0) - (a.total || 0)
+      case 'amount-asc':
+        return (a.total || 0) - (b.total || 0)
+      case 'merchant-asc':
+        return (a.merchant || '').localeCompare(b.merchant || '')
+      case 'date-desc':
+      default:
+        return new Date(b.date || b.capturedAt || 0).getTime() - new Date(a.date || a.capturedAt || 0).getTime()
+    }
+  })
+})
+
+// Processing Tracking
+const pendingUploads = ref(0)
+const processingCount = computed(() => 
+  pendingUploads.value + expenses.value.filter(e => e.status === 'processing' || e.status === 'pending').length
+)
+
 // Actions
 function selectExpense(expense: Expense) {
   selectedId.value = expense.id
@@ -38,11 +74,17 @@ function closeDetail() {
 }
 
 async function handleCaptured({ image, capturedAt }: { image: string, capturedAt: string }) {
+  pendingUploads.value++
   try {
     const newExpense = await uploadReceipt(image, capturedAt)
-    selectExpense(newExpense)
+    // Only select if it's the only one (avoids jumping around during bulk upload)
+    if (pendingUploads.value === 1) {
+      selectExpense(newExpense)
+    }
   } catch (err) {
     // Error handled in composable
+  } finally {
+    pendingUploads.value--
   }
 }
 
@@ -94,7 +136,34 @@ function getStatusColor(status: string) {
       <!-- Header -->
       <div class="p-4 border-b border-gray-100 flex items-center justify-between sticky top-0 bg-white/95 backdrop-blur z-20">
         <div>
-          <h1 class="text-xl font-bold text-gray-900 tracking-tight">Expenses</h1>
+          <div class="flex items-center gap-2">
+            <h1 class="text-xl font-bold text-gray-900 tracking-tight">Expenses</h1>
+            
+            <UDropdownMenu 
+              :items="[sortOptions.map(opt => ({ 
+                label: opt.label, 
+                onSelect: () => sortOption = opt.value,
+                icon: sortOption === opt.value ? 'i-heroicons-check' : undefined
+              }))]"
+            >
+              <UButton 
+                color="neutral" 
+                variant="ghost" 
+                icon="i-heroicons-funnel" 
+                size="xs"
+              />
+            </UDropdownMenu>
+
+            <UBadge 
+              v-if="processingCount > 0"
+              color="blue" 
+              variant="subtle"
+              size="sm"
+              class="animate-pulse"
+            >
+              Analyzing {{ processingCount }}...
+            </UBadge>
+          </div>
           <p class="text-xs text-gray-500 mt-0.5">
             {{ expenses.length }} {{ expenses.length === 1 ? 'receipt' : 'receipts' }}
           </p>
@@ -120,7 +189,7 @@ function getStatusColor(status: string) {
       <!-- List -->
       <div v-else class="flex-1 overflow-y-auto divide-y divide-gray-100">
         <div
-          v-for="expense in expenses"
+          v-for="expense in sortedExpenses"
           :key="expense.id"
           class="p-4 cursor-pointer transition-all hover:bg-gray-50 border-l-4"
           :class="[

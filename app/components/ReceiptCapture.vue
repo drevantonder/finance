@@ -8,9 +8,9 @@ const emit = defineEmits<{
 }>()
 
 const fileInput = ref<HTMLInputElement | null>(null)
-const previewImage = ref<string | null>(null)
 const isProcessing = ref(false)
 const errorMessage = ref<string | null>(null)
+const uploadProgress = ref({ current: 0, total: 0 })
 
 const MAX_SIZE = 1920
 const QUALITY = 0.8
@@ -19,87 +19,112 @@ function triggerCamera() {
   fileInput.value?.click()
 }
 
-function handleFileChange(event: Event) {
+async function processFile(file: File, index: number, total: number): Promise<void> {
+  return new Promise((resolve, reject) => {
+    // Use the file's last modified date (when photo was taken) if available
+    const capturedAt = file.lastModified 
+      ? new Date(file.lastModified).toISOString() 
+      : new Date().toISOString()
+
+    const reader = new FileReader()
+    
+    reader.onload = function(readerEvent) {
+      const dataUrl = readerEvent.target?.result as string
+      if (!dataUrl) {
+        reject(new Error('Failed to read file'))
+        return
+      }
+
+      const img = new Image()
+      
+      img.onload = function() {
+        // Calculate new dimensions
+        let width = img.width
+        let height = img.height
+        
+        if (width > height) {
+          if (width > MAX_SIZE) {
+            height = height * (MAX_SIZE / width)
+            width = MAX_SIZE
+          }
+        } else {
+          if (height > MAX_SIZE) {
+            width = width * (MAX_SIZE / height)
+            height = MAX_SIZE
+          }
+        }
+
+        // Draw to canvas
+        const canvas = document.createElement('canvas')
+        canvas.width = width
+        canvas.height = height
+        const ctx = canvas.getContext('2d')
+        
+        if (!ctx) {
+          reject(new Error('Failed to create canvas context'))
+          return
+        }
+
+        ctx.drawImage(img, 0, 0, width, height)
+        
+        // Get resized base64
+        const resizedDataUrl = canvas.toDataURL('image/jpeg', QUALITY)
+        
+        emit('captured', { image: resizedDataUrl, capturedAt })
+        uploadProgress.value.current++
+        resolve()
+      }
+      
+      img.onerror = function() {
+        reject(new Error('Failed to decode image'))
+      }
+      
+      img.src = dataUrl
+    }
+    
+    reader.onerror = function() {
+      reject(new Error(`File read error: ${reader.error?.message || 'Unknown error'}`))
+    }
+    
+    reader.readAsDataURL(file)
+  })
+}
+
+async function handleFileChange(event: Event) {
   const target = event.target as HTMLInputElement
-  const file = target.files?.[0]
-  if (!file) return
+  const files = target.files
+  if (!files || files.length === 0) return
 
   // Reset state
   errorMessage.value = null
   isProcessing.value = true
+  uploadProgress.value = { current: 0, total: files.length }
   
-  const capturedAt = new Date().toISOString()
-
-  // Simple FileReader approach (same as HTML5-ImageUploader)
-  const reader = new FileReader()
+  // Process files with concurrency limit of 20
+  const CONCURRENCY_LIMIT = 20
+  const filesArray = Array.from(files)
+  const errors: string[] = []
   
-  reader.onload = function(readerEvent) {
-    const dataUrl = readerEvent.target?.result as string
-    if (!dataUrl) {
-      errorMessage.value = 'Failed to read file'
-      isProcessing.value = false
-      return
-    }
-
-    // Create image to get dimensions and resize
-    const img = new Image()
+  // Split into batches
+  for (let i = 0; i < filesArray.length; i += CONCURRENCY_LIMIT) {
+    const batch = filesArray.slice(i, i + CONCURRENCY_LIMIT)
+    const promises = batch.map((file, batchIndex) => 
+      processFile(file, i + batchIndex, filesArray.length)
+        .catch(error => {
+          errors.push(`File ${i + batchIndex + 1}: ${error instanceof Error ? error.message : 'Unknown error'}`)
+        })
+    )
     
-    img.onload = function() {
-      // Calculate new dimensions
-      let width = img.width
-      let height = img.height
-      
-      if (width > height) {
-        if (width > MAX_SIZE) {
-          height = height * (MAX_SIZE / width)
-          width = MAX_SIZE
-        }
-      } else {
-        if (height > MAX_SIZE) {
-          width = width * (MAX_SIZE / height)
-          height = MAX_SIZE
-        }
-      }
-
-      // Draw to canvas
-      const canvas = document.createElement('canvas')
-      canvas.width = width
-      canvas.height = height
-      const ctx = canvas.getContext('2d')
-      
-      if (!ctx) {
-        errorMessage.value = 'Failed to create canvas context'
-        isProcessing.value = false
-        return
-      }
-
-      ctx.drawImage(img, 0, 0, width, height)
-      
-      // Get resized base64
-      const resizedDataUrl = canvas.toDataURL('image/jpeg', QUALITY)
-      
-      previewImage.value = resizedDataUrl
-      emit('captured', { image: resizedDataUrl, capturedAt })
-      isProcessing.value = false
-    }
-    
-    img.onerror = function() {
-      errorMessage.value = 'Failed to decode image'
-      isProcessing.value = false
-    }
-    
-    img.src = dataUrl
+    await Promise.all(promises)
   }
   
-  reader.onerror = function() {
-    errorMessage.value = `File read error: ${reader.error?.message || 'Unknown error'}`
-    isProcessing.value = false
+  if (errors.length > 0) {
+    errorMessage.value = errors.join('; ')
   }
   
-  // This is the key - read as DataURL, not ArrayBuffer
-  reader.readAsDataURL(file)
+  isProcessing.value = false
   
-  // Clear input so same file can be selected again
+  // Clear input so same files can be selected again
   if (fileInput.value) fileInput.value.value = ''
 }
 </script>
@@ -110,27 +135,33 @@ function handleFileChange(event: Event) {
       ref="fileInput"
       type="file"
       accept="image/*"
-      capture="environment"
+      multiple
       class="hidden"
       @change="handleFileChange"
     />
     
     <UButton
-      icon="i-heroicons-camera"
+      icon="i-heroicons-plus"
       size="xl"
       color="primary"
       :loading="isLoading || isProcessing"
-      label="Add Receipt"
+      label="Add Receipts"
       @click="triggerCamera"
     />
 
-    <p v-if="errorMessage" class="text-red-500 text-sm mt-2 max-w-xs text-center">{{ errorMessage }}</p>
-    
-    <div v-if="previewImage" class="relative w-full max-w-xs mt-4">
-      <img :src="previewImage" class="rounded-lg shadow-md w-full" />
-      <div v-if="isLoading" class="absolute inset-0 bg-white/50 flex items-center justify-center rounded-lg">
-        <UIcon name="i-heroicons-arrow-path" class="animate-spin text-primary-500 text-3xl" />
+    <div v-if="isProcessing && uploadProgress.total > 0" class="w-full max-w-xs mt-4 space-y-2">
+      <div class="flex justify-between text-sm text-gray-600 font-medium">
+        <span>Processing receipts...</span>
+        <span>{{ uploadProgress.current }} / {{ uploadProgress.total }}</span>
+      </div>
+      <div class="w-full bg-gray-200 rounded-full h-2.5 overflow-hidden">
+        <div 
+          class="bg-primary-600 h-2.5 rounded-full transition-all duration-300 ease-out"
+          :style="{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }"
+        ></div>
       </div>
     </div>
+
+    <p v-if="errorMessage" class="text-red-500 text-sm mt-2 max-w-xs text-center">{{ errorMessage }}</p>
   </div>
 </template>
