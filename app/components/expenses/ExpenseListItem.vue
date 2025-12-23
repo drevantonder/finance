@@ -9,10 +9,18 @@ const props = defineProps<{
   expense: Expense
   isSelected?: boolean
   isDuplicate?: boolean
+  isChecked?: boolean
+  isSelectionMode?: boolean
+}>()
+
+const emit = defineEmits<{
+  (e: 'update:isChecked', value: boolean): void
+  (e: 'toggle', event: MouseEvent): void
 }>()
 
 const { getCategoryColor } = useCategories()
 const { isProcessing: globalProcessing } = useExpenses()
+
 
 // Categories Logic
 const categories = computed(() => {
@@ -48,7 +56,7 @@ const isOutdated = computed(() => (props.expense.schemaVersion || 0) < CURRENT_S
 
 <template>
   <div 
-    class="group p-3 sm:p-4 cursor-pointer transition-all duration-200 border-l-[3px]"
+    class="group relative p-3 sm:p-4 cursor-pointer transition-all duration-200 border-l-[3px]"
     :class="[
       isSelected 
         ? 'bg-primary-50/40 border-primary-500' 
@@ -56,8 +64,27 @@ const isOutdated = computed(() => (props.expense.schemaVersion || 0) < CURRENT_S
       isProcessing ? 'opacity-70' : 'opacity-100'
     ]"
   >
-    <!-- Top Row: Merchant & Amount -->
-    <div class="flex items-start justify-between gap-3 mb-1.5">
+    <!-- Checkbox Gutter -->
+    <div 
+      class="absolute left-1.5 top-0 bottom-0 flex items-center justify-center transition-all duration-200"
+      :class="[
+        isSelectionMode || isChecked ? 'opacity-100 translate-x-0' : 'opacity-0 -translate-x-2 group-hover:opacity-100 group-hover:translate-x-0'
+      ]"
+    >
+      <UCheckbox 
+        :model-value="isChecked" 
+        @click.stop="(e: MouseEvent) => emit('toggle', e)"
+        @update:model-value="() => {}"
+      />
+    </div>
+
+    <!-- Content: Shifted right when checkbox is visible -->
+    <div 
+      class="transition-all duration-200"
+      :class="[isChecked || isSelectionMode ? 'pl-6' : 'pl-0 group-hover:pl-6']"
+    >
+      <!-- Top Row: Merchant & Amount -->
+      <div class="flex items-start justify-between gap-3 mb-1.5">
       <div class="flex items-center gap-2 min-w-0">
         <span class="font-semibold text-gray-900 truncate text-sm">
           {{ expense.merchant || 'Processing receipt...' }}
@@ -131,6 +158,7 @@ const isOutdated = computed(() => (props.expense.schemaVersion || 0) < CURRENT_S
           </template>
         </UBadge>
       </div>
+    </div>
     </div>
   </div>
 </template>

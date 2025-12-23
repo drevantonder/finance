@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, onUnmounted } from 'vue'
 import { useExpenses } from '~/composables/useExpenses'
 import { useCategories } from '~/composables/useCategories'
 import { formatCurrency } from '~/composables/useFormatter'
@@ -21,10 +21,66 @@ const { getCategoryColor, fetchCategories } = useCategories()
 
 const toast = useToast()
 
-onMounted(() => {
-  fetchExpenses()
-  fetchCategories()
-})
+// Selection & Bulk State
+const checkedIds = ref<Set<string>>(new Set())
+const isSelectionMode = computed(() => checkedIds.value.size > 0)
+const lastCheckedId = ref<string | null>(null)
+
+const isAllSelected = computed(() => 
+  sortedExpenses.value.length > 0 && checkedIds.value.size === sortedExpenses.value.length
+)
+const isIndeterminate = computed(() => 
+  checkedIds.value.size > 0 && checkedIds.value.size < sortedExpenses.value.length
+)
+
+function toggleAll() {
+  if (isAllSelected.value || isIndeterminate.value) {
+    checkedIds.value = new Set()
+    lastCheckedId.value = null
+  } else {
+    checkedIds.value = new Set(sortedExpenses.value.map(e => e.id))
+    lastCheckedId.value = null
+  }
+}
+
+function toggleCheck(id: string, event?: MouseEvent) {
+  const newChecked = new Set(checkedIds.value)
+  
+  if (event?.shiftKey && lastCheckedId.value) {
+    const allIds = sortedExpenses.value.map(e => e.id)
+    const startIdx = allIds.indexOf(lastCheckedId.value)
+    const endIdx = allIds.indexOf(id)
+    
+    if (startIdx !== -1 && endIdx !== -1) {
+      const [min, max] = [Math.min(startIdx, endIdx), Math.max(startIdx, endIdx)]
+      const rangeIds = allIds.slice(min, max + 1)
+      
+      // If the clicked item is being checked, check the whole range
+      // If it's being unchecked, uncheck the whole range
+      const isChecking = !checkedIds.value.has(id)
+      
+      rangeIds.forEach(rid => {
+        if (isChecking) newChecked.add(rid)
+        else newChecked.delete(rid)
+      })
+    }
+  } else {
+    if (newChecked.has(id)) {
+      newChecked.delete(id)
+    } else {
+      newChecked.add(id)
+    }
+  }
+  
+  checkedIds.value = newChecked
+  lastCheckedId.value = id
+}
+
+function clearSelection() {
+  checkedIds.value = new Set()
+  lastCheckedId.value = null
+}
+
 
 // Selection State
 const selectedId = ref<string | null>(null)
@@ -115,6 +171,25 @@ async function handleDelete() {
   }
 }
 
+async function bulkDelete() {
+  const ids = Array.from(checkedIds.value)
+  if (ids.length === 0) return
+  
+  try {
+    isLoading.value = true
+    await Promise.all(ids.map(id => deleteExpense(id)))
+    toast.add({ title: `Deleted ${ids.length} expenses`, color: 'success' })
+    clearSelection()
+    if (ids.includes(selectedId.value || '')) {
+      closeDetail()
+    }
+  } catch (err) {
+    toast.add({ title: 'Bulk delete failed', color: 'error' })
+  } finally {
+    isLoading.value = false
+  }
+}
+
 async function handleReprocess() {
   if (!selectedId.value) return
   try {
@@ -158,55 +233,21 @@ function isDuplicate(expense: Expense) {
       ]"
     >
       <!-- Header -->
-      <div class="p-4 border-b border-gray-100 sticky top-0 bg-white/95 backdrop-blur z-20">
-        <div class="flex items-center justify-between mb-3">
-          <div class="flex items-center gap-2">
-            <h1 class="text-xl font-bold text-gray-900 tracking-tight">Expenses</h1>
-            <UBadge 
-              v-if="processingCount > 0"
-              color="blue" 
-              variant="subtle"
-              size="sm"
-              class="animate-pulse"
-            >
-              Analyzing {{ processingCount }}...
-            </UBadge>
-          </div>
+      <ExpensesExpenseHeader
+        :count="expenses.length"
+        :processing-count="processingCount"
+        :sort-option="sortOption"
+        :sort-options="sortOptions"
+        :is-all-selected="isAllSelected"
+        :is-indeterminate="isIndeterminate"
+        :is-selection-mode="isSelectionMode"
+        @update:sort-option="val => sortOption = val"
+        @toggle-all="toggleAll"
+      >
+        <template #add-button>
           <ReceiptCapture :is-loading="isLoading" @captured="handleCaptured" />
-        </div>
-        
-        <div class="flex items-center justify-between">
-          <p class="text-xs text-gray-500">
-            {{ expenses.length }} {{ expenses.length === 1 ? 'receipt' : 'receipts' }}
-          </p>
-          
-          <UDropdownMenu 
-            :items="[sortOptions.map(opt => ({ 
-              label: opt.label, 
-              onSelect: () => sortOption = opt.value,
-              icon: sortOption === opt.value ? 'i-heroicons-check' : undefined
-            }))]"
-          >
-            <UButton 
-              color="neutral" 
-              variant="outline" 
-              size="xs"
-              trailing-icon="i-heroicons-chevron-down"
-            >
-              {{ currentSortLabel }}
-            </UButton>
-          </UDropdownMenu>
-
-          <UButton 
-            to="/settings" 
-            icon="i-heroicons-cog-6-tooth" 
-            variant="ghost" 
-            color="neutral" 
-            size="xs"
-            title="Manage Categories"
-          />
-        </div>
-      </div>
+        </template>
+      </ExpensesExpenseHeader>
 
       <!-- Loading State -->
       <div v-if="isLoading && expenses.length === 0" class="p-8 text-center">
@@ -231,9 +272,21 @@ function isDuplicate(expense: Expense) {
           :expense="expense"
           :is-selected="selectedId === expense.id"
           :is-duplicate="isDuplicate(expense)"
-          @click="selectExpense(expense)"
+          :is-checked="checkedIds.has(expense.id)"
+          :is-selection-mode="isSelectionMode"
+          @toggle="toggleCheck(expense.id, $event)"
+          @click="isSelectionMode || $event.shiftKey ? toggleCheck(expense.id, $event) : selectExpense(expense)"
         />
       </div>
+
+      <!-- Bulk Actions -->
+      <ExpensesExpenseBulkActionBar
+        v-if="isSelectionMode"
+        :selected-count="checkedIds.size"
+        @clear="clearSelection"
+        @delete="bulkDelete"
+        @reprocess="bulkReprocess"
+      />
     </div>
 
     <!-- Right Pane: Detail Editor (Mailbox View) -->
