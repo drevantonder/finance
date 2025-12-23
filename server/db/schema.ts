@@ -19,8 +19,6 @@ export const expenses = sqliteTable('expenses', {
   merchant: text('merchant'),
   date: text('date'),
   items: text('items'), // JSON stringified array of line items
-  category: text('category'), // Receipt-level category (fallback)
-  notes: text('notes'),
   rawExtraction: text('raw_extraction'), // Full JSON from Gemini
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),

@@ -15,7 +15,7 @@ export default defineEventHandler(async (event) => {
     }
 
     // List of allowed fields to update
-    const allowedFields = ['status', 'total', 'tax', 'merchant', 'date', 'items', 'category', 'notes']
+    const allowedFields = ['status', 'total', 'tax', 'merchant', 'date', 'items']
     for (const field of allowedFields) {
       if (body[field] !== undefined) {
         updateData[field] = body[field]

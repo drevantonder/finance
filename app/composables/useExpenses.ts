@@ -68,13 +68,12 @@ export function useExpenses() {
   }
 
   async function processExpense(id: string) {
-    isProcessing.value[id] = true
+    isProcessing.value = { ...isProcessing.value, [id]: true }
     try {
       const updated = await $fetch<Expense>(`/api/expenses/${id}/process`, {
         method: 'POST'
       })
       
-      // Force update the item in the list
       const index = expenses.value.findIndex(e => e.id === id)
       if (index !== -1) {
         expenses.value[index] = { ...updated }
@@ -84,7 +83,7 @@ export function useExpenses() {
       error.value = err.statusMessage || 'Failed to process expense'
       throw err
     } finally {
-      isProcessing.value[id] = false
+      isProcessing.value = { ...isProcessing.value, [id]: false }
     }
   }
 

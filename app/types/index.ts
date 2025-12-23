@@ -326,8 +326,6 @@ export interface Expense {
   merchant: string | null
   date: string | null // ISO date
   items: string | null // JSON string of ExpenseItem[]
-  category: string | null
-  notes: string | null
   rawExtraction: string | null // JSON string
   createdAt: string | Date
   updatedAt: string | Date

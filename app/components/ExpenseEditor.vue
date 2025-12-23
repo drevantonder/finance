@@ -26,7 +26,6 @@ const form = ref({
   total: 0,
   tax: 0,
   date: '',
-  notes: '',
 })
 
 // Line Items State
@@ -39,7 +38,6 @@ watch(() => props.expense, (newVal) => {
     total: newVal.total || 0,
     tax: newVal.tax || 0,
     date: newVal.date ? new Date(newVal.date).toISOString().split('T')[0] : '',
-    notes: newVal.notes || '',
   }
   
   try {
@@ -62,7 +60,6 @@ const isDirty = computed(() => {
          Math.abs(form.value.total - (props.expense.total || 0)) > 0.001 ||
          Math.abs(form.value.tax - (props.expense.tax || 0)) > 0.001 ||
          form.value.date !== (props.expense.date ? new Date(props.expense.date).toISOString().split('T')[0] : '') ||
-         form.value.notes !== (props.expense.notes || '') ||
          currentItemsJson !== propItemsJson
 })
 
@@ -234,16 +231,6 @@ function handleImageLeave() {
                 class="w-full"
               />
             </div>
-          </div>
-
-          <div class="space-y-1.5">
-            <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Notes</label>
-            <UTextarea 
-              v-model="form.notes" 
-              placeholder="Add details..." 
-              :rows="2" 
-              class="w-full"
-            />
           </div>
         </section>
 
