@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref } from 'vue'
+import { useAuthToken } from '~/composables/useAuthToken'
 
 const props = defineProps<{
   isLoading?: boolean
@@ -49,7 +50,10 @@ async function processFile(file: File, index: number, total: number): Promise<vo
 
       // Check if hash already exists
       try {
-        const { exists } = await $fetch<{ exists: boolean }>(`/api/expenses/check-hash?hash=${imageHash}`)
+        const { token } = useAuthToken()
+        const { exists } = await $fetch<{ exists: boolean }>(`/api/expenses/check-hash?hash=${imageHash}`, {
+          headers: { 'x-auth-token': token.value || '' }
+        })
         if (exists) {
           uploadProgress.value.current++
           resolve() // Skip upload

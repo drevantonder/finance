@@ -2,8 +2,11 @@ export default defineEventHandler((event) => {
   const config = useRuntimeConfig()
   const authSecret = config.authSecret
 
-  // Only protect /api/session routes
-  if (!event.path.startsWith('/api/session')) return
+  // Protect all /api routes
+  if (!event.path.startsWith('/api/')) return
+
+  // Prevent caching of sensitive API responses
+  setResponseHeader(event, 'Cache-Control', 'no-store, max-age=0')
 
   const token = getHeader(event, 'x-auth-token')
 

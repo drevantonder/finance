@@ -299,10 +299,10 @@ function handleImageLeave() {
       <!-- Right: Image -->
       <div class="flex-1 bg-gray-50/50 flex flex-col items-center justify-center p-4 relative group overflow-hidden">
         <div v-if="!imageError" class="relative w-full h-full flex items-center justify-center overflow-hidden rounded-lg">
-          <img 
+          <SecureImage 
             ref="imageRef"
             :src="getImageUrl(expense.id)" 
-            class="max-w-full max-h-full object-contain shadow-sm transition-transform duration-200 cursor-zoom-in" 
+            className="max-w-full max-h-full object-contain shadow-sm transition-transform duration-200 cursor-zoom-in" 
             :class="{ 'cursor-zoom-out': isZoomed }"
             :style="{ 
               transform: isZoomed ? 'scale(2.5)' : 'scale(1)',

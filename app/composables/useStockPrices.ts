@@ -78,9 +78,12 @@ export function useStockPrices() {
   // Fetch stock data from our internal server API
   async function fetchStockFromAPI(symbol: string): Promise<CachedStockData | null> {
     console.log(`[StockPrices] Fetching from server API: ${symbol}`)
+    const { token } = useAuthToken()
     
     try {
-      const res = await fetch(`/api/stock/${encodeURIComponent(symbol)}`)
+      const res = await fetch(`/api/stock/${encodeURIComponent(symbol)}`, {
+        headers: { 'x-auth-token': token.value }
+      })
       if (!res.ok) {
         console.error(`[StockPrices] Failed to fetch ${symbol}: ${res.statusText}`)
         return null
@@ -95,9 +98,12 @@ export function useStockPrices() {
   // Search for stocks using our internal server API
   async function searchStocks(query: string) {
     if (!query || query.length < 2) return []
+    const { token } = useAuthToken()
     
     try {
-      const res = await fetch(`/api/stock/search?q=${encodeURIComponent(query)}`)
+      const res = await fetch(`/api/stock/search?q=${encodeURIComponent(query)}`, {
+        headers: { 'x-auth-token': token.value }
+      })
       if (!res.ok) return []
       const data = await res.json()
       return data.results || []

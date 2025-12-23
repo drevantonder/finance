@@ -5,6 +5,12 @@ import { eq } from 'drizzle-orm'
 import { extractReceiptData } from '~~/server/utils/gemini'
 
 export default defineEventHandler(async (event) => {
+  // 0. Size Limit Check (5MB)
+  const contentLength = getHeader(event, 'content-length')
+  if (contentLength && parseInt(contentLength) > 5 * 1024 * 1024) {
+    throw createError({ statusCode: 413, statusMessage: 'Payload too large (max 5MB)' })
+  }
+
   const { image, capturedAt, imageHash } = await readBody(event)
 
   if (!image) {

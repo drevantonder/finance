@@ -21,6 +21,11 @@ const { getCategoryColor, fetchCategories } = useCategories()
 
 const toast = useToast()
 
+onMounted(() => {
+  fetchExpenses()
+  fetchCategories()
+})
+
 // Selection & Bulk State
 const checkedIds = ref<Set<string>>(new Set())
 const isSelectionMode = computed(() => checkedIds.value.size > 0)

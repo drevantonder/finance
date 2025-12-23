@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { ref, onMounted, computed } from 'vue'
 import { useLogger } from '~/composables/useLogger'
+import { useAuthToken } from '~/composables/useAuthToken'
 import type { LogLevel } from '~/types'
 
 const { logs } = useLogger()
+const { token } = useAuthToken()
 const isLoading = ref(false)
 
 const filterLevel = ref<LogLevel | 'all'>('all')
@@ -25,7 +27,9 @@ const filteredLogs = computed(() => {
 async function fetchLogs() {
   isLoading.value = true
   try {
-    const data = await $fetch('/api/logs')
+    const data = await $fetch('/api/logs', {
+      headers: { 'x-auth-token': token.value || '' }
+    })
     logs.value = data
   } catch (err) {
     console.error('Failed to fetch logs:', err)
