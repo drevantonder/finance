@@ -9,7 +9,11 @@
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
     "test": "vitest",
-    "test:run": "vitest run"
+    "test:run": "vitest run",
+    "db:pull": "./scripts/pull-db.sh",
+    "db:push": "./scripts/push-db.sh",
+    "blob:pull": "./scripts/pull-blobs.sh",
+    "blob:push": "./scripts/push-blobs.sh"
   },
   "dependencies": {
     "@google/genai": "^1.34.0",
