@@ -26,7 +26,6 @@ const form = ref({
   total: 0,
   tax: 0,
   date: '',
-  category: '',
   notes: '',
 })
 
@@ -40,7 +39,6 @@ watch(() => props.expense, (newVal) => {
     total: newVal.total || 0,
     tax: newVal.tax || 0,
     date: newVal.date ? new Date(newVal.date).toISOString().split('T')[0] : '',
-    category: newVal.category || '',
     notes: newVal.notes || '',
   }
   
@@ -64,7 +62,6 @@ const isDirty = computed(() => {
          Math.abs(form.value.total - (props.expense.total || 0)) > 0.001 ||
          Math.abs(form.value.tax - (props.expense.tax || 0)) > 0.001 ||
          form.value.date !== (props.expense.date ? new Date(props.expense.date).toISOString().split('T')[0] : '') ||
-         form.value.category !== (props.expense.category || '') ||
          form.value.notes !== (props.expense.notes || '') ||
          currentItemsJson !== propItemsJson
 })
@@ -122,9 +119,6 @@ function handleImageLeave() {
     if (!isZoomed.value) zoomPos.value = { x: 50, y: 50 }
   }, 200)
 }
-
-// Categories
-const CATEGORIES = ['Groceries', 'Utilities', 'Eating Out', 'Transport', 'Healthcare', 'Entertainment', 'Home', 'Tech', 'Other']
 </script>
 
 <template>
@@ -229,17 +223,6 @@ const CATEGORIES = ['Groceries', 'Utilities', 'Eating Out', 'Transport', 'Health
               />
             </div>
 
-            <div class="space-y-1.5">
-              <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Category</label>
-              <USelect
-                v-model="form.category"
-                :items="CATEGORIES"
-                icon="i-heroicons-tag"
-                size="md"
-                class="w-full"
-              />
-            </div>
-            
             <div class="space-y-1.5">
               <label class="text-xs font-semibold text-gray-500 uppercase tracking-wider">Tax (GST)</label>
               <UInput 

@@ -138,24 +138,6 @@ async function handleReprocess() {
 // Helpers
 const CURRENT_SCHEMA_VERSION = 3
 
-function getStatusBadge(status: string) {
-  switch (status) {
-    case 'complete': return { color: 'emerald', label: 'Synced', icon: 'i-heroicons-check' }
-    case 'processing': return { color: 'blue', label: 'Processing', icon: 'i-heroicons-arrow-path', class: 'animate-spin' }
-    case 'error': return { color: 'red', label: 'Error', icon: 'i-heroicons-exclamation-triangle' }
-    default: return { color: 'neutral', label: 'Pending', icon: 'i-heroicons-clock' }
-  }
-}
-
-function getUniqueCategories(expense: Expense) {
-  if (!expense.items) return []
-  try {
-    const items: any[] = JSON.parse(expense.items)
-    return Array.from(new Set(items.map(i => i.category).filter(Boolean)))
-  } catch {
-    return []
-  }
-}
 
 function isDuplicate(expense: Expense) {
   if (!expense.receiptHash) return false
@@ -242,76 +224,15 @@ function isDuplicate(expense: Expense) {
       </div>
 
       <!-- List -->
-      <div v-else class="flex-1 overflow-y-auto divide-y divide-gray-100">
-        <div
+      <div v-else class="flex-1 overflow-y-auto divide-y divide-gray-50">
+        <ExpensesExpenseListItem
           v-for="expense in sortedExpenses"
           :key="expense.id"
-          class="p-4 cursor-pointer transition-all hover:bg-gray-50 border-l-4"
-          :class="[
-            selectedId === expense.id 
-              ? 'bg-blue-50/50 border-blue-500' 
-              : 'border-transparent bg-white'
-          ]"
+          :expense="expense"
+          :is-selected="selectedId === expense.id"
+          :is-duplicate="isDuplicate(expense)"
           @click="selectExpense(expense)"
-        >
-          <div class="flex items-start justify-between gap-3 mb-1">
-            <div class="flex items-center gap-2 truncate flex-1">
-              <UBadge 
-                v-bind="getStatusBadge(expense.status)"
-                variant="subtle"
-                size="xs"
-                :class="getStatusBadge(expense.status).class"
-              >
-                <template #leading>
-                  <UIcon :name="getStatusBadge(expense.status).icon" class="w-3 h-3" />
-                </template>
-                {{ getStatusBadge(expense.status).label }}
-              </UBadge>
-              <span class="font-semibold text-gray-900 truncate text-sm">
-                {{ expense.merchant || 'Processing...' }}
-              </span>
-            </div>
-            <span class="font-mono font-bold text-gray-900 text-sm">
-              {{ expense.total ? formatCurrency(expense.total, { decimals: 2 }) : '---' }}
-            </span>
-          </div>
-          
-          <div class="flex items-center justify-between pl-4">
-            <div class="flex items-center gap-2 text-[11px] text-gray-500">
-              <div v-if="getUniqueCategories(expense).length > 0" class="flex gap-1.5">
-                <span 
-                  v-for="cat in getUniqueCategories(expense)" 
-                  :key="cat"
-                  class="font-medium"
-                  :style="{ color: getCategoryColor(cat) }"
-                >
-                  {{ cat }}
-                </span>
-              </div>
-              <span v-else class="font-medium text-gray-400">Uncategorized</span>
-              
-              <span>•</span>
-              <span>{{ expense.date ? new Date(expense.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'No date' }}</span>
-            </div>
-            
-            <div class="flex items-center gap-1.5">
-              <span v-if="isDuplicate(expense)" class="text-[9px] font-bold text-amber-600 bg-amber-50 px-1 rounded border border-amber-200 uppercase tracking-tighter shadow-sm">Duplicate</span>
-              
-              <UBadge 
-                v-if="expense.schemaVersion < CURRENT_SCHEMA_VERSION" 
-                color="amber" 
-                variant="subtle" 
-                size="xs"
-                class="font-mono"
-              >
-                v{{ expense.schemaVersion }}
-                <template #trailing>
-                  <UIcon name="i-heroicons-arrow-up-circle" class="w-3 h-3" />
-                </template>
-              </UBadge>
-            </div>
-          </div>
-        </div>
+        />
       </div>
     </div>
 

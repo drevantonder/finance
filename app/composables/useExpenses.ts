@@ -1,10 +1,12 @@
 import type { Expense } from '~/types'
 
-export function useExpenses() {
-  const expenses = ref<Expense[]>([])
-  const isLoading = ref(false)
-  const error = ref<string | null>(null)
+// Global State (Singleton Pattern)
+const expenses = ref<Expense[]>([])
+const isLoading = ref(false)
+const error = ref<string | null>(null)
+const isProcessing = ref<Record<string, boolean>>({})
 
+export function useExpenses() {
   async function fetchExpenses() {
     isLoading.value = true
     error.value = null
@@ -65,8 +67,6 @@ export function useExpenses() {
     }
   }
 
-  const isProcessing = ref<Record<string, boolean>>({})
-
   async function processExpense(id: string) {
     isProcessing.value[id] = true
     try {
@@ -77,10 +77,7 @@ export function useExpenses() {
       // Force update the item in the list
       const index = expenses.value.findIndex(e => e.id === id)
       if (index !== -1) {
-        // Create a new object reference to trigger reactivity
         expenses.value[index] = { ...updated }
-        // Trigger a shallow ref update if needed, but array assignment should work
-        expenses.value = [...expenses.value]
       }
       return updated
     } catch (err: any) {
