@@ -30,6 +30,7 @@ export default defineEventHandler(async (event) => {
       imageKey,
       imageHash,
       status: 'pending',
+      schemaVersion: 3,
       capturedAt: capturedAt ? new Date(capturedAt) : now,
       createdAt: now,
       updatedAt: now,
@@ -55,15 +56,38 @@ export default defineEventHandler(async (event) => {
           date: extraction.date,
           items: JSON.stringify(extraction.items),
           receiptHash,
+          schemaVersion: 3,
           rawExtraction: JSON.stringify(extraction),
           updatedAt: new Date(),
         })
         .where(eq(expenses.id, id))
+        
+      // Log success
+      await $fetch('/api/logs', {
+        method: 'POST',
+        body: {
+          level: 'success',
+          message: `Processed receipt for ${extraction.merchant}`,
+          source: 'expenses',
+          details: JSON.stringify({ id, total: extraction.total })
+        }
+      }).catch(() => {})
     } catch (processErr) {
       console.error('Initial processing error:', processErr)
       await db.update(expenses)
         .set({ status: 'error', updatedAt: new Date() })
         .where(eq(expenses.id, id))
+        
+      // Log error
+      await $fetch('/api/logs', {
+        method: 'POST',
+        body: {
+          level: 'error',
+          message: `Failed to process receipt ${id.slice(0, 8)}`,
+          source: 'expenses',
+          details: JSON.stringify({ error: String(processErr) })
+        }
+      }).catch(() => {})
     }
 
     // Fetch the updated expense to return

@@ -1,4 +1,6 @@
 import { GoogleGenAI, Type, ThinkingLevel } from '@google/genai'
+import { db } from 'hub:db'
+import { categories } from '~~/server/db/schema'
 
 export interface ReceiptExtraction {
   total: number
@@ -11,6 +13,8 @@ export interface ReceiptExtraction {
     unit: string
     unitPrice: number
     lineTotal: number
+    category: string
+    taxable: boolean
   }>
 }
 
@@ -58,8 +62,16 @@ const responseSchema = {
             type: Type.NUMBER,
             description: "The total price for this line item (qty * unitPrice)",
           },
+          category: {
+            type: Type.STRING,
+            description: "Category for this specific item (e.g. Groceries, Cleaning, Alcohol)",
+          },
+          taxable: {
+            type: Type.BOOLEAN,
+            description: "True if GST/tax was applied to this specific item",
+          },
         },
-        required: ["name", "lineTotal"],
+        required: ["name", "lineTotal", "category", "taxable"],
       },
     },
   },
@@ -74,6 +86,12 @@ export async function extractReceiptData(imageBase64: string): Promise<ReceiptEx
     throw new Error('NUXT_GEMINI_API_KEY is not set in environment')
   }
 
+  // Fetch user-defined categories for context
+  const userCategories = await db.select().from(categories).all()
+  const categoryContext = userCategories.length > 0 
+    ? `You MUST use ONLY one of these categories: ${userCategories.map(c => c.name).join(', ')}, or "Uncategorized" if none fit. DO NOT invent new categories.`
+    : `Use "Uncategorized" for all items.`
+
   const ai = new GoogleGenAI({ apiKey })
 
   const prompt = `Extract the following details from this receipt image.
@@ -87,6 +105,8 @@ export async function extractReceiptData(imageBase64: string): Promise<ReceiptEx
     - unit: The unit of measure (ea, kg, L, etc. - default to 'ea')
     - unitPrice: The price per single unit or per kg/L
     - lineTotal: The final price for this line (usually qty * unitPrice)
+    - category: Broad category for the item. ${categoryContext}
+    - taxable: Whether this specific item is subject to GST/tax (look for *, G, or other markers on Australian receipts)
 
 If a field is unclear, provide your best estimate. For items without explicit quantities, use 1.`
 

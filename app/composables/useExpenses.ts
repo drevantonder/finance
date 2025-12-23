@@ -65,19 +65,29 @@ export function useExpenses() {
     }
   }
 
+  const isProcessing = ref<Record<string, boolean>>({})
+
   async function processExpense(id: string) {
+    isProcessing.value[id] = true
     try {
       const updated = await $fetch<Expense>(`/api/expenses/${id}/process`, {
         method: 'POST'
       })
+      
+      // Force update the item in the list
       const index = expenses.value.findIndex(e => e.id === id)
       if (index !== -1) {
-        expenses.value[index] = updated
+        // Create a new object reference to trigger reactivity
+        expenses.value[index] = { ...updated }
+        // Trigger a shallow ref update if needed, but array assignment should work
+        expenses.value = [...expenses.value]
       }
       return updated
     } catch (err: any) {
       error.value = err.statusMessage || 'Failed to process expense'
       throw err
+    } finally {
+      isProcessing.value[id] = false
     }
   }
 
@@ -88,6 +98,7 @@ export function useExpenses() {
   return {
     expenses,
     isLoading,
+    isProcessing,
     error,
     fetchExpenses,
     uploadReceipt,

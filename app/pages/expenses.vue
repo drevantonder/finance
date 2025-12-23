@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { ref, computed, onMounted } from 'vue'
 import { useExpenses } from '~/composables/useExpenses'
+import { useCategories } from '~/composables/useCategories'
 import { formatCurrency } from '~/composables/useFormatter'
 import type { Expense } from '~/types'
 
@@ -12,11 +13,17 @@ const {
   uploadReceipt,
   updateExpense,
   deleteExpense,
-  processExpense
+  processExpense,
+  isProcessing
 } = useExpenses()
+
+const { getCategoryColor, fetchCategories } = useCategories()
+
+const toast = useToast()
 
 onMounted(() => {
   fetchExpenses()
+  fetchCategories()
 })
 
 // Selection State
@@ -110,20 +117,43 @@ async function handleDelete() {
 
 async function handleReprocess() {
   if (!selectedId.value) return
-  const updated = await processExpense(selectedId.value)
-  // Ensure we stay selected on the updated item
-  if (updated) {
-    // Usually existing object is mutated in place by composable, but safe check
+  try {
+    const updated = await processExpense(selectedId.value)
+    if (updated) {
+      toast.add({
+        title: 'Reprocessing complete',
+        description: `Successfully updated ${updated.merchant || 'receipt'}`,
+        color: 'success'
+      })
+    }
+  } catch (err) {
+    toast.add({
+      title: 'Reprocessing failed',
+      description: 'Check activity log for details',
+      color: 'error'
+    })
   }
 }
 
 // Helpers
-function getStatusColor(status: string) {
+const CURRENT_SCHEMA_VERSION = 3
+
+function getStatusBadge(status: string) {
   switch (status) {
-    case 'complete': return 'bg-green-50 text-green-700 ring-green-600/20'
-    case 'processing': return 'bg-blue-50 text-blue-700 ring-blue-600/20 animate-pulse'
-    case 'error': return 'bg-red-50 text-red-700 ring-red-600/20'
-    default: return 'bg-gray-50 text-gray-600 ring-gray-500/10'
+    case 'complete': return { color: 'emerald', label: 'Synced', icon: 'i-heroicons-check' }
+    case 'processing': return { color: 'blue', label: 'Processing', icon: 'i-heroicons-arrow-path', class: 'animate-spin' }
+    case 'error': return { color: 'red', label: 'Error', icon: 'i-heroicons-exclamation-triangle' }
+    default: return { color: 'neutral', label: 'Pending', icon: 'i-heroicons-clock' }
+  }
+}
+
+function getUniqueCategories(expense: Expense) {
+  if (!expense.items) return []
+  try {
+    const items: any[] = JSON.parse(expense.items)
+    return Array.from(new Set(items.map(i => i.category).filter(Boolean)))
+  } catch {
+    return []
   }
 }
 
@@ -184,6 +214,15 @@ function isDuplicate(expense: Expense) {
               {{ currentSortLabel }}
             </UButton>
           </UDropdownMenu>
+
+          <UButton 
+            to="/settings" 
+            icon="i-heroicons-cog-6-tooth" 
+            variant="ghost" 
+            color="neutral" 
+            size="xs"
+            title="Manage Categories"
+          />
         </div>
       </div>
 
@@ -216,30 +255,60 @@ function isDuplicate(expense: Expense) {
           @click="selectExpense(expense)"
         >
           <div class="flex items-start justify-between gap-3 mb-1">
-            <span class="font-semibold text-gray-900 truncate flex-1 text-sm">
-              {{ expense.merchant || 'Processing...' }}
-            </span>
+            <div class="flex items-center gap-2 truncate flex-1">
+              <UBadge 
+                v-bind="getStatusBadge(expense.status)"
+                variant="subtle"
+                size="xs"
+                :class="getStatusBadge(expense.status).class"
+              >
+                <template #leading>
+                  <UIcon :name="getStatusBadge(expense.status).icon" class="w-3 h-3" />
+                </template>
+                {{ getStatusBadge(expense.status).label }}
+              </UBadge>
+              <span class="font-semibold text-gray-900 truncate text-sm">
+                {{ expense.merchant || 'Processing...' }}
+              </span>
+            </div>
             <span class="font-mono font-bold text-gray-900 text-sm">
               {{ expense.total ? formatCurrency(expense.total, { decimals: 2 }) : '---' }}
             </span>
           </div>
           
-          <div class="flex items-center justify-between">
-            <div class="flex items-center gap-2 text-xs text-gray-500">
+          <div class="flex items-center justify-between pl-4">
+            <div class="flex items-center gap-2 text-[11px] text-gray-500">
+              <div v-if="getUniqueCategories(expense).length > 0" class="flex gap-1.5">
+                <span 
+                  v-for="cat in getUniqueCategories(expense)" 
+                  :key="cat"
+                  class="font-medium"
+                  :style="{ color: getCategoryColor(cat) }"
+                >
+                  {{ cat }}
+                </span>
+              </div>
+              <span v-else class="font-medium text-gray-400">Uncategorized</span>
+              
+              <span>•</span>
               <span>{{ expense.date ? new Date(expense.date).toLocaleDateString(undefined, { month: 'short', day: 'numeric' }) : 'No date' }}</span>
-              <span v-if="expense.category" class="px-1.5 py-0.5 bg-gray-100 rounded text-gray-600 font-medium">
-                {{ expense.category }}
-              </span>
             </div>
             
-            <div class="flex items-center gap-2">
-              <span v-if="isDuplicate(expense)" class="text-[10px] font-bold text-amber-600 bg-amber-50 px-1 rounded border border-amber-200 uppercase tracking-tighter">Duplicate</span>
-              <span 
-                class="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium ring-1 ring-inset uppercase tracking-wider"
-                :class="getStatusColor(expense.status)"
+            <div class="flex items-center gap-1.5">
+              <span v-if="isDuplicate(expense)" class="text-[9px] font-bold text-amber-600 bg-amber-50 px-1 rounded border border-amber-200 uppercase tracking-tighter shadow-sm">Duplicate</span>
+              
+              <UBadge 
+                v-if="expense.schemaVersion < CURRENT_SCHEMA_VERSION" 
+                color="amber" 
+                variant="subtle" 
+                size="xs"
+                class="font-mono"
               >
-                {{ expense.status }}
-              </span>
+                v{{ expense.schemaVersion }}
+                <template #trailing>
+                  <UIcon name="i-heroicons-arrow-up-circle" class="w-3 h-3" />
+                </template>
+              </UBadge>
             </div>
           </div>
         </div>

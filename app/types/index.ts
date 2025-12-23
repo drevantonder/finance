@@ -309,12 +309,16 @@ export interface ExpenseItem {
   unit: string     // "ea", "kg", "L", etc.
   unitPrice: number
   lineTotal: number
+  category?: string
+  taxable?: boolean
 }
 
 export interface Expense {
   id: string
   imageKey: string
   imageHash: string | null
+  receiptHash: string | null
+  schemaVersion: number
   status: ExpenseStatus
   capturedAt: string | Date
   total: number | null
@@ -327,4 +331,25 @@ export interface Expense {
   rawExtraction: string | null // JSON string
   createdAt: string | Date
   updatedAt: string | Date
+}
+
+export interface Category {
+  id: string
+  name: string
+  description: string | null
+  color: string | null
+  createdAt: Date
+  updatedAt: Date
+}
+
+export type LogLevel = 'info' | 'success' | 'warn' | 'error'
+
+export interface LogEntry {
+  id: string
+  level: LogLevel
+  message: string
+  details: string | null
+  source: string
+  ip: string | null
+  createdAt: Date
 }

@@ -1,14 +1,17 @@
-export function formatCurrency(amount: number, options?: { abbrev?: boolean; decimals?: number }): string {
+export function formatCurrency(amount: any, options?: { abbrev?: boolean; decimals?: number }): string {
+  const num = Number(amount)
+  if (amount === null || amount === undefined || isNaN(num)) return '$0'
+  
   const { abbrev = false, decimals = 0 } = options || {}
-  const abs = Math.abs(amount)
+  const abs = Math.abs(num)
 
   if (abbrev && abs >= 1_000_000) {
-      return '$' + (amount / 1_000_000).toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals }) + 'M'
+      return '$' + (num / 1_000_000).toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals }) + 'M'
   }
   if (abbrev && abs >= 1_000) {
-      return '$' + (amount / 1_000).toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals }) + 'k'
+      return '$' + (num / 1_000).toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals }) + 'k'
   }
-  return amount.toLocaleString(undefined, {
+  return num.toLocaleString(undefined, {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
     style: 'currency',

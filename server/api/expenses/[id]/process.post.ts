@@ -51,15 +51,39 @@ export default defineEventHandler(async (event) => {
           date: extraction.date,
           items: JSON.stringify(extraction.items),
           receiptHash,
+          schemaVersion: 3,
           rawExtraction: JSON.stringify(extraction),
           updatedAt: new Date(),
         })
         .where(eq(expenses.id, id))
+        
+      // Log success
+      await $fetch('/api/logs', {
+        method: 'POST',
+        body: {
+          level: 'success',
+          message: `Reprocessed receipt for ${extraction.merchant}`,
+          source: 'expenses',
+          details: JSON.stringify({ id, total: extraction.total })
+        }
+      }).catch(() => {})
     } catch (processErr) {
       console.error('Processing error:', processErr)
       await db.update(expenses)
         .set({ status: 'error', updatedAt: new Date() })
         .where(eq(expenses.id, id))
+        
+      // Log error
+      await $fetch('/api/logs', {
+        method: 'POST',
+        body: {
+          level: 'error',
+          message: `Failed to reprocess receipt ${id.slice(0, 8)}`,
+          source: 'expenses',
+          details: JSON.stringify({ error: String(processErr) })
+        }
+      }).catch(() => {})
+        
       throw createError({ statusCode: 500, statusMessage: 'AI processing failed' })
     }
 

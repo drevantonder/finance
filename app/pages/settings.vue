@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import CategoryManager from '~/components/settings/CategoryManager.vue'
 const { token } = useAuthToken()
 const toast = useToast()
 
@@ -94,5 +95,7 @@ function clearData() {
         </UButton>
       </div>
     </UCard>
+
+    <CategoryManager />
   </div>
 </template>

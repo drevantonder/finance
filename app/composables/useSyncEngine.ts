@@ -1,3 +1,5 @@
+import { ref, watch, onMounted, type Ref } from 'vue'
+import { useLogger } from '~/composables/useLogger'
 import { get, set } from 'idb-keyval'
 import { watchDebounced, useOnline } from '@vueuse/core'
 import type { SessionConfig } from '../types'
@@ -10,6 +12,7 @@ const CACHE_KEY = 'hp_session_cache'
 export const useSyncEngine = (config: Ref<SessionConfig>) => {
   const { token, isAuthenticated, clearToken } = useAuthToken()
   const online = useOnline()
+  const logger = useLogger()
   
   const status = ref<SyncStatus>('synced')
   const lastSyncedAt = ref<number | null>(null)
@@ -65,11 +68,13 @@ export const useSyncEngine = (config: Ref<SessionConfig>) => {
       }
       status.value = 'synced'
       error.value = null
+      logger.success('Synced session data from cloud', 'sync')
     } catch (e: unknown) {
       if (!handleAuthError(e)) {
         status.value = 'error'
         const err = e as { message?: string }
         error.value = err.message || 'Failed to pull from server'
+        logger.error('Failed to pull sync data', 'sync', { error: String(e) })
       }
     }
   }
@@ -98,6 +103,7 @@ export const useSyncEngine = (config: Ref<SessionConfig>) => {
         pendingPush.value = false
         status.value = 'synced'
         error.value = null
+        logger.info('Saved changes to cloud', 'sync')
       }
     } catch (e: unknown) {
       if (!handleAuthError(e)) {
@@ -105,6 +111,7 @@ export const useSyncEngine = (config: Ref<SessionConfig>) => {
         const err = e as { message?: string }
         error.value = err.message || 'Failed to push to server'
         pendingPush.value = true
+        logger.warn('Failed to push sync data (offline?)', 'sync')
       }
     }
   }

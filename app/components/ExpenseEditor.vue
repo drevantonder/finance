@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { ref, computed, watch } from 'vue'
+import ExpenseLineItem from '~/components/expenses/ExpenseLineItem.vue'
 import type { Expense, ExpenseItem } from '~/types'
 import { useExpenses } from '~/composables/useExpenses'
 import { formatCurrency } from '~/composables/useFormatter'
@@ -15,7 +16,9 @@ const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
-const { getImageUrl } = useExpenses()
+const { getImageUrl, isLoading, isProcessing } = useExpenses()
+
+const isReprocessing = computed(() => isProcessing.value[props.expense.id])
 
 // Form State
 const form = ref({
@@ -169,6 +172,8 @@ const CATEGORIES = ['Groceries', 'Utilities', 'Eating Out', 'Transport', 'Health
           variant="ghost"
           icon="i-heroicons-arrow-path"
           size="sm"
+          :loading="isReprocessing"
+          :disabled="isReprocessing || isLoading"
           @click="emit('reprocess')"
         >
           Reprocess
@@ -179,6 +184,7 @@ const CATEGORIES = ['Groceries', 'Utilities', 'Eating Out', 'Transport', 'Health
           variant="ghost"
           icon="i-heroicons-trash"
           size="sm"
+          :disabled="isLoading"
           @click="emit('delete')"
         >
           Delete
@@ -187,7 +193,14 @@ const CATEGORIES = ['Groceries', 'Utilities', 'Eating Out', 'Transport', 'Health
     </div>
 
     <!-- Content Split -->
-    <div class="flex-1 flex flex-col lg:flex-row overflow-hidden">
+    <div class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
+      <!-- Loading Overlay -->
+      <div v-if="isLoading" class="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-50 flex items-center justify-center">
+        <div class="bg-white p-4 rounded-xl shadow-xl border border-gray-100 flex items-center gap-3">
+          <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin text-primary-500" />
+          <span class="text-sm font-medium text-gray-700">AI is analyzing receipt...</span>
+        </div>
+      </div>
       
       <!-- Left: Form -->
       <div class="flex-1 overflow-y-auto p-6 lg:p-8 space-y-8 border-b lg:border-b-0 lg:border-r border-gray-200 min-w-0">
@@ -267,83 +280,14 @@ const CATEGORIES = ['Groceries', 'Utilities', 'Eating Out', 'Transport', 'Health
             />
           </div>
 
-          <div v-if="lineItems.length > 0" class="space-y-2">
-            <div 
+          <div v-if="lineItems.length > 0" class="space-y-3">
+            <ExpenseLineItem
               v-for="(item, idx) in lineItems" 
               :key="idx" 
-              class="flex items-start gap-2 p-3 bg-gray-50 rounded-lg group border border-transparent hover:border-gray-200 transition-colors"
-            >
-              <div class="flex-shrink-0 flex gap-1">
-                <div class="w-14">
-                  <UInput 
-                    v-model.number="item.qty" 
-                    type="number" 
-                    size="xs" 
-                    placeholder="Qty" 
-                    :ui="{ base: 'text-center' }"
-                    @update:model-value="updateLineTotal(idx)"
-                  />
-                </div>
-                <div class="w-12">
-                  <UInput 
-                    v-model="item.unit" 
-                    size="xs" 
-                    placeholder="ea" 
-                    :ui="{ base: 'text-center' }"
-                  />
-                </div>
-              </div>
-              
-              <div class="flex-1 min-w-0">
-                <UInput 
-                  v-model="item.name" 
-                  size="xs" 
-                  placeholder="Item name" 
-                  class="w-full"
-                />
-              </div>
-              
-              <div class="flex-shrink-0 flex gap-1 items-center">
-                <div class="w-20">
-                  <UInput 
-                    v-model.number="item.unitPrice" 
-                    type="number" 
-                    step="0.01" 
-                    size="xs" 
-                    placeholder="Price"
-                    @update:model-value="updateLineTotal(idx)"
-                  >
-                    <template #leading>
-                      <span class="text-gray-400 text-[10px]">$</span>
-                    </template>
-                  </UInput>
-                </div>
-                <span class="text-gray-400 text-xs">→</span>
-                <div class="w-24">
-                  <UInput 
-                    v-model.number="item.lineTotal" 
-                    type="number" 
-                    step="0.01" 
-                    size="xs" 
-                    placeholder="Total"
-                    :ui="{ base: 'text-right font-medium' }"
-                  >
-                    <template #leading>
-                      <span class="text-gray-500 text-xs">$</span>
-                    </template>
-                  </UInput>
-                </div>
-              </div>
-
-              <UButton
-                color="red"
-                variant="ghost"
-                icon="i-heroicons-x-mark"
-                size="xs"
-                class="opacity-0 group-hover:opacity-100 transition-opacity"
-                @click="removeLineItem(idx)"
-              />
-            </div>
+              :item="item"
+              @update="(val) => { lineItems[idx] = val; updateLineTotal(idx) }"
+              @delete="removeLineItem(idx)"
+            />
           </div>
           
           <div v-else class="text-center py-8 border-2 border-dashed border-gray-100 rounded-lg">
