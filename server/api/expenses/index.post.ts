@@ -5,7 +5,7 @@ import { eq } from 'drizzle-orm'
 import { extractReceiptData } from '~~/server/utils/gemini'
 
 export default defineEventHandler(async (event) => {
-  const { image, capturedAt } = await readBody(event)
+  const { image, capturedAt, imageHash } = await readBody(event)
 
   if (!image) {
     throw createError({ statusCode: 400, statusMessage: 'Image is required' })
@@ -17,7 +17,6 @@ export default defineEventHandler(async (event) => {
 
   try {
     // 1. Upload to R2
-    // Decode base64 if it has data:image/jpeg;base64, prefix
     const base64Data = image.replace(/^data:image\/\w+;base64,/, '')
     const buffer = Buffer.from(base64Data, 'base64')
     
@@ -29,6 +28,7 @@ export default defineEventHandler(async (event) => {
     const newExpense = {
       id,
       imageKey,
+      imageHash,
       status: 'pending',
       capturedAt: capturedAt ? new Date(capturedAt) : now,
       createdAt: now,
@@ -41,6 +41,11 @@ export default defineEventHandler(async (event) => {
     try {
       const extraction = await extractReceiptData(base64Data)
       
+      // Generate receipt hash: merchant_date_total
+      const receiptString = `${extraction.merchant.toLowerCase().trim()}_${extraction.date}_${Number(extraction.total).toFixed(2)}`
+      const { createHash } = await import('node:crypto')
+      const receiptHash = createHash('sha256').update(receiptString).digest('hex')
+
       await db.update(expenses)
         .set({
           status: 'complete',
@@ -49,6 +54,7 @@ export default defineEventHandler(async (event) => {
           merchant: extraction.merchant,
           date: extraction.date,
           items: JSON.stringify(extraction.items),
+          receiptHash,
           rawExtraction: JSON.stringify(extraction),
           updatedAt: new Date(),
         })

@@ -30,11 +30,33 @@ async function processFile(file: File, index: number, total: number): Promise<vo
 
     const reader = new FileReader()
     
-    reader.onload = function(readerEvent) {
+    reader.onload = async function(readerEvent) {
       const dataUrl = readerEvent.target?.result as string
       if (!dataUrl) {
         reject(new Error('Failed to read file'))
         return
+      }
+
+      // Calculate hash before resizing for maximum uniqueness of the source
+      const base64Data = dataUrl.split(',')[1]
+      const binaryData = atob(base64Data)
+      const bytes = new Uint8Array(binaryData.length)
+      for (let i = 0; i < binaryData.length; i++) bytes[i] = binaryData.charCodeAt(i)
+      
+      const hashBuffer = await crypto.subtle.digest('SHA-256', bytes)
+      const hashArray = Array.from(new Uint8Array(hashBuffer))
+      const imageHash = hashArray.map(b => b.toString(16).padStart(2, '0')).join('')
+
+      // Check if hash already exists
+      try {
+        const { exists } = await $fetch<{ exists: boolean }>(`/api/expenses/check-hash?hash=${imageHash}`)
+        if (exists) {
+          uploadProgress.value.current++
+          resolve() // Skip upload
+          return
+        }
+      } catch (e) {
+        console.warn('Hash check failed, proceeding with upload')
       }
 
       const img = new Image()
@@ -56,7 +78,6 @@ async function processFile(file: File, index: number, total: number): Promise<vo
           }
         }
 
-        // Draw to canvas
         const canvas = document.createElement('canvas')
         canvas.width = width
         canvas.height = height
@@ -68,26 +89,18 @@ async function processFile(file: File, index: number, total: number): Promise<vo
         }
 
         ctx.drawImage(img, 0, 0, width, height)
-        
-        // Get resized base64
         const resizedDataUrl = canvas.toDataURL('image/jpeg', QUALITY)
         
-        emit('captured', { image: resizedDataUrl, capturedAt })
+        emit('captured', { image: resizedDataUrl, capturedAt, imageHash })
         uploadProgress.value.current++
         resolve()
       }
       
-      img.onerror = function() {
-        reject(new Error('Failed to decode image'))
-      }
-      
+      img.onerror = () => reject(new Error('Failed to decode image'))
       img.src = dataUrl
     }
     
-    reader.onerror = function() {
-      reject(new Error(`File read error: ${reader.error?.message || 'Unknown error'}`))
-    }
-    
+    reader.onerror = () => reject(new Error('File read error'))
     reader.readAsDataURL(file)
   })
 }

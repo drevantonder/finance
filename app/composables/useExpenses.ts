@@ -18,13 +18,13 @@ export function useExpenses() {
     }
   }
 
-  async function uploadReceipt(image: string, capturedAt: string) {
+  async function uploadReceipt(image: string, capturedAt: string, imageHash: string) {
     isLoading.value = true
     error.value = null
     try {
       const newExpense = await $fetch<Expense>('/api/expenses', {
         method: 'POST',
-        body: { image, capturedAt }
+        body: { image, capturedAt, imageHash }
       })
       expenses.value = [newExpense, ...expenses.value]
       return newExpense

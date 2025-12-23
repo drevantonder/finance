@@ -80,10 +80,10 @@ function closeDetail() {
   selectedId.value = null
 }
 
-async function handleCaptured({ image, capturedAt }: { image: string, capturedAt: string }) {
+async function handleCaptured({ image, capturedAt, imageHash }: { image: string, capturedAt: string, imageHash: string }) {
   pendingUploads.value++
   try {
-    const newExpense = await uploadReceipt(image, capturedAt)
+    const newExpense = await uploadReceipt(image, capturedAt, imageHash)
     // Only select if it's the only one (avoids jumping around during bulk upload)
     if (pendingUploads.value === 1) {
       selectExpense(newExpense)
@@ -125,6 +125,11 @@ function getStatusColor(status: string) {
     case 'error': return 'bg-red-50 text-red-700 ring-red-600/20'
     default: return 'bg-gray-50 text-gray-600 ring-gray-500/10'
   }
+}
+
+function isDuplicate(expense: Expense) {
+  if (!expense.receiptHash) return false
+  return expenses.value.some(e => e.id !== expense.id && e.receiptHash === expense.receiptHash)
 }
 </script>
 
@@ -227,12 +232,15 @@ function getStatusColor(status: string) {
               </span>
             </div>
             
-            <span 
-              class="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium ring-1 ring-inset uppercase tracking-wider"
-              :class="getStatusColor(expense.status)"
-            >
-              {{ expense.status }}
-            </span>
+            <div class="flex items-center gap-2">
+              <span v-if="isDuplicate(expense)" class="text-[10px] font-bold text-amber-600 bg-amber-50 px-1 rounded border border-amber-200 uppercase tracking-tighter">Duplicate</span>
+              <span 
+                class="inline-flex items-center px-1.5 py-0.5 rounded-md text-[10px] font-medium ring-1 ring-inset uppercase tracking-wider"
+                :class="getStatusColor(expense.status)"
+              >
+                {{ expense.status }}
+              </span>
+            </div>
           </div>
         </div>
       </div>

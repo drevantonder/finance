@@ -8,7 +8,9 @@ export interface ReceiptExtraction {
   items: Array<{
     name: string
     qty: number
-    price: number
+    unit: string
+    unitPrice: number
+    lineTotal: number
   }>
 }
 
@@ -44,12 +46,20 @@ const responseSchema = {
             type: Type.NUMBER,
             description: "The quantity purchased (default 1)",
           },
-          price: {
+          unit: {
+            type: Type.STRING,
+            description: "The measurement unit (ea, kg, L, etc.)",
+          },
+          unitPrice: {
             type: Type.NUMBER,
-            description: "The total price for this line item",
+            description: "The price per unit/kg/L",
+          },
+          lineTotal: {
+            type: Type.NUMBER,
+            description: "The total price for this line item (qty * unitPrice)",
           },
         },
-        required: ["name", "price"],
+        required: ["name", "lineTotal"],
       },
     },
   },
@@ -71,7 +81,12 @@ export async function extractReceiptData(imageBase64: string): Promise<ReceiptEx
 - tax: The GST/tax amount (use 0 if not visible)
 - merchant: The store or seller name
 - date: The receipt date in YYYY-MM-DD format
-- items: List of purchased items with name, quantity, and price
+- items: List of purchased items. For each item:
+    - name: Item name
+    - qty: Number of units, weight, or volume
+    - unit: The unit of measure (ea, kg, L, etc. - default to 'ea')
+    - unitPrice: The price per single unit or per kg/L
+    - lineTotal: The final price for this line (usually qty * unitPrice)
 
 If a field is unclear, provide your best estimate. For items without explicit quantities, use 1.`
 

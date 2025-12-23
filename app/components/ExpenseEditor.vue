@@ -50,7 +50,7 @@ watch(() => props.expense, (newVal) => {
 
 // Derived State
 const lineItemsTotal = computed(() => {
-  return lineItems.value.reduce((sum, item) => sum + (item.qty * item.price), 0)
+  return lineItems.value.reduce((sum, item) => sum + (item.lineTotal || 0), 0)
 })
 
 const isDirty = computed(() => {
@@ -68,7 +68,12 @@ const isDirty = computed(() => {
 
 // Actions
 function addLineItem() {
-  lineItems.value.push({ name: 'New Item', qty: 1, price: 0 })
+  lineItems.value.push({ name: 'New Item', qty: 1, unit: 'ea', unitPrice: 0, lineTotal: 0 })
+}
+
+function updateLineTotal(index: number) {
+  const item = lineItems.value[index]
+  item.lineTotal = Number((item.qty * item.unitPrice).toFixed(2))
 }
 
 function removeLineItem(index: number) {
@@ -268,14 +273,25 @@ const CATEGORIES = ['Groceries', 'Utilities', 'Eating Out', 'Transport', 'Health
               :key="idx" 
               class="flex items-start gap-2 p-3 bg-gray-50 rounded-lg group border border-transparent hover:border-gray-200 transition-colors"
             >
-              <div class="w-16 flex-shrink-0">
-                <UInput 
-                  v-model="item.qty" 
-                  type="number" 
-                  size="xs" 
-                  placeholder="Qty" 
-                  :ui="{ base: 'text-center' }"
-                />
+              <div class="flex-shrink-0 flex gap-1">
+                <div class="w-14">
+                  <UInput 
+                    v-model.number="item.qty" 
+                    type="number" 
+                    size="xs" 
+                    placeholder="Qty" 
+                    :ui="{ base: 'text-center' }"
+                    @update:model-value="updateLineTotal(idx)"
+                  />
+                </div>
+                <div class="w-12">
+                  <UInput 
+                    v-model="item.unit" 
+                    size="xs" 
+                    placeholder="ea" 
+                    :ui="{ base: 'text-center' }"
+                  />
+                </div>
               </div>
               
               <div class="flex-1 min-w-0">
@@ -287,19 +303,36 @@ const CATEGORIES = ['Groceries', 'Utilities', 'Eating Out', 'Transport', 'Health
                 />
               </div>
               
-              <div class="w-24 flex-shrink-0">
-                <UInput 
-                  v-model="item.price" 
-                  type="number" 
-                  step="0.01" 
-                  size="xs" 
-                  placeholder="Price"
-                  :ui="{ base: 'text-right' }"
-                >
-                  <template #leading>
-                    <span class="text-gray-500 text-xs">$</span>
-                  </template>
-                </UInput>
+              <div class="flex-shrink-0 flex gap-1 items-center">
+                <div class="w-20">
+                  <UInput 
+                    v-model.number="item.unitPrice" 
+                    type="number" 
+                    step="0.01" 
+                    size="xs" 
+                    placeholder="Price"
+                    @update:model-value="updateLineTotal(idx)"
+                  >
+                    <template #leading>
+                      <span class="text-gray-400 text-[10px]">$</span>
+                    </template>
+                  </UInput>
+                </div>
+                <span class="text-gray-400 text-xs">→</span>
+                <div class="w-24">
+                  <UInput 
+                    v-model.number="item.lineTotal" 
+                    type="number" 
+                    step="0.01" 
+                    size="xs" 
+                    placeholder="Total"
+                    :ui="{ base: 'text-right font-medium' }"
+                  >
+                    <template #leading>
+                      <span class="text-gray-500 text-xs">$</span>
+                    </template>
+                  </UInput>
+                </div>
               </div>
 
               <UButton

@@ -9,6 +9,8 @@ export const sessions = sqliteTable('sessions', {
 export const expenses = sqliteTable('expenses', {
   id: text('id').primaryKey(),
   imageKey: text('image_key').notNull(),
+  imageHash: text('image_hash'),
+  receiptHash: text('receipt_hash'),
   status: text('status').notNull().default('pending'),
   capturedAt: integer('captured_at', { mode: 'timestamp' }).notNull(),
   total: real('total'),

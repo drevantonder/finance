@@ -306,12 +306,15 @@ export type ExpenseStatus = 'pending' | 'processing' | 'complete' | 'error'
 export interface ExpenseItem {
   name: string
   qty: number
-  price: number
+  unit: string     // "ea", "kg", "L", etc.
+  unitPrice: number
+  lineTotal: number
 }
 
 export interface Expense {
   id: string
   imageKey: string
+  imageHash: string | null
   status: ExpenseStatus
   capturedAt: string | Date
   total: number | null
