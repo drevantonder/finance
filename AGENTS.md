@@ -1,5 +1,10 @@
 # Agent Instructions
 
+## Git Policy
+- **NEVER create branches, PRs, or push to remote** - The user will handle all git operations
+- Only commit locally if explicitly requested by the user
+- Focus on implementing features and fixes, not git workflow
+
 ## Commands
 ```bash
 pnpm dev              # Dev server (localhost:3000)
