@@ -23,16 +23,26 @@ export default defineNitroPlugin((nitroApp) => {
       const headerFrom = (email.from?.address || '').toLowerCase()
       
       // Check Cloudflare authentication results (DKIM/SPF)
+      // Use word boundaries to prevent substring attacks
       const authResults = message.headers.get('Authentication-Results') || ''
-      const hasPassedAuth = authResults.includes('dkim=pass') || authResults.includes('spf=pass')
+      const arcAuthResults = message.headers.get('ARC-Authentication-Results') || ''
+      const allAuthResults = `${authResults} ${arcAuthResults}`
+      
+      const dkimPass = /\bdkim=pass\b/i.test(allAuthResults)
+      const spfPass = /\bspf=pass\b/i.test(allAuthResults)
+      
+      // Require DKIM pass OR (SPF pass with envelope-header alignment)
+      // This prevents envelope spoofing attacks
+      const hasPassedAuth = dkimPass || (spfPass && envelopeFrom === headerFrom)
 
-      // Find authorized user
-      const authResult = await db.select()
-        .from(authorizedUsers)
-        .where(
-          sql`${authorizedUsers.email} = ${envelopeFrom} OR (${authorizedUsers.email} = ${headerFrom} AND ${hasPassedAuth})`
-        )
-        .get()
+      // Only trust headerFrom after authentication passes
+      // Never trust unauthenticated envelope addresses
+      const authResult = hasPassedAuth 
+        ? await db.select()
+            .from(authorizedUsers)
+            .where(eq(authorizedUsers.email, headerFrom))
+            .get()
+        : null
 
       const isVerified = !!authResult
       
