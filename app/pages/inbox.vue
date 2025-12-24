@@ -42,9 +42,10 @@ function getStatusColor(status: string) {
   <div class="space-y-6">
     <div class="flex justify-between items-center">
       <div>
-        <h2 class="text-2xl font-bold text-gray-900">Email Inbox</h2>
-        <p class="text-gray-500 text-sm">Receipts received via receipts@thevantonders.com</p>
+        <h1 class="text-2xl font-bold text-gray-900">Household Inbox</h1>
+        <p class="text-gray-500">Forward receipts to <code class="bg-gray-100 px-1 rounded text-primary-700 font-medium">finance@thevantonders.com</code></p>
       </div>
+
       <UButton
         icon="i-heroicons-arrow-path"
         color="neutral"

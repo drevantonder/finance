@@ -64,7 +64,7 @@ export default defineNitroPlugin((nitroApp) => {
         receivedAt,
         status: isVerified ? 'pending' : 'unauthorized',
         verified: isVerified,
-        createdAt: new Date()
+        createdAt: new Date().toISOString()
       })
 
       for (const ref of attachmentRefs) {
