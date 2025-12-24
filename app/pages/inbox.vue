@@ -7,7 +7,7 @@ async function processItem(id: string) {
   processing.value[id] = true
   try {
     await $fetch(`/api/inbox/${id}/process`, { method: 'POST' })
-    toast.add({ title: 'Processing started', color: 'success' })
+    toast.add({ title: 'Expense created successfully', color: 'success' })
     await refresh()
   } catch (err: any) {
     toast.add({ 
@@ -15,6 +15,19 @@ async function processItem(id: string) {
       description: err.statusMessage || 'Check logs for details',
       color: 'error' 
     })
+  } finally {
+    processing.value[id] = false
+  }
+}
+
+async function approveItem(id: string) {
+  processing.value[id] = true
+  try {
+    await $fetch(`/api/inbox/${id}/approve`, { method: 'POST' })
+    toast.add({ title: 'Item approved and processed', color: 'success' })
+    await refresh()
+  } catch (err: any) {
+    toast.add({ title: 'Approval failed', color: 'error' })
   } finally {
     processing.value[id] = false
   }
@@ -104,6 +117,17 @@ function getStatusColor(status: string) {
           </div>
 
           <div class="flex items-center gap-2 shrink-0 opacity-0 group-hover:opacity-100 transition-opacity">
+            <UButton
+              v-if="item.status === 'unauthorized'"
+              size="xs"
+              color="success"
+              variant="subtle"
+              icon="i-heroicons-check-badge"
+              :loading="processing[item.id]"
+              @click="approveItem(item.id)"
+            >
+              Approve & Process
+            </UButton>
             <UButton
               v-if="item.status === 'pending' || item.status === 'error'"
               size="xs"
