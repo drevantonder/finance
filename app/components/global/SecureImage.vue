@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { ref, watch, onBeforeUnmount } from 'vue'
+import { ref, watch, onBeforeUnmount, computed } from 'vue'
 
 const props = defineProps<{
   src: string
@@ -10,6 +10,9 @@ const props = defineProps<{
 const objectUrl = ref<string | null>(null)
 const isLoading = ref(true)
 const error = ref(false)
+const detectedMimeType = ref<string | null>(null)
+
+const isPdf = computed(() => detectedMimeType.value === 'application/pdf')
 
 async function loadImage() {
   if (!props.src) return
@@ -19,6 +22,7 @@ async function loadImage() {
   
   try {
     const blob = await $fetch<Blob>(props.src)
+    detectedMimeType.value = blob.type
     
     if (objectUrl.value) {
       URL.revokeObjectURL(objectUrl.value)
@@ -26,7 +30,7 @@ async function loadImage() {
     
     objectUrl.value = URL.createObjectURL(blob)
   } catch (err) {
-    console.error('Failed to load secure image:', err)
+    console.error('Failed to load secure resource:', err)
     error.value = true
   } finally {
     isLoading.value = false
@@ -58,10 +62,16 @@ onBeforeUnmount(() => {
     </template>
     
     <img 
-      v-else-if="objectUrl" 
+      v-else-if="objectUrl && !isPdf" 
       :src="objectUrl" 
       :alt="alt" 
-      class="w-full h-full object-cover"
+      class="w-full h-full object-contain"
+    />
+
+    <iframe
+      v-else-if="objectUrl && isPdf"
+      :src="objectUrl"
+      class="w-full h-full border-0"
     />
   </div>
 </template>

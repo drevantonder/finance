@@ -4,6 +4,7 @@ import { expenses } from '~~/server/db/schema'
 import { eq } from 'drizzle-orm'
 import { extractReceiptData } from '~~/server/utils/gemini'
 import { generateReceiptHash } from '~~/server/utils/hash'
+import { extractText, getDocumentProxy } from 'unpdf'
 
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
@@ -20,26 +21,41 @@ export default defineEventHandler(async (event) => {
     }
 
     const expense = result[0]
+    const isPdf = expense.imageKey.toLowerCase().endsWith('.pdf')
     
     // 1. Mark as processing
     await db.update(expenses)
       .set({ status: 'processing', updatedAt: new Date() })
       .where(eq(expenses.id, id))
 
-    // 2. Fetch image from R2
+    // 2. Fetch file from storage
     const blobData = await blob.get(expense.imageKey)
     if (!blobData) {
-      throw createError({ statusCode: 404, statusMessage: 'Image not found in storage' })
+      throw createError({ statusCode: 404, statusMessage: 'File not found in storage' })
     }
     
     const arrayBuffer = await blobData.arrayBuffer()
-    const base64 = Buffer.from(arrayBuffer).toString('base64')
+    const buffer = Buffer.from(arrayBuffer)
+    const base64 = buffer.toString('base64')
 
-    // 3. Extract data via Gemini
+    // 3. Extract text if PDF
+    let pdfText: string | undefined
+    if (isPdf) {
+      try {
+        const pdf = await getDocumentProxy(new Uint8Array(arrayBuffer))
+        const result = await extractText(pdf, { mergePages: true })
+        pdfText = result.text
+      } catch (e) {
+        console.error('PDF text extraction failed:', e)
+      }
+    }
+
+    // 4. Extract data via Gemini
     try {
-      const extraction = await extractReceiptData(base64)
+      const extraction = await extractReceiptData(isPdf ? { text: pdfText } : { image: base64 })
       
-      const receiptString = `${extraction.merchant.toLowerCase().trim()}_${extraction.date}_${Number(extraction.total).toFixed(2)}`
+      const merchant = extraction.merchant || 'unknown'
+      const receiptString = `${merchant.toLowerCase().trim()}_${extraction.date}_${Number(extraction.total).toFixed(2)}`
       const receiptHash = await generateReceiptHash(receiptString)
 
       await db.update(expenses)
@@ -47,7 +63,7 @@ export default defineEventHandler(async (event) => {
           status: 'complete',
           total: extraction.total,
           tax: extraction.tax,
-          merchant: extraction.merchant,
+          merchant,
           date: extraction.date,
           items: JSON.stringify(extraction.items),
           receiptHash,
@@ -62,7 +78,7 @@ export default defineEventHandler(async (event) => {
         method: 'POST',
         body: {
           level: 'success',
-          message: `Reprocessed receipt for ${extraction.merchant}`,
+          message: `Reprocessed receipt for ${merchant}`,
           source: 'expenses',
           details: JSON.stringify({ id, total: extraction.total })
         }

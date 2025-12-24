@@ -3,34 +3,49 @@ import { blob } from 'hub:blob'
 import { expenses } from '~~/server/db/schema'
 import { eq } from 'drizzle-orm'
 import { extractReceiptData } from '~~/server/utils/gemini'
+import { generateReceiptHash } from '~~/server/utils/hash'
+import { extractText, getDocumentProxy } from 'unpdf'
 
 export default defineEventHandler(async (event) => {
-  // 0. Size Limit Check (5MB)
+  // 0. Size Limit Check (10MB for PDFs)
   const contentLength = getHeader(event, 'content-length')
-  if (contentLength && parseInt(contentLength) > 5 * 1024 * 1024) {
-    throw createError({ statusCode: 413, statusMessage: 'Payload too large (max 5MB)' })
+  if (contentLength && parseInt(contentLength) > 10 * 1024 * 1024) {
+    throw createError({ statusCode: 413, statusMessage: 'Payload too large (max 10MB)' })
   }
 
   const { image, capturedAt, imageHash } = await readBody(event)
 
   if (!image) {
-    throw createError({ statusCode: 400, statusMessage: 'Image is required' })
+    throw createError({ statusCode: 400, statusMessage: 'File data is required' })
   }
 
   const id = crypto.randomUUID()
-  const imageKey = `receipts/${id}.jpg`
+  const isPdf = image.startsWith('data:application/pdf')
+  const imageKey = `receipts/${id}.${isPdf ? 'pdf' : 'jpg'}`
   const now = new Date()
 
   try {
-    // 1. Upload to R2
-    const base64Data = image.replace(/^data:image\/\w+;base64,/, '')
+    // 1. Process and Upload
+    const base64Data = image.replace(/^data:.*?;base64,/, '')
     const buffer = Buffer.from(base64Data, 'base64')
     
     await blob.put(imageKey, buffer, {
-      contentType: 'image/jpeg'
+      contentType: isPdf ? 'application/pdf' : 'image/jpeg'
     })
 
-    // 2. Create DB record
+    // 2. Extract text if PDF
+    let pdfText: string | undefined
+    if (isPdf) {
+      try {
+        const pdf = await getDocumentProxy(new Uint8Array(buffer))
+        const result = await extractText(pdf, { mergePages: true })
+        pdfText = result.text
+      } catch (e) {
+        console.error('PDF text extraction failed:', e)
+      }
+    }
+
+    // 3. Create DB record
     const newExpense = {
       id,
       imageKey,
@@ -44,12 +59,13 @@ export default defineEventHandler(async (event) => {
 
     await db.insert(expenses).values(newExpense)
 
-    // 3. Trigger initial processing (sync for MVP)
+    // 4. Trigger AI processing
     try {
-      const extraction = await extractReceiptData(base64Data)
+      const extraction = await extractReceiptData(isPdf ? { text: pdfText } : { image: base64Data })
       
       // Generate receipt hash: merchant_date_total
-      const receiptString = `${extraction.merchant.toLowerCase().trim()}_${extraction.date}_${Number(extraction.total).toFixed(2)}`
+      const merchant = extraction.merchant || 'unknown'
+      const receiptString = `${merchant.toLowerCase().trim()}_${extraction.date}_${Number(extraction.total).toFixed(2)}`
       const receiptHash = await generateReceiptHash(receiptString)
 
       await db.update(expenses)
@@ -57,7 +73,7 @@ export default defineEventHandler(async (event) => {
           status: 'complete',
           total: extraction.total,
           tax: extraction.tax,
-          merchant: extraction.merchant,
+          merchant,
           date: extraction.date,
           items: JSON.stringify(extraction.items),
           receiptHash,
@@ -66,33 +82,27 @@ export default defineEventHandler(async (event) => {
           updatedAt: new Date(),
         })
         .where(eq(expenses.id, id))
-        
-      // Log success
-      await $fetch('/api/logs', {
-        method: 'POST',
-        body: {
-          level: 'success',
-          message: `Processed receipt for ${extraction.merchant}`,
-          source: 'expenses',
-          details: JSON.stringify({ id, total: extraction.total })
-        }
-      }).catch(() => {})
     } catch (processErr) {
-      console.error('Initial processing error:', processErr)
+      console.error('Processing error:', processErr)
+      // Update status to error if AI fails
       await db.update(expenses)
-        .set({ status: 'error', updatedAt: new Date() })
+        .set({ 
+          status: 'error', 
+          updatedAt: new Date() 
+        })
         .where(eq(expenses.id, id))
         
-      // Log error
-      await $fetch('/api/logs', {
-        method: 'POST',
-        body: {
-          level: 'error',
-          message: `Failed to process receipt ${id.slice(0, 8)}`,
-          source: 'expenses',
-          details: JSON.stringify({ error: String(processErr) })
-        }
-      }).catch(() => {})
+      // Log the error for debugging
+      await db.insert(logs).values({
+        id: crypto.randomUUID(),
+        level: 'error',
+        message: `AI extraction failed for ${isPdf ? 'PDF' : 'Image'}`,
+        source: 'expenses',
+        details: JSON.stringify({ id, error: String(processErr) }),
+        createdAt: new Date()
+      }).catch(e => console.error('Failed to log error to DB:', e))
+
+      throw processErr
     }
 
     // Fetch the updated expense to return

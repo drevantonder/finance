@@ -96,13 +96,15 @@ function handleImageError() {
 }
 
 // Zoom handling
-const imageRef = ref<HTMLElement | null>(null)
+const imageRef = ref<{ $el: HTMLElement } | null>(null)
 const isZoomed = ref(false)
 const zoomPos = ref({ x: 50, y: 50 })
 
 function handleImageMove(e: MouseEvent) {
-  if (!imageRef.value) return
-  const rect = imageRef.value.getBoundingClientRect()
+  if (!imageRef.value || (props.expense.imageKey || '').toLowerCase().endsWith('.pdf')) return
+  
+  const el = imageRef.value.$el
+  const rect = el.getBoundingClientRect()
   const x = Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100))
   const y = Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100))
   
@@ -297,18 +299,21 @@ function handleImageLeave() {
         </section>
       </div>
 
-      <!-- Right: Image -->
-      <div class="flex-1 bg-gray-50/50 flex flex-col items-center justify-center p-4 relative group overflow-hidden">
-        <div v-if="!imageError" class="relative w-full h-full flex items-center justify-center overflow-hidden rounded-lg">
+      <!-- Right: Image/PDF Preview -->
+      <div class="flex-1 bg-gray-50 flex flex-col relative group min-h-[500px] lg:min-h-0">
+        <div v-if="!imageError" class="absolute inset-0 flex items-center justify-center p-4">
           <SecureImage 
             ref="imageRef"
             :src="getImageUrl(expense.id)" 
-            className="max-w-full max-h-full object-contain shadow-sm transition-transform duration-200 cursor-zoom-in" 
-            :class="{ 'cursor-zoom-out': isZoomed }"
-            :style="{ 
+            className="w-full h-full rounded-lg shadow-md bg-white transition-transform duration-200" 
+            :class="[
+              (expense.imageKey || '').toLowerCase().endsWith('.pdf') ? '' : 'cursor-zoom-in',
+              isZoomed ? 'cursor-zoom-out' : ''
+            ]"
+            :style="!(expense.imageKey || '').toLowerCase().endsWith('.pdf') ? { 
               transform: isZoomed ? 'scale(2.5)' : 'scale(1)',
               transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`
-            }"
+            } : {}"
             @mousemove="handleImageMove"
             @mouseleave="handleImageLeave"
             @error="handleImageError"

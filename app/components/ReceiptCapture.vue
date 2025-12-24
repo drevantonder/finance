@@ -37,7 +37,16 @@ async function processFile(file: File, index: number, total: number): Promise<vo
         return
       }
 
-      // Calculate hash before resizing for maximum uniqueness of the source
+      // 1. Handle PDF directly (no resizing)
+      if (file.type === 'application/pdf') {
+        const imageHash = `pdf-${file.name}-${file.size}-${file.lastModified}`
+        emit('captured', { image: dataUrl, capturedAt, imageHash })
+        uploadProgress.value.current++
+        resolve()
+        return
+      }
+
+      // 2. Handle Images (with hashing and resizing)
       const base64Data = dataUrl.split(',')[1]
       if (!base64Data) {
         reject(new Error('Failed to parse base64 data'))
@@ -154,7 +163,7 @@ async function handleFileChange(event: Event) {
     <input
       ref="fileInput"
       type="file"
-      accept="image/*"
+      accept="image/*,application/pdf"
       multiple
       class="hidden"
       @change="handleFileChange"

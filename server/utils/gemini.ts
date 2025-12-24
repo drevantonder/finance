@@ -78,7 +78,7 @@ const responseSchema = {
   required: ["total", "merchant", "date"],
 }
 
-export async function extractReceiptData(imageBase64: string): Promise<ReceiptExtraction> {
+export async function extractReceiptData(input: { image?: string, text?: string }): Promise<ReceiptExtraction> {
   const config = useRuntimeConfig()
   const apiKey = config.geminiApiKey
   
@@ -94,43 +94,37 @@ export async function extractReceiptData(imageBase64: string): Promise<ReceiptEx
 
   const ai = new GoogleGenAI({ apiKey })
 
-  const prompt = `Extract the following details from this receipt image.
-- total: The final total amount paid
-- tax: The GST/tax amount (use 0 if not visible)
-- merchant: The store or seller name
-- date: The receipt date in YYYY-MM-DD format
-- items: List of purchased items. For each item:
-    - name: Item name
-    - qty: Number of units, weight, or volume
-    - unit: The unit of measure (ea, kg, L, etc. - default to 'ea')
-    - unitPrice: The price per single unit or per kg/L
-    - lineTotal: The final price for this line (usually qty * unitPrice)
-    - category: Broad category for the item. ${categoryContext}
-    - taxable: Whether this specific item is subject to GST/tax (look for *, G, or other markers on Australian receipts)
+  const prompt = `Extract receipt details from the provided ${input.image ? 'image' : 'text'}.
+- total: Final total amount paid
+- tax: GST/tax amount (0 if not visible)
+- merchant: Store or seller name
+- date: Receipt date (YYYY-MM-DD)
+- items: List of items with name, qty, unit, unitPrice, lineTotal, category (${categoryContext}), and taxable (boolean).
 
-If a field is unclear, provide your best estimate. For items without explicit quantities, use 1.`
+If a field is unclear, provide your best estimate.`
+
+  const parts: any[] = [{ text: prompt }]
+  
+  if (input.image) {
+    parts.push({
+      inlineData: {
+        data: input.image,
+        mimeType: "image/jpeg",
+      },
+    })
+  } else if (input.text) {
+    parts.push({ text: `DATA TO EXTRACT FROM:\n${input.text}` })
+  }
 
   const response = await ai.models.generateContent({
     model: "gemini-3-flash-preview",
-    contents: [
-      {
-        role: "user",
-        parts: [
-          { text: prompt },
-          {
-            inlineData: {
-              data: imageBase64,
-              mimeType: "image/jpeg",
-            },
-          },
-        ],
-      },
-    ],
+    contents: [{ role: "user", parts }],
     config: {
       responseMimeType: "application/json",
       responseSchema,
     },
   })
+
 
   // Improved logging for debugging
   console.log('Gemini finish reason:', response.candidates?.[0]?.finishReason)
