@@ -20,7 +20,8 @@ export default defineOAuthGoogleEventHandler({
         email: user.email,
         name: user.name,
         picture: user.picture
-      }
+      },
+      loggedInAt: Date.now()
     })
 
     return sendRedirect(event, '/')

@@ -17,11 +17,14 @@ export const useSyncEngine = (config: Ref<SessionConfig>) => {
   const lastSyncedAt = ref<number | null>(null)
   const error = ref<string | null>(null)
   const pendingPush = ref(false)
+  const isInitialized = ref(false)
+  const isReady = ref(false)
 
   // Load from local cache (IndexedDB)
   const loadFromCache = async () => {
     const cached = await get<{ config: SessionConfig, updatedAt: number }>(CACHE_KEY)
     if (cached) {
+      isInitialized.value = true
       return cached
     }
     return null
@@ -44,8 +47,11 @@ export const useSyncEngine = (config: Ref<SessionConfig>) => {
     return false
   }
 
-  const pull = async () => {
-    if (!online.value) return
+  const pull = async (force = false) => {
+    if (!online.value) {
+      isReady.value = true // Allow local work if offline
+      return
+    }
 
     status.value = 'syncing'
     try {
@@ -53,13 +59,15 @@ export const useSyncEngine = (config: Ref<SessionConfig>) => {
 
       if (response.config) {
         const cached = await loadFromCache()
-        // Simple last-write-wins based on updatedAt
-        if (!cached || response.updatedAt > cached.updatedAt) {
+        // Trust server if force=true or if server is newer
+        if (force || !cached || response.updatedAt > cached.updatedAt) {
           config.value = response.config
           await saveToCache(response.config, response.updatedAt)
           lastSyncedAt.value = response.updatedAt
         }
       }
+      isInitialized.value = true
+      isReady.value = true
       status.value = 'synced'
       error.value = null
       logger.success('Synced session data from cloud', 'sync')
@@ -74,6 +82,12 @@ export const useSyncEngine = (config: Ref<SessionConfig>) => {
   }
 
   const push = async () => {
+    // Prevent pushing before we've successfully pulled at least once
+    if (!isReady.value) {
+      logger.info('Skipping push - not yet ready', 'sync')
+      return
+    }
+
     if (!online.value) {
       pendingPush.value = true
       status.value = 'offline'
@@ -128,6 +142,7 @@ export const useSyncEngine = (config: Ref<SessionConfig>) => {
     error,
     pull,
     push,
-    loadFromCache
+    loadFromCache,
+    isReady
   }
 }

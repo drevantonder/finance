@@ -133,17 +133,19 @@ export const useSessionStore = defineStore('session', () => {
 
   async function initialise() {
     try {
-      // 3. Try to load from sync engine (cache first, then pull)
+      // 1. Load from cache for immediate UI responsiveness
       const cached = await sync.loadFromCache()
       if (cached) {
         config.value = cached.config
       }
       
-      // Background pull to refresh
-      await sync.pull()
+      // 2. Force pull from server to ensure we have the latest (especially after a restore)
+      await sync.pull(true)
 
-      // Self-healing... (rest of the logic)
+      // 3. Self-healing: Ensure basic structures exist
+      // This will now trigger a 'push' but only after isReady is true
       if (!config.value.people || config.value.people.length === 0) {
+
         config.value.people = [{ id: crypto.randomUUID(), name: 'Applicant 1' }]
       }
       

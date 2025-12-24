@@ -3,6 +3,7 @@ import { blob } from 'hub:blob'
 import { expenses } from '~~/server/db/schema'
 import { eq } from 'drizzle-orm'
 import { extractReceiptData } from '~~/server/utils/gemini'
+import { generateReceiptHash } from '~~/server/utils/hash'
 
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
