@@ -39,8 +39,7 @@ export default defineEventHandler(async (event) => {
       const extraction = await extractReceiptData(base64)
       
       const receiptString = `${extraction.merchant.toLowerCase().trim()}_${extraction.date}_${Number(extraction.total).toFixed(2)}`
-      const { createHash } = await import('node:crypto')
-      const receiptHash = createHash('sha256').update(receiptString).digest('hex')
+      const receiptHash = await generateReceiptHash(receiptString)
 
       await db.update(expenses)
         .set({

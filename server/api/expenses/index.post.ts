@@ -50,8 +50,7 @@ export default defineEventHandler(async (event) => {
       
       // Generate receipt hash: merchant_date_total
       const receiptString = `${extraction.merchant.toLowerCase().trim()}_${extraction.date}_${Number(extraction.total).toFixed(2)}`
-      const { createHash } = await import('node:crypto')
-      const receiptHash = createHash('sha256').update(receiptString).digest('hex')
+      const receiptHash = await generateReceiptHash(receiptString)
 
       await db.update(expenses)
         .set({
