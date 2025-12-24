@@ -1,8 +1,6 @@
 import type { Category } from '~/types'
-import { useAuthToken } from '~/composables/useAuthToken'
 
 export const useCategories = () => {
-  const { token } = useAuthToken()
   const categories = useState<Category[]>('categories', () => [])
   const isLoading = useState('categories-loading', () => false)
 
@@ -12,9 +10,7 @@ export const useCategories = () => {
 
     isLoading.value = true
     try {
-      categories.value = await $fetch('/api/categories', {
-        headers: { 'x-auth-token': token.value }
-      })
+      categories.value = await $fetch('/api/categories')
     } catch (err) {
       console.error('Failed to fetch categories', err)
     } finally {

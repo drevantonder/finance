@@ -22,6 +22,13 @@
       "when": 1766529091789,
       "tag": "0002_breezy_whistler",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1766553601881,
+      "tag": "0003_add_authorized_users",
+      "breakpoints": true
     }
   ]
 }

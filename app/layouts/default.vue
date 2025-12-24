@@ -13,6 +13,15 @@
           <!-- Session Info -->
           <div class="flex items-center gap-4">
             <SyncIndicator />
+            <UDropdownMenu
+              v-if="user"
+              :items="[{ label: 'Sign out', icon: 'i-heroicons-arrow-right-on-rectangle', click: logout }]"
+            >
+              <UButton color="neutral" variant="ghost" class="gap-2">
+                <UAvatar :src="user.picture" :alt="user.name" size="xs" />
+                <span class="hidden sm:inline">{{ user.name }}</span>
+              </UButton>
+            </UDropdownMenu>
             <div class="hidden sm:flex items-center gap-4">
               <div class="flex items-center gap-1 text-sm text-gray-500">
                 <span class="font-medium">Today:</span>
@@ -128,6 +137,12 @@
 
 <script setup lang="ts">
 const store = useSessionStore()
+const { user, clear } = useUserSession()
+
+async function logout() {
+  await clear()
+  navigateTo('/login')
+}
 
 const todayLabel = computed(() => {
   return new Date().toLocaleDateString('en-AU', { 

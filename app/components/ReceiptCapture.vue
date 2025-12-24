@@ -1,13 +1,12 @@
 <script setup lang="ts">
 import { ref } from 'vue'
-import { useAuthToken } from '~/composables/useAuthToken'
 
 const props = defineProps<{
   isLoading?: boolean
 }>()
 
 const emit = defineEmits<{
-  (e: 'captured', data: { image: string, capturedAt: string }): void
+  (e: 'captured', data: { image: string, capturedAt: string, imageHash: string }): void
 }>()
 
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -40,6 +39,10 @@ async function processFile(file: File, index: number, total: number): Promise<vo
 
       // Calculate hash before resizing for maximum uniqueness of the source
       const base64Data = dataUrl.split(',')[1]
+      if (!base64Data) {
+        reject(new Error('Failed to parse base64 data'))
+        return
+      }
       const binaryData = atob(base64Data)
       const bytes = new Uint8Array(binaryData.length)
       for (let i = 0; i < binaryData.length; i++) bytes[i] = binaryData.charCodeAt(i)
@@ -50,10 +53,7 @@ async function processFile(file: File, index: number, total: number): Promise<vo
 
       // Check if hash already exists
       try {
-        const { token } = useAuthToken()
-        const { exists } = await $fetch<{ exists: boolean }>(`/api/expenses/check-hash?hash=${imageHash}`, {
-          headers: { 'x-auth-token': token.value || '' }
-        })
+        const { exists } = await $fetch<{ exists: boolean }>(`/api/expenses/check-hash?hash=${imageHash}`)
         if (exists) {
           uploadProgress.value.current++
           resolve() // Skip upload
@@ -97,6 +97,7 @@ async function processFile(file: File, index: number, total: number): Promise<vo
         
         emit('captured', { image: resizedDataUrl, capturedAt, imageHash })
         uploadProgress.value.current++
+
         resolve()
       }
       

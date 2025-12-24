@@ -63,7 +63,7 @@ const displaySortLabel = computed(() => {
         <span class="text-sm font-medium text-gray-400 tabular-nums">{{ count }}</span>
         <UBadge 
           v-if="processingCount > 0"
-          color="blue" 
+          color="info" 
           variant="subtle"
           size="xs"
           class="animate-pulse"

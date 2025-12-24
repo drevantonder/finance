@@ -12,13 +12,10 @@ import type {
 import { calculateSmartProjection } from '~/composables/useSmartProjection'
 import { useStockPrices } from '~/composables/useStockPrices'
 
-import { useAuthToken } from '~/composables/useAuthToken'
 import { useSyncEngine } from '~/composables/useSyncEngine'
-
 
 export const useSessionStore = defineStore('session', () => {
   const stockPrices = useStockPrices()
-  const { token, isAuthenticated, initializeFromUrl } = useAuthToken()
   
   const config = ref<SessionConfig>({
     people: [],
@@ -140,11 +137,6 @@ export const useSessionStore = defineStore('session', () => {
 
 
   async function initialise() {
-    // 1. Check for token in URL
-    initializeFromUrl()
-
-    if (!isAuthenticated.value) return
-
     try {
       // 3. Try to load from sync engine (cache first, then pull)
       const cached = await sync.loadFromCache()

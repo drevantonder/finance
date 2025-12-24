@@ -1,5 +1,4 @@
 import type { Expense } from '~/types'
-import { useAuthToken } from '~/composables/useAuthToken'
 
 // Global State (Singleton Pattern)
 const expenses = ref<Expense[]>([])
@@ -8,15 +7,11 @@ const error = ref<string | null>(null)
 const isProcessing = ref<Record<string, boolean>>({})
 
 export function useExpenses() {
-  const { token } = useAuthToken()
-
   async function fetchExpenses() {
     isLoading.value = true
     error.value = null
     try {
-      const data = await $fetch<Expense[]>('/api/expenses', {
-        headers: { 'x-auth-token': token.value }
-      })
+      const data = await $fetch<Expense[]>('/api/expenses')
       expenses.value = data
     } catch (err: any) {
       error.value = err.statusMessage || 'Failed to fetch expenses'
@@ -31,7 +26,6 @@ export function useExpenses() {
     try {
       const newExpense = await $fetch<Expense>('/api/expenses', {
         method: 'POST',
-        headers: { 'x-auth-token': token.value },
         body: { image, capturedAt, imageHash }
       })
       expenses.value = [newExpense, ...expenses.value]
@@ -48,7 +42,6 @@ export function useExpenses() {
     try {
       const updated = await $fetch<Expense>(`/api/expenses/${id}`, {
         method: 'PUT',
-        headers: { 'x-auth-token': token.value },
         body: updates
       })
       const index = expenses.value.findIndex(e => e.id === id)
@@ -65,8 +58,7 @@ export function useExpenses() {
   async function deleteExpense(id: string) {
     try {
       await $fetch(`/api/expenses/${id}`, {
-        method: 'DELETE',
-        headers: { 'x-auth-token': token.value }
+        method: 'DELETE' as any
       })
       expenses.value = expenses.value.filter(e => e.id !== id)
     } catch (err: any) {
@@ -79,8 +71,7 @@ export function useExpenses() {
     isProcessing.value = { ...isProcessing.value, [id]: true }
     try {
       const updated = await $fetch<Expense>(`/api/expenses/${id}/process`, {
-        method: 'POST',
-        headers: { 'x-auth-token': token.value }
+        method: 'POST'
       })
       
       const index = expenses.value.findIndex(e => e.id === id)

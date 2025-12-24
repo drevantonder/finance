@@ -148,7 +148,8 @@ function closeDetail() {
   selectedId.value = null
 }
 
-async function handleCaptured({ image, capturedAt, imageHash }: { image: string, capturedAt: string, imageHash: string }) {
+async function handleCaptured(data: { image: string, capturedAt: string, imageHash: string }) {
+  const { image, capturedAt, imageHash } = data
   pendingUploads.value++
   try {
     const newExpense = await uploadReceipt(image, capturedAt, imageHash)
@@ -190,12 +191,29 @@ async function bulkDelete() {
     }
   } catch (err) {
     toast.add({ title: 'Bulk delete failed', color: 'error' })
+    } finally {
+    isLoading.value = false
+  }
+}
+
+async function bulkReprocess() {
+  const ids = Array.from(checkedIds.value)
+  if (ids.length === 0) return
+  
+  try {
+    isLoading.value = true
+    await Promise.all(ids.map(id => processExpense(id)))
+    toast.add({ title: `Reprocessed ${ids.length} expenses`, color: 'success' })
+    clearSelection()
+  } catch (err) {
+    toast.add({ title: 'Bulk reprocessing failed', color: 'error' })
   } finally {
     isLoading.value = false
   }
 }
 
 async function handleReprocess() {
+
   if (!selectedId.value) return
   try {
     const updated = await processExpense(selectedId.value)
@@ -274,7 +292,7 @@ function isDuplicate(expense: Expense) {
         <ExpensesExpenseListItem
           v-for="expense in sortedExpenses"
           :key="expense.id"
-          :expense="expense"
+          :expense="(expense as any)"
           :is-selected="selectedId === expense.id"
           :is-duplicate="isDuplicate(expense)"
           :is-checked="checkedIds.has(expense.id)"

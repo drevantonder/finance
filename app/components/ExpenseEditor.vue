@@ -70,7 +70,8 @@ function addLineItem() {
 
 function updateLineTotal(index: number) {
   const item = lineItems.value[index]
-  item.lineTotal = Number((item.qty * item.unitPrice).toFixed(2))
+  if (!item) return
+  item.lineTotal = Number(((item.qty || 0) * (item.unitPrice || 0)).toFixed(2))
 }
 
 function removeLineItem(index: number) {

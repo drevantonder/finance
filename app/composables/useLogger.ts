@@ -21,14 +21,9 @@ export const useLogger = () => {
 
     // Persist to DB for significant events (client-side only)
     if (['error', 'warn', 'success'].includes(level) && process.client) {
-      const { token } = useAuthToken()
-      // Only attempt to log if we have a valid token to avoid 401 loops
-      if (!token.value || typeof token.value !== 'string' || token.value.length === 0) return
-      
       try {
         await $fetch('/api/logs', {
           method: 'POST',
-          headers: { 'x-auth-token': token.value },
           body: {
             level,
             message,

@@ -1,4 +1,5 @@
 import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core'
+import { sql } from 'drizzle-orm'
 
 export const sessions = sqliteTable('sessions', {
   id: text('id').primaryKey().default('default'),
@@ -41,4 +42,12 @@ export const logs = sqliteTable('logs', {
   source: text('source').notNull(), // 'expenses', 'sync', 'auth', 'system'
   ip: text('ip'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+})
+
+export const authorizedUsers = sqliteTable('authorized_users', {
+  email: text('email').primaryKey(),
+  name: text('name'),
+  pictureUrl: text('picture_url'),
+  lastLoginAt: text('last_login_at'),
+  createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`)
 })

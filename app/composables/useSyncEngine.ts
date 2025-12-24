@@ -1,4 +1,4 @@
-import { ref, watch, onMounted, type Ref } from 'vue'
+import { ref, watch, type Ref } from 'vue'
 import { useLogger } from '~/composables/useLogger'
 import { get, set } from 'idb-keyval'
 import { watchDebounced, useOnline } from '@vueuse/core'
@@ -10,7 +10,6 @@ export type SyncStatus = 'synced' | 'syncing' | 'pending' | 'offline' | 'error'
 const CACHE_KEY = 'hp_session_cache'
 
 export const useSyncEngine = (config: Ref<SessionConfig>) => {
-  const { token, isAuthenticated, clearToken } = useAuthToken()
   const online = useOnline()
   const logger = useLogger()
   
@@ -38,24 +37,19 @@ export const useSyncEngine = (config: Ref<SessionConfig>) => {
   const handleAuthError = (e: unknown) => {
     const err = e as { statusCode?: number }
     if (err.statusCode === 401) {
-      clearToken()
       status.value = 'error'
-      error.value = 'Session expired or invalid token'
+      error.value = 'Session expired'
       return true
     }
     return false
   }
 
   const pull = async () => {
-    if (!isAuthenticated.value || !online.value) return
+    if (!online.value) return
 
     status.value = 'syncing'
     try {
-      const response = await $fetch<{ config: SessionConfig | null, updatedAt: number }>('/api/session', {
-        headers: {
-          'x-auth-token': token.value || ''
-        }
-      })
+      const response = await $fetch<{ config: SessionConfig | null, updatedAt: number }>('/api/session')
 
       if (response.config) {
         const cached = await loadFromCache()
@@ -80,9 +74,9 @@ export const useSyncEngine = (config: Ref<SessionConfig>) => {
   }
 
   const push = async () => {
-    if (!isAuthenticated.value || !online.value) {
+    if (!online.value) {
       pendingPush.value = true
-      status.value = online.value ? 'synced' : 'offline'
+      status.value = 'offline'
       return
     }
 
@@ -91,10 +85,7 @@ export const useSyncEngine = (config: Ref<SessionConfig>) => {
       const cleanData = clonePlain(config.value)
       const response = await $fetch<{ success: boolean, updatedAt: number }>('/api/session', {
         method: 'PUT',
-        body: { config: cleanData },
-        headers: {
-          'x-auth-token': token.value || ''
-        }
+        body: { config: cleanData }
       })
 
       if (response.success) {
@@ -137,7 +128,6 @@ export const useSyncEngine = (config: Ref<SessionConfig>) => {
     error,
     pull,
     push,
-    loadFromCache,
-    isAuthenticated
+    loadFromCache
   }
 }

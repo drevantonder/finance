@@ -146,11 +146,10 @@ const isOutdated = computed(() => (props.expense.schemaVersion || 0) < CURRENT_S
         
         <UBadge 
           v-if="isOutdated && !isProcessing" 
-          color="gray" 
+          color="neutral" 
           variant="subtle" 
           size="xs"
           class="font-mono h-4 px-1"
-          :ui="{ rounded: 'rounded-sm' }"
         >
           v{{ expense.schemaVersion || 1 }}
           <template #trailing>

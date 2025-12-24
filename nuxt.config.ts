@@ -1,5 +1,5 @@
 export default defineNuxtConfig({
-  modules: ['@nuxt/ui', '@pinia/nuxt', '@vueuse/nuxt', '@nuxthub/core'],
+  modules: ['@nuxt/ui', '@pinia/nuxt', '@vueuse/nuxt', '@nuxthub/core', 'nuxt-auth-utils'],
 
   // Default: auto-detect storage backends
   hub: {
@@ -8,8 +8,14 @@ export default defineNuxtConfig({
   },
 
   runtimeConfig: {
-    authSecret: '', // Set via NUXT_AUTH_SECRET env var
-    geminiApiKey: '', // Set via NUXT_GEMINI_API_KEY env var
+    // Session password is set via NUXT_SESSION_PASSWORD env var
+    oauth: {
+      google: {
+        clientId: '', // NUXT_OAUTH_GOOGLE_CLIENT_ID
+        clientSecret: '' // NUXT_OAUTH_GOOGLE_CLIENT_SECRET
+      }
+    },
+    geminiApiKey: '', // NUXT_GEMINI_API_KEY
     public: {}
   },
   css: ['~/assets/css/main.css'],

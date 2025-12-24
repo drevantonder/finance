@@ -15,8 +15,18 @@ pnpm vitest run test/unit/tax.test.ts  # Single test file
 pnpm nuxt typecheck   # TypeScript checking
 ```
 
+## Infrastructure
+- **Database**: 
+  - **Dev**: Local SQLite (stored in `.data/db/sqlite.db`). Access via `sqlite3` or Drizzle.
+  - **Prod**: Cloudflare D1. Access via `npx nuxthub database query`.
+- **Storage**: Cloudflare R2 for images/PDFs.
+
 ## Code Style
 - **Stack**: Nuxt 4, Vue 3, Pinia, Nuxt UI v4, Tailwind CSS 4, TypeScript strict
+- **Nuxt UI v4 Gotchas**: 
+  - `UDropdown` is now `UDropdownMenu`.
+  - `UDropdownMenu` items are a flat array `[{ label: '...', click: ... }]` (not nested arrays).
+  - Colors: Use `neutral`, `success`, `error`, `info`, `warning` (v3 colors like `gray`, `red`, `blue` are deprecated).
 - **Structure**: Frontend in `~/app` (composables, components, pages), `types/index.ts` for interfaces
 - **Naming**: PascalCase components, camelCase composables (`useFoo`), UPPER_CASE constants
 - **Types**: Strong typing with `defineProps<T>()`, never `any`, percentages as 0-1 internally

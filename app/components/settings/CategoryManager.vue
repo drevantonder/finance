@@ -32,7 +32,7 @@ async function handleCreate() {
       method: 'POST',
       body: newCategory.value
     })
-    categories.value.push(newCat as Category)
+    categories.value.push(newCat as unknown as Category)
     categories.value.sort((a, b) => a.name.localeCompare(b.name))
     isCreateModalOpen.value = false
   } catch (err) {

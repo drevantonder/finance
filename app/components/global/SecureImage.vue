@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { ref, watch, onBeforeUnmount } from 'vue'
-import { useAuthToken } from '~/composables/useAuthToken'
 
 const props = defineProps<{
   src: string
@@ -8,7 +7,6 @@ const props = defineProps<{
   className?: string
 }>()
 
-const { token } = useAuthToken()
 const objectUrl = ref<string | null>(null)
 const isLoading = ref(true)
 const error = ref(false)
@@ -20,11 +18,7 @@ async function loadImage() {
   error.value = false
   
   try {
-    const blob = await $fetch<Blob>(props.src, {
-      headers: {
-        'x-auth-token': token.value || ''
-      }
-    })
+    const blob = await $fetch<Blob>(props.src)
     
     if (objectUrl.value) {
       URL.revokeObjectURL(objectUrl.value)

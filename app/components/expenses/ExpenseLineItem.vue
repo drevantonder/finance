@@ -155,7 +155,7 @@ function toggleEdit() {
 
       <!-- Delete button -->
       <UButton
-        color="red"
+        color="error"
         variant="ghost"
         icon="i-heroicons-trash"
         size="xs"
