@@ -1,5 +1,5 @@
 import PostalMime from 'postal-mime'
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import { db } from 'hub:db'
 import { blob } from 'hub:blob'
 import { inboxItems, inboxAttachments, authorizedUsers } from '../db/schema'
@@ -17,15 +17,28 @@ export default defineNitroPlugin((nitroApp) => {
       const parser = new PostalMime()
       const email = await parser.parse(rawArrayBuffer)
 
-      // 2. Verify Sender
+      // 2. Verify Sender & Authentication (DKIM/SPF)
       const envelopeFrom = message.from.toLowerCase()
+      const headerFrom = (email.from?.address || '').toLowerCase()
       
+      // Check Cloudflare authentication results (DKIM/SPF)
+      const authResults = message.headers.get('Authentication-Results') || ''
+      const hasPassedAuth = authResults.includes('dkim=pass') || authResults.includes('spf=pass')
+
+      // Find authorized user
       const authResult = await db.select()
         .from(authorizedUsers)
-        .where(eq(authorizedUsers.email, envelopeFrom))
+        .where(
+          sql`${authorizedUsers.email} = ${envelopeFrom} OR (${authorizedUsers.email} = ${headerFrom} AND ${hasPassedAuth})`
+        )
         .get()
 
       const isVerified = !!authResult
+      
+      if (!isVerified) {
+        console.warn(`[EmailInbox] Unauthorized email from ${headerFrom} (Envelope: ${envelopeFrom}, Auth: ${hasPassedAuth})`)
+      }
+
       
       // 3. Store Attachments in R2
       const attachmentRefs = []
