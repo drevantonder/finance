@@ -1,6 +1,6 @@
 import { db } from 'hub:db'
 import { blob } from 'hub:blob'
-import { expenses } from '~~/server/db/schema'
+import { expenses, inboxItems } from '~~/server/db/schema'
 import { eq } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
@@ -14,11 +14,16 @@ export default defineEventHandler(async (event) => {
       .where(eq(expenses.id, id))
       .limit(1)
 
-    if (result && result.length > 0) {
+    if (result && result.length > 0 && result[0].imageKey) {
       const imageKey = result[0].imageKey
       // 2. Delete from R2
       await blob.delete(imageKey)
     }
+
+    // 2.5 Clear references in inbox items
+    await db.update(inboxItems)
+      .set({ expenseId: null })
+      .where(eq(inboxItems.expenseId, id))
 
     // 3. Delete from DB
     await db.delete(expenses)
