@@ -237,15 +237,6 @@ export interface SessionConfig {
   costs: CostsConfig
 }
 
-// Session storage model
-export interface Session {
-  id: string
-  name: string
-  updatedAt: string
-  config: SessionConfig
-  notes?: string
-}
-
 // Results from scenario-based calculation
 export type LimitingFactor = 'DTI' | 'Serviceability'
 

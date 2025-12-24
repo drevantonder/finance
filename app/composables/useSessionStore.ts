@@ -63,11 +63,6 @@ export const useSessionStore = defineStore('session', () => {
 
   const sync = useSyncEngine(config)
 
-  // 2. Persistence Logic (Replaced by Sync Engine)
-  function save() {
-    // Sync engine handles this via watchDebounced internally
-  }
-
   function addPerson(name: string = 'New Person'): Person {
     const person: Person = {
       id: crypto.randomUUID(),

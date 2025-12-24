@@ -49,7 +49,7 @@ export const useSyncEngine = (config: Ref<SessionConfig>) => {
 
     status.value = 'syncing'
     try {
-      const response = await $fetch<{ config: SessionConfig | null, updatedAt: number }>('/api/session')
+      const response = await $fetch<{ config: SessionConfig, updatedAt: number }>('/api/session')
 
       if (response.config) {
         const cached = await loadFromCache()

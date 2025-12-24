@@ -139,6 +139,10 @@
 const store = useSessionStore()
 const { user, clear } = useUserSession()
 
+onMounted(() => {
+  store.initialise()
+})
+
 async function logout() {
   await clear()
   navigateTo('/login')
