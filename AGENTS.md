@@ -25,5 +25,9 @@ pnpm nuxt typecheck   # TypeScript checking
 - **Errors**: `Math.max(0, val)` for negatives, `isFinite()` for division guards
 - **Patterns**: Iterative solvers for circular deps (e.g., house price ↔ stamp duty)
 
+## Edge Compatibility
+- **Crypto**: Use Web Crypto API (`crypto.subtle`) instead of `node:crypto` (not supported in Cloudflare Workers).
+- **Timeouts**: Avoid long-running processes; Cloudflare Workers have strict wall-clock limits (disable AI "thinking" modes).
+
 ## Domain Context
 See `docs/DOMAIN.md` for business rules, glossary, calculation logic, and gotchas.
