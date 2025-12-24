@@ -84,7 +84,11 @@ export default defineEventHandler(async (event) => {
         }
       }).catch(() => {})
         
-      throw createError({ statusCode: 500, statusMessage: 'AI processing failed' })
+      throw createError({
+        statusCode: 500,
+        statusMessage: 'AI processing failed',
+        message: processErr instanceof Error ? processErr.message : String(processErr)
+      })
     }
 
     const updated = await db.select().from(expenses).where(eq(expenses.id, id)).limit(1)

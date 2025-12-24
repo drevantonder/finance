@@ -129,16 +129,20 @@ If a field is unclear, provide your best estimate. For items without explicit qu
     config: {
       responseMimeType: "application/json",
       responseSchema,
-      thinkingConfig: {
-        thinkingLevel: ThinkingLevel.MEDIUM, // Balance speed and accuracy
-      },
     },
   })
+
+  // Improved logging for debugging
+  console.log('Gemini finish reason:', response.candidates?.[0]?.finishReason)
+  
+  if (response.candidates?.[0]?.finishReason !== 'STOP') {
+    console.warn('Gemini response candidates:', JSON.stringify(response.candidates, null, 2))
+  }
 
   const text = response.text
   
   if (!text) {
-    throw new Error('Empty response from Gemini')
+    throw new Error(`Empty response from Gemini. Finish reason: ${response.candidates?.[0]?.finishReason}`)
   }
 
   try {
