@@ -50,6 +50,9 @@ importers:
       pinia:
         specifier: ^3.0.4
         version: 3.0.4(typescript@5.9.3)(vue@3.5.25(typescript@5.9.3))
+      postal-mime:
+        specifier: ^2.7.1
+        version: 2.7.1
       tailwindcss:
         specifier: ^4.1.18
         version: 4.1.18
@@ -4121,6 +4124,9 @@ packages:
   pluralize@8.0.0:
     resolution: {integrity: sha512-Nc3IT5yHzflTfbjgqWcCPpo7DaKy4FnpB0l/zCAW0Tc7jxAiuqSxHasntB3D7887LSrA93kDJ9IXovxJYxyLCA==}
     engines: {node: '>=4'}
+
+  postal-mime@2.7.1:
+    resolution: {integrity: sha512-0VslL0CLSV7PBmglwWR8eCGC5fgsdVictjOG4PEA+vvA0+QJF5SC0tV018CbvAcW4XbpbMIJNd91Dt8vTa9kbA==}
 
   postcss-calc@10.1.1:
     resolution: {integrity: sha512-NYEsLHh8DgG/PRH2+G9BTuUdtf9ViS+vdoQ0YA5OQdGsfN4ztiwtDWNtBl9EKeqNMFnIu8IKZ0cLxEQ5r5KVMw==}
@@ -9563,6 +9569,8 @@ snapshots:
       pathe: 2.0.3
 
   pluralize@8.0.0: {}
+
+  postal-mime@2.7.1: {}
 
   postcss-calc@10.1.1(postcss@8.5.6):
     dependencies:

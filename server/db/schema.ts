@@ -51,3 +51,29 @@ export const authorizedUsers = sqliteTable('authorized_users', {
   lastLoginAt: text('last_login_at'),
   createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`)
 })
+
+export const inboxItems = sqliteTable('inbox_items', {
+  id: text('id').primaryKey(),
+  fromAddress: text('from_address').notNull(),
+  toAddress: text('to_address'),
+  envelopeFrom: text('envelope_from'),
+  subject: text('subject'),
+  textBody: text('text_body'),
+  htmlBody: text('html_body'),
+  receivedAt: text('received_at').notNull(),
+  status: text('status').notNull().default('pending'), // pending, processing, complete, error, ignored, unauthorized
+  verified: integer('verified', { mode: 'boolean' }).notNull().default(false),
+  errorMessage: text('error_message'),
+  expenseId: text('expense_id').references(() => expenses.id),
+  createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`)
+})
+
+export const inboxAttachments = sqliteTable('inbox_attachments', {
+  id: text('id').primaryKey(),
+  inboxItemId: text('inbox_item_id').notNull().references(() => inboxItems.id),
+  filename: text('filename'),
+  mimeType: text('mime_type').notNull(),
+  storageKey: text('storage_key').notNull(),
+  sizeBytes: integer('size_bytes').notNull(),
+  createdAt: text('created_at').notNull().default(sql`CURRENT_TIMESTAMP`)
+})

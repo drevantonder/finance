@@ -29,6 +29,13 @@
       "when": 1766553601881,
       "tag": "0003_add_authorized_users",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1766561333614,
+      "tag": "0004_add_inbox_tables",
+      "breakpoints": true
     }
   ]
 }
