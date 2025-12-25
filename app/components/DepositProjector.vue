@@ -360,6 +360,7 @@ import { useProjectionResults } from '~/composables/useProjectionResults'
 import type { DepositConfig, IncomeSource, InvestmentStrategy, StockHolding } from '~/types'
 
 const store = useSessionStore()
+const stockPrices = useStockPrices()
 const { 
   smartResult, 
   chartSeries, 
@@ -368,33 +369,23 @@ const {
   exactTargetDateLabel 
 } = useProjectionResults()
 
-const props = defineProps<{
-  modelValue: DepositConfig,
-  incomeSources: IncomeSource[]
-}>()
-
-const emit = defineEmits<{
-  'update:modelValue': [value: DepositConfig]
-}>()
-
 const localConfig = computed({
-  get: () => props.modelValue,
-  set: (value) => emit('update:modelValue', value)
-})
-
-const stockPrices = useStockPrices()
-
-onMounted(async () => {
-  const symbols = localConfig.value.holdings.map(h => h.symbol).filter(s => s)
-  if (symbols.length > 0) {
-    await stockPrices.initializePrices(symbols)
+  get: () => store.config.deposit,
+  set: (val) => {
+    store.config = { ...store.config, deposit: val }
   }
 })
 
-// === BREAKDOWN FROM FINAL SERIES POINT ===
-const finalPoint = computed(() => chartSeries.value[chartSeries.value.length - 1])
-const finalStocks = computed(() => finalPoint.value?.stocksValue || 0)
-const finalEmergency = computed(() => finalPoint.value?.emergencyFund || 0)
+const finalEmergency = computed(() => {
+  const finalPoint = chartSeries.value[chartSeries.value.length - 1]
+  return (finalPoint as any)?.emergencyFund || 0
+})
+
+const finalStocks = computed(() => {
+  const finalPoint = chartSeries.value[chartSeries.value.length - 1]
+  return (finalPoint as any)?.stocksValue || 0
+})
+
 
 const currentStockValue = computed(() => {
   return localConfig.value.holdings.reduce((sum, h) => {

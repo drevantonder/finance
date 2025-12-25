@@ -7,5 +7,12 @@ export default defineEventHandler(async (event) => {
   if (!id) return
 
   await db.delete(categories).where(eq(categories.id, id))
+
+  // Notify other devices
+  const { user } = await requireUserSession(event)
+  if (user?.email) {
+    await broadcastCategoriesChanged(user.email)
+  }
+
   return { success: true }
 })

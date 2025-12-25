@@ -18,7 +18,7 @@
               :items="[{ label: 'Sign out', icon: 'i-heroicons-arrow-right-on-rectangle', click: logout }]"
             >
               <UButton color="neutral" variant="ghost" class="gap-2">
-                <UAvatar :src="user.picture" :alt="user.name" size="xs" />
+                <UAvatar :src="(user as any).pictureUrl || (user as any).picture" :alt="user.name" size="xs" />
                 <span class="hidden sm:inline">{{ user.name }}</span>
               </UButton>
             </UDropdownMenu>
@@ -149,7 +149,7 @@ const store = useSessionStore()
 const { user, clear } = useUserSession()
 
 onMounted(() => {
-  store.initialise()
+  store.load()
 })
 
 async function logout() {

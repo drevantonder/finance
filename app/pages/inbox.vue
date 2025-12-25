@@ -1,14 +1,19 @@
 <script setup lang="ts">
-const { data: items, refresh, pending } = useFetch('/api/inbox')
+import { useInboxQuery, useProcessInboxMutation, useApproveInboxMutation } from '~/composables/queries'
+
+const { data: items = [], status, refetch } = useInboxQuery()
+const pending = computed(() => status.value === 'pending')
+const { mutateAsync: processItemMutation } = useProcessInboxMutation()
+const { mutateAsync: approveItemMutation } = useApproveInboxMutation()
+
 const toast = useToast()
 const processing = ref<Record<string, boolean>>({})
 
 async function processItem(id: string) {
   processing.value[id] = true
   try {
-    await $fetch(`/api/inbox/${id}/process`, { method: 'POST' })
+    await processItemMutation(id)
     toast.add({ title: 'Expense created successfully', color: 'success' })
-    await refresh()
   } catch (err: any) {
     toast.add({ 
       title: 'Processing failed', 
@@ -23,9 +28,8 @@ async function processItem(id: string) {
 async function approveItem(id: string) {
   processing.value[id] = true
   try {
-    await $fetch(`/api/inbox/${id}/approve`, { method: 'POST' })
+    await approveItemMutation(id)
     toast.add({ title: 'Item approved and processed', color: 'success' })
-    await refresh()
   } catch (err: any) {
     toast.add({ title: 'Approval failed', color: 'error' })
   } finally {

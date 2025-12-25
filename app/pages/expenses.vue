@@ -1,120 +1,34 @@
 <script setup lang="ts">
-import { ref, computed, onMounted, onUnmounted } from 'vue'
-import { useExpenses } from '~/composables/useExpenses'
-import { useCategories } from '~/composables/useCategories'
+import { ref, computed } from 'vue'
+import { useExpensesQuery, useExpenseMutation, useDeleteExpenseMutation } from '~/composables/queries'
+import { useCategoriesQuery } from '~/composables/queries'
 import { formatCurrency } from '~/composables/useFormatter'
 import type { Expense } from '~/types'
 
-const {
-  expenses,
-  isLoading,
-  error,
-  fetchExpenses,
-  uploadReceipt,
-  updateExpense,
-  deleteExpense,
-  processExpense,
-  isProcessing
-} = useExpenses()
+const { data: expenses, isLoading, error } = useExpensesQuery()
+const { mutateAsync: updateExpense } = useExpenseMutation()
+const { mutateAsync: deleteExpense } = useDeleteExpenseMutation()
 
-const { getCategoryColor, fetchCategories } = useCategories()
+const { data: categories } = useCategoriesQuery()
+const getCategoryColor = (name: string) => categories.value?.find((c: any) => c.name === name)?.color || '#9ca3af'
 
 const toast = useToast()
 
-onMounted(() => {
-  fetchExpenses()
-  fetchCategories()
-})
-
-// Selection & Bulk State
-const checkedIds = ref<Set<string>>(new Set())
-const isSelectionMode = computed(() => checkedIds.value.size > 0)
-const lastCheckedId = ref<string | null>(null)
-
-const isAllSelected = computed(() => 
-  sortedExpenses.value.length > 0 && checkedIds.value.size === sortedExpenses.value.length
-)
-const isIndeterminate = computed(() => 
-  checkedIds.value.size > 0 && checkedIds.value.size < sortedExpenses.value.length
-)
-
-function toggleAll() {
-  if (isAllSelected.value || isIndeterminate.value) {
-    checkedIds.value = new Set()
-    lastCheckedId.value = null
-  } else {
-    checkedIds.value = new Set(sortedExpenses.value.map(e => e.id))
-    lastCheckedId.value = null
-  }
-}
-
-function toggleCheck(id: string, event?: MouseEvent) {
-  const newChecked = new Set(checkedIds.value)
-  
-  if (event?.shiftKey && lastCheckedId.value) {
-    const allIds = sortedExpenses.value.map(e => e.id)
-    const startIdx = allIds.indexOf(lastCheckedId.value)
-    const endIdx = allIds.indexOf(id)
-    
-    if (startIdx !== -1 && endIdx !== -1) {
-      const [min, max] = [Math.min(startIdx, endIdx), Math.max(startIdx, endIdx)]
-      const rangeIds = allIds.slice(min, max + 1)
-      
-      // If the clicked item is being checked, check the whole range
-      // If it's being unchecked, uncheck the whole range
-      const isChecking = !checkedIds.value.has(id)
-      
-      rangeIds.forEach(rid => {
-        if (isChecking) newChecked.add(rid)
-        else newChecked.delete(rid)
-      })
-    }
-  } else {
-    if (newChecked.has(id)) {
-      newChecked.delete(id)
-    } else {
-      newChecked.add(id)
-    }
-  }
-  
-  checkedIds.value = newChecked
-  lastCheckedId.value = id
-}
-
-function clearSelection() {
-  checkedIds.value = new Set()
-  lastCheckedId.value = null
-}
-
-
-// Selection State
-const selectedId = ref<string | null>(null)
-const selectedExpense = computed(() => 
-  expenses.value.find(e => e.id === selectedId.value) || null
-)
-
-// Computed Layout
-const isDetailOpen = computed(() => !!selectedId.value)
-
 // Sorting
-type SortOption = 'invoice-date-desc' | 'invoice-date-asc' | 'capture-date-desc' | 'capture-date-asc' | 'processed-date-desc' | 'processed-date-asc'
-const sortOption = ref<SortOption>('invoice-date-desc')
-
+const sortOption = ref('invoice-date-desc')
 const sortOptions = [
-  { label: 'Invoice Date: Newest', value: 'invoice-date-desc' as const },
-  { label: 'Invoice Date: Oldest', value: 'invoice-date-asc' as const },
-  { label: 'Photo Date: Newest', value: 'capture-date-desc' as const },
-  { label: 'Photo Date: Oldest', value: 'capture-date-asc' as const },
-  { label: 'Processed Date: Newest', value: 'processed-date-desc' as const },
-  { label: 'Processed Date: Oldest', value: 'processed-date-asc' as const }
+  { label: 'Invoice Date (Newest)', value: 'invoice-date-desc' },
+  { label: 'Invoice Date (Oldest)', value: 'invoice-date-asc' },
+  { label: 'Capture Date (Newest)', value: 'capture-date-desc' },
+  { label: 'Capture Date (Oldest)', value: 'capture-date-asc' },
+  { label: 'Processed Date (Newest)', value: 'processed-date-desc' },
+  { label: 'Processed Date (Oldest)', value: 'processed-date-asc' },
 ]
 
-const currentSortLabel = computed(() => 
-  sortOptions.find(opt => opt.value === sortOption.value)?.label || 'Invoice Date: Newest'
-)
-
 const sortedExpenses = computed(() => {
+  if (!expenses.value) return []
   return [...expenses.value].sort((a, b) => {
+
     switch (sortOption.value) {
       case 'invoice-date-asc':
         return new Date(a.date || a.capturedAt || 0).getTime() - new Date(b.date || b.capturedAt || 0).getTime()
@@ -133,10 +47,64 @@ const sortedExpenses = computed(() => {
   })
 })
 
+// Selection State
+const selectedId = ref<string | null>(null)
+const selectedExpense = computed(() => 
+  expenses.value?.find(e => e.id === selectedId.value) || null
+)
+const isDetailOpen = computed(() => !!selectedId.value)
+
+const checkedIds = ref<Set<string>>(new Set())
+const lastCheckedId = ref<string | null>(null)
+
+const isSelectionMode = computed(() => checkedIds.value.size > 0)
+const isAllSelected = computed(() => 
+  (expenses.value?.length || 0) > 0 && checkedIds.value.size === (expenses.value?.length || 0)
+)
+const isIndeterminate = computed(() => 
+  checkedIds.value.size > 0 && checkedIds.value.size < (expenses.value?.length || 0)
+)
+
+function toggleCheck(id: string, event?: MouseEvent) {
+  const newChecked = new Set(checkedIds.value)
+  
+  if (event?.shiftKey && lastCheckedId.value && expenses.value) {
+    const allIds = (sortedExpenses.value as Expense[]).map(e => e.id)
+    const start = allIds.indexOf(lastCheckedId.value)
+    const end = allIds.indexOf(id)
+    const range = allIds.slice(Math.min(start, end), Math.max(start, end) + 1)
+    
+    const shouldAdd = !newChecked.has(id)
+    range.forEach(rangeId => {
+      if (shouldAdd) newChecked.add(rangeId)
+      else newChecked.delete(rangeId)
+    })
+  } else {
+    if (newChecked.has(id)) newChecked.delete(id)
+    else newChecked.add(id)
+  }
+  
+  checkedIds.value = newChecked
+  lastCheckedId.value = id
+}
+
+function toggleAll() {
+  if (isAllSelected.value) {
+    checkedIds.value = new Set()
+  } else {
+    checkedIds.value = new Set(expenses.value?.map(e => e.id) || [])
+  }
+}
+
+function clearSelection() {
+  checkedIds.value = new Set()
+  lastCheckedId.value = null
+}
+
 // Processing Tracking
 const pendingUploads = ref(0)
 const processingCount = computed(() => 
-  pendingUploads.value + expenses.value.filter(e => e.status === 'processing' || e.status === 'pending').length
+  pendingUploads.value + (expenses.value?.filter(e => e.status === 'processing' || e.status === 'pending').length || 0)
 )
 
 // Actions
@@ -152,13 +120,16 @@ async function handleCaptured(data: { image: string, capturedAt: string, imageHa
   const { image, capturedAt, imageHash } = data
   pendingUploads.value++
   try {
-    const newExpense = await uploadReceipt(image, capturedAt, imageHash)
+    const newExpense = await $fetch<Expense>('/api/expenses', {
+      method: 'POST',
+      body: { image, capturedAt, imageHash }
+    })
     // Only select if it's the only one (avoids jumping around during bulk upload)
     if (pendingUploads.value === 1) {
       selectExpense(newExpense)
     }
   } catch (err) {
-    // Error handled in composable
+    toast.add({ title: 'Upload failed', color: 'error' })
   } finally {
     pendingUploads.value--
   }
@@ -182,7 +153,6 @@ async function bulkDelete() {
   if (ids.length === 0) return
   
   try {
-    isLoading.value = true
     await Promise.all(ids.map(id => deleteExpense(id)))
     toast.add({ title: `Deleted ${ids.length} expenses`, color: 'success' })
     clearSelection()
@@ -191,8 +161,6 @@ async function bulkDelete() {
     }
   } catch (err) {
     toast.add({ title: 'Bulk delete failed', color: 'error' })
-    } finally {
-    isLoading.value = false
   }
 }
 
@@ -201,22 +169,18 @@ async function bulkReprocess() {
   if (ids.length === 0) return
   
   try {
-    isLoading.value = true
-    await Promise.all(ids.map(id => processExpense(id)))
+    await Promise.all(ids.map(id => $fetch(`/api/expenses/${id}/process`, { method: 'POST' })))
     toast.add({ title: `Reprocessed ${ids.length} expenses`, color: 'success' })
     clearSelection()
   } catch (err) {
     toast.add({ title: 'Bulk reprocessing failed', color: 'error' })
-  } finally {
-    isLoading.value = false
   }
 }
 
 async function handleReprocess() {
-
   if (!selectedId.value) return
   try {
-    const updated = await processExpense(selectedId.value)
+    const updated = await $fetch<Expense>(`/api/expenses/${selectedId.value}/process`, { method: 'POST' })
     if (updated) {
       toast.add({
         title: 'Reprocessing complete',
@@ -233,12 +197,8 @@ async function handleReprocess() {
   }
 }
 
-// Helpers
-const CURRENT_SCHEMA_VERSION = 3
-
-
 function isDuplicate(expense: Expense) {
-  if (!expense.receiptHash) return false
+  if (!expense.receiptHash || !expenses.value) return false
   return expenses.value.some(e => e.id !== expense.id && e.receiptHash === expense.receiptHash)
 }
 </script>
@@ -257,7 +217,7 @@ function isDuplicate(expense: Expense) {
     >
       <!-- Header -->
       <ExpensesExpenseHeader
-        :count="expenses.length"
+        :count="expenses?.length || 0"
         :processing-count="processingCount"
         :sort-option="sortOption"
         :sort-options="sortOptions"
@@ -273,13 +233,13 @@ function isDuplicate(expense: Expense) {
       </ExpensesExpenseHeader>
 
       <!-- Loading State -->
-      <div v-if="isLoading && expenses.length === 0" class="p-8 text-center">
+      <div v-if="isLoading && (expenses?.length || 0) === 0" class="p-8 text-center">
         <UIcon name="i-heroicons-arrow-path" class="text-2xl animate-spin text-gray-400 mx-auto mb-2" />
         <p class="text-sm text-gray-500">Loading expenses...</p>
       </div>
 
       <!-- Empty State -->
-      <div v-else-if="expenses.length === 0" class="flex-1 flex flex-col items-center justify-center p-8 text-center text-gray-500">
+      <div v-else-if="(expenses?.length || 0) === 0" class="flex-1 flex flex-col items-center justify-center p-8 text-center text-gray-500">
         <div class="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
           <UIcon name="i-heroicons-receipt-refund" class="text-2xl text-gray-400" />
         </div>
@@ -332,7 +292,7 @@ function isDuplicate(expense: Expense) {
 
     <!-- Empty Detail State (Desktop only) -->
     <div 
-      v-else-if="expenses.length > 0"
+      v-else-if="(expenses?.length || 0) > 0"
       class="hidden md:flex flex-1 items-center justify-center bg-gray-50/50"
     >
       <div class="text-center">

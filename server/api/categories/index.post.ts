@@ -16,5 +16,12 @@ export default defineEventHandler(async (event) => {
   }
 
   await db.insert(categories).values(newCategory)
+
+  // Notify other devices
+  const { user } = await requireUserSession(event)
+  if (user?.email) {
+    await broadcastCategoriesChanged(user.email)
+  }
+
   return newCategory
 })

@@ -1,30 +1,41 @@
 import { db } from 'hub:db'
 import { inboxItems, inboxAttachments } from '~~/server/db/schema'
-import { desc, eq } from 'drizzle-orm'
+import { eq, desc, inArray } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
+  const { user } = await requireUserSession(event)
+  if (!user?.email) {
+    throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
+  }
+
   try {
     const items = await db.select()
       .from(inboxItems)
+      .where(eq(inboxItems.verified, true)) // or adjust based on your logic
       .orderBy(desc(inboxItems.receivedAt))
-      .all()
 
-    // Enrich with attachments
-    const enrichedItems = await Promise.all(items.map(async (item) => {
-      const attachments = await db.select()
-        .from(inboxAttachments)
-        .where(eq(inboxAttachments.inboxItemId, item.id))
-        .all()
-      
-      return {
-        ...item,
-        attachments
-      }
+    if (items.length === 0) return []
+
+    const itemIds = items.map(i => i.id)
+    const allAttachments = await db.select()
+      .from(inboxAttachments)
+      .where(inArray(inboxAttachments.inboxItemId, itemIds))
+
+    // Group attachments by inboxItemId
+    const attachmentsByItemId = new Map<string, any[]>()
+    for (const att of allAttachments) {
+      const existing = attachmentsByItemId.get(att.inboxItemId) || []
+      existing.push(att)
+      attachmentsByItemId.set(att.inboxItemId, existing)
+    }
+
+    return items.map(item => ({
+      ...item,
+      attachments: attachmentsByItemId.get(item.id) || []
     }))
-
-    return enrichedItems
-  } catch (err) {
-    console.error('Failed to fetch inbox items:', err)
-    throw createError({ statusCode: 500, statusMessage: 'Internal Server Error' })
+  } catch (err: unknown) {
+    console.error('Fetch inbox error:', err)
+    throw createError({ statusCode: 500, statusMessage: 'Failed to fetch inbox' })
   }
 })
+

@@ -1,54 +1,45 @@
 <script setup lang="ts">
 import { useTimeAgo } from '@vueuse/core'
+import { useQueryClient } from '@tanstack/vue-query'
+import { useRealtimeSync } from '~/composables/useRealtimeSync'
 
+const queryClient = useQueryClient()
 const store = useSessionStore()
-const { sync } = store
+const { isConnected } = useRealtimeSync()
+
+const isFetching = computed(() => queryClient.isFetching() > 0 || store.isLoading)
+const isMutating = computed(() => queryClient.isMutating() > 0 || store.isSyncing)
 
 const statusConfig = computed(() => {
-  // Pinia store properties are unwrapped when accessed via the store instance
-  const s = store.sync.status
-  switch (s) {
-    case 'syncing':
-      return { 
-        icon: 'i-heroicons-arrow-path-20-solid', 
-        color: 'text-primary-500', 
-        class: 'animate-spin',
-        label: 'Syncing...'
-      }
-    case 'pending':
-      return { 
-        icon: 'i-heroicons-cloud-arrow-up-20-solid', 
-        color: 'text-amber-500', 
-        class: '',
-        label: 'Offline (Changes pending)'
-      }
-    case 'offline':
-      return { 
-        icon: 'i-heroicons-cloud-slash-20-solid', 
-        color: 'text-gray-400', 
-        class: '',
-        label: 'Offline'
-      }
-    case 'error':
-      return { 
-        icon: 'i-heroicons-exclamation-circle-20-solid', 
-        color: 'text-red-500', 
-        class: '',
-        label: 'Sync Error'
-      }
-    default: // synced
-      return { 
-        icon: 'i-heroicons-cloud-20-solid', 
-        color: 'text-gray-400', 
-        class: '',
-        label: 'Synced'
-      }
+  if (isMutating.value || isFetching.value) {
+    return { 
+      icon: 'i-heroicons-arrow-path-20-solid', 
+      color: 'text-primary-500', 
+      class: 'animate-spin',
+      label: 'Syncing...'
+    }
+  }
+  
+  if (!isConnected.value) {
+    return { 
+      icon: 'i-heroicons-cloud-slash-20-solid', 
+      color: 'text-gray-400', 
+      class: '',
+      label: 'Disconnected'
+    }
+  }
+
+  return { 
+    icon: 'i-heroicons-cloud-20-solid', 
+    color: 'text-gray-400', 
+    class: '',
+    label: 'Synced'
   }
 })
 
-const timeAgo = useTimeAgo(computed(() => store.sync.lastSyncedAt ? new Date(store.sync.lastSyncedAt) : new Date()))
-const { logs } = useLogger()
-const hasUnreadErrors = computed(() => logs.value.some(l => l.level === 'error' && new Date(l.createdAt).getTime() > Date.now() - 3600000))
+function forceRefresh() {
+  queryClient.invalidateQueries()
+}
 </script>
 
 <template>
@@ -62,7 +53,6 @@ const hasUnreadErrors = computed(() => logs.value.some(l => l.level === 'error' 
           square
           size="sm"
         />
-        <span v-if="hasUnreadErrors" class="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full ring-2 ring-white"></span>
       </div>
 
       <template #content>
@@ -72,20 +62,12 @@ const hasUnreadErrors = computed(() => logs.value.some(l => l.level === 'error' 
           {{ statusConfig.label }}
         </p>
         
-        <p v-if="store.sync.error" class="text-red-500 mb-2 italic">
-          {{ store.sync.error }}
-        </p>
-        
-        <p class="text-gray-500">
-          Last synced: {{ store.sync.lastSyncedAt ? timeAgo : 'Never' }}
-        </p>
-        
           <UButton 
-            v-if="store.sync.status === 'error' || store.sync.status === 'offline' || store.sync.status === 'pending'"
             size="xs" 
             variant="soft" 
             class="mt-2 w-full"
-            @click="store.sync.pull()"
+            :loading="isFetching"
+            @click="forceRefresh"
           >
             Sync Now
           </UButton>

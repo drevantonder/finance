@@ -29,6 +29,12 @@ export default defineEventHandler(async (event) => {
     await db.delete(expenses)
       .where(eq(expenses.id, id))
 
+    // Notify other devices
+    const { user } = await requireUserSession(event)
+    if (user?.email) {
+      await broadcastExpensesChanged(user.email)
+    }
+
     return { success: true }
   } catch (err: unknown) {
     console.error('Delete expense error:', err)

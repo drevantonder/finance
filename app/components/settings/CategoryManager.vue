@@ -1,9 +1,18 @@
 <script setup lang="ts">
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed } from 'vue'
 import type { Category } from '~/types'
-import { useCategories } from '~/composables/useCategories'
+import { useCategoriesQuery, useCategoryMutation, useDeleteCategoryMutation } from '~/composables/queries'
 
-const { categories, isLoading, fetchCategories, colorPalette } = useCategories()
+const { data: categories = [], isLoading } = useCategoriesQuery()
+const { mutateAsync: createCategory } = useCategoryMutation()
+const { mutateAsync: updateCategoryMutation } = useCategoryMutation()
+const { mutateAsync: deleteCategoryMutation } = useDeleteCategoryMutation()
+
+const colorPalette = [
+  '#f87171', '#fb923c', '#fbbf24', '#facc15', '#a3e635', '#4ade80', '#34d399', '#2dd4bf', 
+  '#22d3ee', '#38bdf8', '#60a5fa', '#818cf8', '#a78bfa', '#c084fc', '#e879f9', '#f472b6', '#fb7185'
+]
+
 const toast = useToast()
 
 // Create State
@@ -17,8 +26,6 @@ const isDeleteModalOpen = computed({
   set: (val) => { if (!val) deleteTarget.value = null }
 })
 
-onMounted(fetchCategories)
-
 function startCreate() {
   newCategory.value = { name: '', description: '', color: colorPalette[Math.floor(Math.random() * colorPalette.length)] }
   isCreateModalOpen.value = true
@@ -28,12 +35,7 @@ async function handleCreate() {
   if (!newCategory.value.name.trim()) return
   
   try {
-    const newCat = await $fetch('/api/categories', {
-      method: 'POST',
-      body: newCategory.value
-    })
-    categories.value.push(newCat as unknown as Category)
-    categories.value.sort((a, b) => a.name.localeCompare(b.name))
+    await createCategory(newCategory.value)
     isCreateModalOpen.value = false
   } catch (err) {
     toast.add({ title: 'Error adding category', color: 'error' })
@@ -42,10 +44,7 @@ async function handleCreate() {
 
 async function updateCategory(cat: Category) {
   try {
-    await $fetch(`/api/categories/${cat.id}`, {
-      method: 'PUT',
-      body: cat
-    })
+    await updateCategoryMutation(cat)
   } catch (err) {
     toast.add({ title: 'Error updating category', color: 'error' })
   }
@@ -55,8 +54,7 @@ async function confirmDelete() {
   if (!deleteTarget.value) return
   
   try {
-    await $fetch(`/api/categories/${deleteTarget.value.id}`, { method: 'DELETE' })
-    categories.value = categories.value.filter(c => c.id !== deleteTarget.value!.id)
+    await deleteCategoryMutation(deleteTarget.value.id)
     deleteTarget.value = null
   } catch (err) {
     toast.add({ title: 'Error deleting category', color: 'error' })
@@ -125,7 +123,7 @@ async function confirmDelete() {
         No categories defined.
       </div>
 
-      <div v-else v-for="cat in categories" :key="cat.id" class="p-4 group flex items-start gap-4">
+      <div v-else v-for="cat in (categories || [])" :key="cat.id" class="p-4 group flex items-start gap-4">
         <UPopover>
           <button 
             type="button"

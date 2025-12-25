@@ -2,8 +2,7 @@
 import { computed } from 'vue'
 import type { Expense } from '~/types'
 import { formatCurrency } from '~/composables/useFormatter'
-import { useCategories } from '~/composables/useCategories'
-import { useExpenses } from '~/composables/useExpenses'
+import { useCategoriesQuery } from '~/composables/queries'
 
 const props = defineProps<{
   expense: Expense
@@ -18,8 +17,8 @@ const emit = defineEmits<{
   (e: 'toggle', event: MouseEvent): void
 }>()
 
-const { getCategoryColor } = useCategories()
-const { isProcessing: globalProcessing } = useExpenses()
+const { data: categoriesData = [] } = useCategoriesQuery()
+const getCategoryColor = (name: string) => categoriesData.value.find(c => c.name === name)?.color || '#9ca3af'
 
 
 // Categories Logic
@@ -43,8 +42,7 @@ const formattedDate = computed(() => {
 
 // Status Logic
 const isProcessing = computed(() => 
-  props.expense.status === 'processing' || 
-  !!globalProcessing.value[props.expense.id]
+  props.expense.status === 'processing' || props.expense.status === 'pending'
 )
 const isError = computed(() => props.expense.status === 'error' && !isProcessing.value)
 const isOffline = computed(() => props.expense.status === 'pending' && !isProcessing.value)

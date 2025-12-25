@@ -2,7 +2,7 @@
 import { ref, computed, watch, onMounted } from 'vue'
 import type { ExpenseItem } from '~/types'
 import { formatCurrency } from '~/composables/useFormatter'
-import { useCategories } from '~/composables/useCategories'
+import { useCategoriesQuery } from '~/composables/queries'
 
 const props = defineProps<{
   item: ExpenseItem
@@ -13,8 +13,8 @@ const emit = defineEmits<{
   (e: 'delete'): void
 }>()
 
-const { getCategoryColor, fetchCategories } = useCategories()
-onMounted(fetchCategories)
+const { data: categoriesData = [] } = useCategoriesQuery()
+const getCategoryColor = (name: string) => categoriesData.value.find(c => c.name === name)?.color || '#9ca3af'
 
 const isEditing = ref(false)
 const localItem = ref<ExpenseItem>({ ...props.item })

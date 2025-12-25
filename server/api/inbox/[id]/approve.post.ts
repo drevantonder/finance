@@ -13,5 +13,14 @@ export default defineEventHandler(async (event) => {
     .where(eq(inboxItems.id, id))
 
   // 2. Trigger processing immediately
-  return await processInboxItem(id)
+  const result = await processInboxItem(id)
+
+  // Notify other devices
+  const { user } = await requireUserSession(event)
+  if (user?.email) {
+    await broadcastInboxChanged(user.email)
+    await broadcastExpensesChanged(user.email)
+  }
+
+  return result
 })

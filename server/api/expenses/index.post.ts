@@ -1,6 +1,6 @@
 import { db } from 'hub:db'
 import { blob } from 'hub:blob'
-import { expenses } from '~~/server/db/schema'
+import { expenses, logs } from '~~/server/db/schema'
 import { eq } from 'drizzle-orm'
 import { extractReceiptData } from '~~/server/utils/gemini'
 import { generateReceiptHash } from '~~/server/utils/hash'
@@ -107,6 +107,13 @@ export default defineEventHandler(async (event) => {
 
     // Fetch the updated expense to return
     const result = await db.select().from(expenses).where(eq(expenses.id, id)).limit(1)
+    
+    // Notify other devices
+    const { user } = await requireUserSession(event)
+    if (user?.email) {
+      await broadcastExpensesChanged(user.email)
+    }
+
     return result[0]
   } catch (err: unknown) {
     console.error('Create expense error:', err)

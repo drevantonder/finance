@@ -2,7 +2,6 @@
 import { ref, computed, watch } from 'vue'
 import ExpenseLineItem from '~/components/expenses/ExpenseLineItem.vue'
 import type { Expense, ExpenseItem } from '~/types'
-import { useExpenses } from '~/composables/useExpenses'
 import { formatCurrency } from '~/composables/useFormatter'
 
 const props = defineProps<{
@@ -16,9 +15,12 @@ const emit = defineEmits<{
   (e: 'close'): void
 }>()
 
-const { getImageUrl, isLoading, isProcessing } = useExpenses()
+const getImageUrl = (id: string) => `/api/expenses/${id}/image`
+const isReprocessing = ref(false)
 
-const isReprocessing = computed(() => isProcessing.value[props.expense.id])
+// We rely on the parent or the query cache for loading state, 
+// but for the specific "AI is analyzing" overlay, we use the expense status
+const isAIProcessing = computed(() => props.expense.status === 'processing' || props.expense.status === 'pending')
 
 // Form State
 const form = ref({
@@ -167,7 +169,7 @@ function handleImageLeave() {
           icon="i-heroicons-arrow-path"
           size="sm"
           :loading="isReprocessing"
-          :disabled="isReprocessing || isLoading"
+          :disabled="isReprocessing || isAIProcessing"
           @click="emit('reprocess')"
         >
           Reprocess
@@ -178,7 +180,7 @@ function handleImageLeave() {
           variant="ghost"
           icon="i-heroicons-trash"
           size="sm"
-          :disabled="isLoading"
+          :disabled="isAIProcessing"
           @click="emit('delete')"
         >
           Delete
@@ -189,7 +191,7 @@ function handleImageLeave() {
     <!-- Content Split -->
     <div class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
       <!-- Loading Overlay -->
-      <div v-if="isLoading" class="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-50 flex items-center justify-center">
+      <div v-if="isAIProcessing" class="absolute inset-0 bg-white/50 backdrop-blur-[1px] z-50 flex items-center justify-center">
         <div class="bg-white p-4 rounded-xl shadow-xl border border-gray-100 flex items-center gap-3">
           <UIcon name="i-heroicons-arrow-path" class="w-5 h-5 animate-spin text-primary-500" />
           <span class="text-sm font-medium text-gray-700">AI is analyzing receipt...</span>

@@ -26,6 +26,12 @@ export default defineEventHandler(async (event) => {
       .set(updateData)
       .where(eq(expenses.id, id))
 
+    // Notify other devices
+    const { user } = await requireUserSession(event)
+    if (user?.email) {
+      await broadcastExpensesChanged(user.email)
+    }
+
     const result = await db.select().from(expenses).where(eq(expenses.id, id)).limit(1)
     return result[0]
   } catch (err: unknown) {
