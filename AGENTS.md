@@ -13,31 +13,134 @@ pnpm test             # Run tests in watch mode
 pnpm test:run         # Run tests once
 pnpm vitest run test/unit/tax.test.ts  # Single test file
 pnpm nuxt typecheck   # TypeScript checking
+
+# Database & Storage
+pnpm db:pull          # Pull production D1 database locally
+pnpm db:push          # Push local database to production
+pnpm blob:pull        # Pull R2 blobs locally
+pnpm blob:push        # Push local blobs to R2
 ```
 
 ## Infrastructure
 - **Database**: 
-  - **Dev**: Local SQLite (stored in `.data/db/sqlite.db`). Access via `sqlite3` or Drizzle.
+  - **Dev**: Local SQLite (`.data/db/sqlite.db`). Access via `sqlite3` or Drizzle.
   - **Prod**: Cloudflare D1. Access via `npx nuxthub database query`.
-- **Storage**: Cloudflare R2 for images/PDFs.
+- **Storage**: Cloudflare R2 for images/PDFs (`hub:blob`).
+- **Auth**: Google OAuth via `nuxt-auth-utils`.
+- **AI**: Google Gemini for receipt processing.
+
+## Architecture
+
+### Data Layer Philosophy
+This app uses **two patterns** for data management:
+
+| Data Type | Pattern | Why |
+|-----------|---------|-----|
+| **Documents** (Session/Config) | Pinia store + `watchDebounced` + `$fetch` | Complex nested object edited constantly. Simple ref is more reliable. |
+| **Collections** (Expenses, Inbox, Categories) | TanStack Query + mutations | Entity lists benefit from caching, optimistic updates, deduplication. |
+
+**Key principle**: Same mental model (load → display → mutate → sync), different implementations based on data shape.
+
+### Real-time Sync
+- **SSE** (`/api/events`) broadcasts changes to all connected devices
+- Session changes → `store.load()` refetch
+- Collection changes → `queryClient.invalidateQueries()`
+
+### Directory Structure
+```
+app/
+├── components/       # Vue components (PascalCase)
+├── composables/      # Shared logic (useFoo.ts)
+│   └── queries/      # TanStack Query composables
+├── pages/            # File-based routing
+├── layouts/          # Page layouts
+├── plugins/          # Nuxt plugins (vue-query, chartjs)
+└── types/            # TypeScript interfaces
+server/
+├── api/              # API routes
+├── db/               # Drizzle schema & migrations
+├── middleware/       # Auth, rate limiting
+└── utils/            # Server utilities (gemini, broadcast)
+```
 
 ## Code Style
-- **Stack**: Nuxt 4, Vue 3, Pinia, Nuxt UI v4, Tailwind CSS 4, TypeScript strict
-- **Nuxt UI v4 Gotchas**: 
-  - `UDropdown` is now `UDropdownMenu`.
-  - `UDropdownMenu` items are a flat array `[{ label: '...', click: ... }]` (not nested arrays).
-  - Colors: Use `neutral`, `success`, `error`, `info`, `warning` (v3 colors like `gray`, `red`, `blue` are deprecated).
-- **Structure**: Frontend in `~/app` (composables, components, pages), `types/index.ts` for interfaces
-- **Naming**: PascalCase components, camelCase composables (`useFoo`), UPPER_CASE constants
-- **Types**: Strong typing with `defineProps<T>()`, never `any`, percentages as 0-1 internally
-- **Imports**: Use `~/` alias, explicit imports from composables (not auto-imported)
-- **Formatting**: Currency as `$123k`/`$45M`, percentages as `45%` in UI
-- **Errors**: `Math.max(0, val)` for negatives, `isFinite()` for division guards
-- **Patterns**: Iterative solvers for circular deps (e.g., house price ↔ stamp duty)
 
-## Edge Compatibility
-- **Crypto**: Use Web Crypto API (`crypto.subtle`) instead of `node:crypto` (not supported in Cloudflare Workers).
-- **Timeouts**: Avoid long-running processes; Cloudflare Workers have strict wall-clock limits (disable AI "thinking" modes).
+### Stack
+Nuxt 4, Vue 3, Pinia, TanStack Query, Nuxt UI v4, Tailwind CSS 4, TypeScript strict
+
+### Nuxt UI v4 Gotchas
+- `UDropdown` → `UDropdownMenu`
+- Items are flat arrays: `[{ label: '...', click: ... }]` (not nested)
+- Colors: `neutral`, `success`, `error`, `info`, `warning` (NOT `gray`, `red`, `blue`)
+- Icons: `i-heroicons-{name}` (e.g., `i-heroicons-cloud`, `i-heroicons-arrow-path`)
+
+### Naming Conventions
+| Type | Convention | Example |
+|------|------------|---------|
+| Components | PascalCase | `ExpenseEditor.vue` |
+| Composables | camelCase with `use` prefix | `useSessionStore.ts` |
+| Constants | UPPER_SNAKE_CASE | `DEFAULT_CONFIG` |
+| Types/Interfaces | PascalCase | `SessionConfig` |
+| API routes | kebab-case | `[id].delete.ts` |
+
+### TypeScript
+- Strong typing with `defineProps<T>()`, never `any` (use `unknown` + type guards)
+- Percentages stored as decimals internally (0.05 = 5%), displayed as `5%`
+- Currency displayed as `$123k` / `$45M` via `formatCurrency()`
+
+### Imports
+- Use `~/` alias for app imports
+- Explicit imports from `~/composables/queries` (barrel exports)
+- Server imports: `~~/server/db/schema`, `hub:db`, `hub:blob`
+
+### Error Handling
+- `Math.max(0, val)` to prevent negative values
+- `isFinite()` guard for division operations
+- Server errors: `throw createError({ statusCode: 4xx, statusMessage: '...' })`
+
+### Patterns
+- Iterative solvers for circular dependencies (e.g., house price ↔ stamp duty)
+- Optimistic UI: Update local state immediately, rollback on error
+- Debounced auto-save: 2 seconds for session config
+
+## Edge Compatibility (Cloudflare Workers)
+- **Crypto**: Use `crypto.subtle` (Web Crypto API), NOT `node:crypto`
+- **Timeouts**: Avoid long-running processes; Workers have strict wall-clock limits
+
+## Testing
+```bash
+pnpm vitest run test/unit/tax.test.ts    # Single file
+pnpm vitest run --grep "HECS"            # By pattern
+pnpm test                                 # Watch mode
+```
+
+Tests are in `test/unit/`. Focus areas: tax calculations, HECS thresholds, loan math.
 
 ## Domain Context
-See `docs/DOMAIN.md` for business rules, glossary, calculation logic, and gotchas.
+See `docs/DOMAIN.md` for:
+- Business rules (TMN, MFB, DTI calculations)
+- Australian lending context
+- Tax rates and HECS thresholds
+- Common calculation bugs to avoid
+
+## Quick Reference
+
+### Session Store (Document Pattern)
+```typescript
+const store = useSessionStore()
+await store.load()                    // Fetch from server
+store.config.loan.interestRate = 0.05 // Direct mutation (auto-saves)
+```
+
+### TanStack Query (Collection Pattern)
+```typescript
+const { data: expenses } = useExpensesQuery()
+const { mutate } = useExpenseMutation()
+mutate({ merchant: 'Coles', total: 45.50 })  // Optimistic update
+```
+
+### SSE Broadcast (Server)
+```typescript
+import { broadcastExpensesChanged } from '~~/server/utils/broadcast'
+broadcastExpensesChanged(user.email)  // Notify other devices
+```
