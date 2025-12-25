@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useInboxQuery, useProcessInboxMutation, useApproveInboxMutation } from '~/composables/queries'
 
-const { data: items = [], status, refetch } = useInboxQuery()
+const { data: items = [], status, refresh } = useInboxQuery()
 const pending = computed(() => status.value === 'pending')
 const { mutateAsync: processItemMutation } = useProcessInboxMutation()
 const { mutateAsync: approveItemMutation } = useApproveInboxMutation()

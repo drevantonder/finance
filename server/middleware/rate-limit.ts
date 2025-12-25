@@ -13,7 +13,7 @@ export default defineEventHandler((event) => {
   const ip = getHeader(event, 'x-forwarded-for') || 'unknown'
   const now = Date.now()
   const windowMs = 60 * 1000 // 1 minute
-  const maxRequests = 15 // General limit for mutations
+  const maxRequests = 60 // Increased from 15 to allow frequent config edits
 
   // Stricter limit for AI processing
   const isAiProcess = event.path.includes('/process') || (event.path === '/api/expenses' && event.method === 'POST')

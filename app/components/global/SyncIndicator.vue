@@ -13,7 +13,7 @@ const isMutating = computed(() => queryClient.isMutating() > 0 || store.isSyncin
 const statusConfig = computed(() => {
   if (isMutating.value || isFetching.value) {
     return { 
-      icon: 'i-heroicons-arrow-path-20-solid', 
+      icon: 'i-heroicons-arrow-path', 
       color: 'text-primary-500', 
       class: 'animate-spin',
       label: 'Syncing...'
@@ -22,7 +22,7 @@ const statusConfig = computed(() => {
   
   if (!isConnected.value) {
     return { 
-      icon: 'i-heroicons-cloud-slash-20-solid', 
+      icon: 'i-heroicons-no-symbol', 
       color: 'text-gray-400', 
       class: '',
       label: 'Disconnected'
@@ -30,7 +30,7 @@ const statusConfig = computed(() => {
   }
 
   return { 
-    icon: 'i-heroicons-cloud-20-solid', 
+    icon: 'i-heroicons-cloud', 
     color: 'text-gray-400', 
     class: '',
     label: 'Synced'
