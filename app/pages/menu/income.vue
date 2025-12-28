@@ -82,7 +82,7 @@ const impactLabel = computed(() => {
               </span>
             </div>
             
-            <URange v-model="tmnBoost" :min="0" :max="2000" :step="100" color="primary" />
+            <USlider v-model="tmnBoost" :min="0" :max="2000" :step="100" color="primary" />
             
             <div class="flex items-center gap-2">
               <UIcon 
