@@ -13,6 +13,12 @@ const successCount = ref(0)
 const lastCapture = ref<Expense | null>(null)
 const captureComponent = ref<any>(null)
 
+onMounted(() => {
+  nextTick(() => {
+    captureComponent.value?.triggerCamera()
+  })
+})
+
 async function handleCaptured(data: { image: string, capturedAt: string, imageHash: string }) {
   const { image, capturedAt, imageHash } = data
   pendingUploads.value++
@@ -47,6 +53,9 @@ function done() {
 function scanAnother() {
   successCount.value = 0
   lastCapture.value = null
+  nextTick(() => {
+    captureComponent.value?.triggerCamera()
+  })
 }
 </script>
 
@@ -84,7 +93,6 @@ function scanAnother() {
         </div>
         <div class="space-y-1">
           <h3 class="text-xl font-bold text-white">Uploading...</h3>
-          <p class="text-white/40 text-sm">Processing with AI</p>
         </div>
       </div>
 
@@ -138,10 +146,6 @@ function scanAnother() {
             <p class="text-white/40 font-medium">Photos or PDFs</p>
           </div>
         </div>
-
-        <p class="text-white/20 text-xs uppercase tracking-[0.2em] font-bold">
-          AI Receipt Processing
-        </p>
         
         <div class="hidden">
           <ReceiptCapture ref="captureComponent" @captured="handleCaptured" />

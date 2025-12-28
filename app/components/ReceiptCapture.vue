@@ -156,41 +156,18 @@ async function handleFileChange(event: Event) {
   // Clear input so same files can be selected again
   if (fileInput.value) fileInput.value.value = ''
 }
+
+defineExpose({ triggerCamera })
 </script>
 
 <template>
-  <div class="flex flex-col items-end gap-2">
-    <input
-      ref="fileInput"
-      type="file"
-      accept="image/*,application/pdf"
-      multiple
-      class="hidden"
-      @change="handleFileChange"
-    />
-    
-    <UButton
-      icon="i-heroicons-plus"
-      size="sm"
-      color="primary"
-      :loading="isLoading || isProcessing"
-      label="Add Receipts"
-      @click="triggerCamera"
-    />
-
-    <div v-if="isProcessing && uploadProgress.total > 0" class="w-48 space-y-1.5">
-      <div class="flex justify-between text-xs text-gray-600 font-medium">
-        <span>Processing...</span>
-        <span>{{ uploadProgress.current }} / {{ uploadProgress.total }}</span>
-      </div>
-      <div class="w-full bg-gray-200 rounded-full h-1.5 overflow-hidden">
-        <div 
-          class="bg-primary-600 h-1.5 rounded-full transition-all duration-300 ease-out"
-          :style="{ width: `${(uploadProgress.current / uploadProgress.total) * 100}%` }"
-        ></div>
-      </div>
-    </div>
-
-    <p v-if="errorMessage" class="text-red-500 text-xs max-w-xs text-right">{{ errorMessage }}</p>
-  </div>
+  <input
+    ref="fileInput"
+    type="file"
+    accept="image/*,application/pdf"
+    capture="environment"
+    multiple
+    class="hidden"
+    @change="handleFileChange"
+  />
 </template>
