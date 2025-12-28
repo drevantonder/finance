@@ -3,7 +3,9 @@ import { ref, computed } from 'vue'
 import type { Category } from '~/types'
 import { useCategoriesQuery, useCategoryMutation, useDeleteCategoryMutation } from '~/composables/queries'
 
-const { data: categories = [], isLoading } = useCategoriesQuery()
+const { data, isLoading } = useCategoriesQuery()
+const categories = computed(() => data.value ?? [])
+
 const { mutateAsync: createCategory } = useCategoryMutation()
 const { mutateAsync: updateCategoryMutation } = useCategoryMutation()
 const { mutateAsync: deleteCategoryMutation } = useDeleteCategoryMutation()

@@ -1,22 +1,6 @@
 <script setup lang="ts">
-const strategyItems = [
-  { label: 'Income Strategy', to: '/menu/income', icon: 'i-heroicons-user-group', color: 'bg-blue-500', description: 'TMN, Salary, Household', disabled: false },
-  { label: 'Assets', to: '/menu/assets', icon: 'i-heroicons-banknotes', color: 'bg-emerald-500', description: 'Cash, Stocks, FHSS', disabled: false },
-  { label: 'Budget', to: '/menu/budget', icon: 'i-heroicons-chart-pie', color: 'bg-orange-500', description: 'Savings goals, limits', disabled: false },
-  { label: 'Bank Rules', to: '/menu/bank', icon: 'i-heroicons-building-library', color: 'bg-indigo-500', description: 'DTI, Serviceability', disabled: false },
-  { label: 'Purchase Costs', to: '/menu/costs', icon: 'i-heroicons-calculator', color: 'bg-violet-500', description: 'Stamp duty, Legal fees', disabled: false }
-]
-
-const systemItems = [
-  { label: 'System Health', to: '/menu/system', icon: 'i-heroicons-heart', color: 'bg-rose-500', description: 'Inbox debug, Logs', disabled: false },
-  { label: 'Claims', to: '/menu/claims', icon: 'i-heroicons-document-check', color: 'bg-indigo-500', description: 'MFB tracking (Coming Soon)', disabled: true },
-  { label: 'Settings', to: '/menu/settings', icon: 'i-heroicons-cog-6-tooth', color: 'bg-gray-500', description: 'Categories, Data', disabled: false }
-]
-
-const groups = [
-  { label: 'Money & Strategy', items: strategyItems },
-  { label: 'System', items: systemItems }
-]
+const { navGroups } = useNavigation()
+const groups = navGroups
 </script>
 
 <template>

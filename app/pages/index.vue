@@ -5,54 +5,16 @@ import { useExpensesQuery } from '~/composables/queries'
 import { useProjectionResults } from '~/composables/useProjectionResults'
 import { useLogger } from '~/composables/useLogger'
 import { formatCurrency } from '~/composables/useFormatter'
+import AssetsChart from '~/components/AssetsChart.vue'
+import BudgetProjectionChart from '~/components/BudgetProjectionChart.vue'
+import FinancialCompositionChart from '~/components/FinancialCompositionChart.vue'
 
 const store = useSessionStore()
 const { data: expenses } = useExpensesQuery()
-const { borrowingResult, targetDateLabel, smartResult } = useProjectionResults()
+const { targetDateLabel, smartResult, chartSeries } = useProjectionResults()
 const { logs } = useLogger()
 
-// 1. Budget Pulse (Fortnightly)
-const budgetFortnight = computed(() => {
-  if (!store.config.budget.budgetItems) return 0
-  return store.config.budget.budgetItems
-    .filter(i => i.category !== 'goal')
-    .reduce((acc, i) => {
-      let amount = i.amount
-      if (i.frequency === 'weekly') amount *= 2
-      else if (i.frequency === 'monthly') amount *= 12 / 26
-      else if (i.frequency === 'yearly') amount /= 26
-      return acc + amount
-    }, 0)
-})
-
-const actualFortnight = computed(() => {
-  if (!expenses.value) return 0
-  const twoWeeksAgo = new Date()
-  twoWeeksAgo.setDate(twoWeeksAgo.getDate() - 14)
-  return expenses.value
-    .filter(e => e.date && new Date(e.date) > twoWeeksAgo)
-    .reduce((acc, e) => acc + (e.total || 0), 0)
-})
-
-const budgetUsage = computed(() => {
-  if (budgetFortnight.value === 0) return 0
-  return (actualFortnight.value / budgetFortnight.value) * 100
-})
-
-const budgetColor = computed(() => {
-  if (budgetUsage.value > 100) return 'error'
-  if (budgetUsage.value > 80) return 'warning'
-  return 'success'
-})
-
-// 2. Goal Progress (North Star)
-const goalProgress = computed(() => {
-  const current = store.projectedDeposit
-  const target = borrowingResult.value?.costs.totalCosts || 1
-  return Math.min(100, Math.round((current / target) * 100))
-})
-
-// 3. Attention Items
+// Attention Items
 const attentionItems = computed(() => {
   const items = []
   
@@ -78,22 +40,12 @@ const attentionItems = computed(() => {
 })
 
 const recentLogs = computed(() => logs.value.slice(0, 5))
-
-const animatedBudgetUsage = ref(0)
-const animatedGoalProgress = ref(0)
-
-onMounted(() => {
-  setTimeout(() => {
-    animatedBudgetUsage.value = budgetUsage.value
-    animatedGoalProgress.value = goalProgress.value
-  }, 100)
-})
 </script>
 
 <template>
   <div class="space-y-6">
     <div class="flex items-center justify-between">
-      <h1 class="text-2xl font-bold">Dash</h1>
+      <h1 class="text-2xl font-bold">Dashboard</h1>
     </div>
 
     <div class="flex flex-wrap gap-3">
@@ -120,86 +72,75 @@ onMounted(() => {
       />
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-      <!-- Budget Pulse -->
+    <!-- Attention Items -->
+    <div v-if="attentionItems.length > 0">
       <UCard>
         <template #header>
-          <div class="flex items-center justify-between">
-            <h3 class="font-semibold">Budget Pulse</h3>
-            <span class="text-sm text-gray-500">Last 14 days</span>
+          <div class="flex items-center gap-2 text-warning-500">
+            <UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5" />
+            <h3 class="font-semibold text-gray-900 dark:text-white">Attention Needed</h3>
           </div>
         </template>
-        <div class="space-y-4">
-          <div class="flex justify-between items-end">
-            <div>
-              <div class="text-2xl font-bold" :class="`text-${budgetColor}-500`">
-                {{ formatCurrency(actualFortnight) }}
-              </div>
-              <div class="text-xs text-gray-500">of {{ formatCurrency(budgetFortnight) }}</div>
-            </div>
-            <div class="text-right">
-              <div class="text-lg font-semibold">{{ Math.round(budgetUsage) }}%</div>
-            </div>
-          </div>
-          <UProgress :value="animatedBudgetUsage" :color="budgetColor" size="sm" class="transition-all duration-1000" />
-        </div>
-      </UCard>
-
-      <!-- Goal Progress -->
-      <UCard>
-        <template #header>
-          <div class="flex items-center justify-between">
-            <h3 class="font-semibold">Goal Progress</h3>
-            <NuxtLink to="/goal" class="text-xs text-primary-500 hover:underline">View Strategy</NuxtLink>
-          </div>
-        </template>
-        <div class="space-y-4">
-          <div class="flex justify-between items-end">
-            <div>
-              <div class="text-2xl font-bold text-primary-500">{{ goalProgress }}%</div>
-              <div class="text-xs text-gray-500">Target: {{ targetDateLabel }}</div>
-            </div>
-            <div class="text-right">
-              <div class="text-xs text-gray-500">Deposit: {{ formatCurrency(store.projectedDeposit) }}</div>
-            </div>
-          </div>
-          <UProgress :value="animatedGoalProgress" color="primary" size="sm" class="transition-all duration-1000" />
-        </div>
-      </UCard>
-
-      <!-- Attention -->
-      <UCard>
-        <template #header>
-          <h3 class="font-semibold">Attention</h3>
-        </template>
-        <div class="space-y-3">
-          <div v-if="attentionItems.length === 0" class="text-center py-6 bg-success-50 dark:bg-success-950/30 rounded-xl border border-success-100 dark:border-success-900/50">
-            <UIcon name="i-heroicons-check-badge" class="w-12 h-12 text-success-400 mx-auto mb-2" />
-            <div class="text-sm font-medium text-success-600">All caught up!</div>
-            <div class="text-xs text-gray-500">No actions needed right now</div>
-          </div>
-          <div v-for="item in attentionItems" :key="item.label" class="flex items-center gap-3 p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div v-for="item in attentionItems" :key="item.label" class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
             <UIcon :name="item.icon" :class="`text-${item.color}-500`" class="w-5 h-5" />
-            <span class="text-sm">{{ item.label }}</span>
+            <span class="text-sm font-medium">{{ item.label }}</span>
           </div>
         </div>
       </UCard>
     </div>
 
-    <!-- Recent Activity -->
-    <UCard>
-      <template #header>
-        <div class="flex items-center justify-between">
-          <h3 class="font-semibold">Recent Activity</h3>
-          <NuxtLink to="/menu/system" class="text-xs text-gray-500 hover:underline">View All</NuxtLink>
+    <!-- Main Insights Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Allocation (Pie/Doughnut) -->
+      <UCard class="lg:col-span-1">
+        <template #header>
+          <h3 class="font-semibold">Allocation</h3>
+        </template>
+        <FinancialCompositionChart />
+      </UCard>
+
+      <!-- Net Worth Projection -->
+      <UCard class="lg:col-span-2">
+        <template #header>
+          <div class="flex items-center justify-between">
+            <h3 class="font-semibold">Net Worth Projection</h3>
+            <span class="text-xs text-gray-500">Target: {{ targetDateLabel }}</span>
+          </div>
+        </template>
+        <div class="h-64">
+          <AssetsChart :series="chartSeries" />
         </div>
-      </template>
-      <div class="space-y-2">
-        <div v-if="recentLogs.length === 0" class="text-sm text-gray-500 italic py-4 text-center">
-          No recent activity logs.
+      </UCard>
+
+      <!-- Cash Flow Projection -->
+      <UCard class="lg:col-span-2">
+        <template #header>
+          <div class="flex items-center justify-between">
+            <h3 class="font-semibold">Cash Flow Projection</h3>
+            <span class="text-xs text-gray-500">Monthly Surplus vs Expenses</span>
+          </div>
+        </template>
+        <div class="h-64">
+          <BudgetProjectionChart :series="chartSeries" />
         </div>
-        <ActivityLogEntry v-for="log in recentLogs" :key="log.id" :entry="log" />
-      </div>
-    </UCard>
+      </UCard>
+
+      <!-- Recent Activity -->
+      <UCard class="lg:col-span-1">
+        <template #header>
+          <div class="flex items-center justify-between">
+            <h3 class="font-semibold">Recent Activity</h3>
+            <NuxtLink to="/menu/system" class="text-xs text-gray-500 hover:underline">View All</NuxtLink>
+          </div>
+        </template>
+        <div class="space-y-4">
+          <div v-if="recentLogs.length === 0" class="text-sm text-gray-500 italic py-4 text-center">
+            No recent activity logs.
+          </div>
+          <ActivityLogEntry v-for="log in recentLogs" :key="log.id" :entry="log" />
+        </div>
+      </UCard>
+    </div>
   </div>
 </template>

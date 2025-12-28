@@ -3,6 +3,7 @@ const store = useSessionStore()
 const { user, clear } = useUserSession()
 const route = useRoute()
 const isCollapsed = ref(false)
+const { mainNavItems, strategyItems, systemItems } = useNavigation()
 
 onMounted(() => {
   store.load()
@@ -13,37 +14,13 @@ async function logout() {
   navigateTo('/login')
 }
 
-// 5-Slot Navigation
-const navItems = [
-  { label: 'Dash', to: '/', icon: 'i-heroicons-home' },
-  { label: 'Expenses', to: '/expenses', icon: 'i-heroicons-banknotes' },
-  { label: 'Capture', to: '/capture', icon: 'i-heroicons-camera' },
-  { label: 'Goal', to: '/goal', icon: 'i-heroicons-home-modern' },
-  { label: 'Menu', to: '/menu', icon: 'i-heroicons-bars-3' }
-]
-
-const strategyItems = [
-  { label: 'Income', to: '/menu/income', icon: 'i-heroicons-user-group' },
-  { label: 'Assets', to: '/menu/assets', icon: 'i-heroicons-circle-stack' },
-  { label: 'Budget', to: '/menu/budget', icon: 'i-heroicons-chart-pie' },
-  { label: 'Bank', to: '/menu/bank', icon: 'i-heroicons-building-library' },
-  { label: 'Costs', to: '/menu/costs', icon: 'i-heroicons-calculator' }
-]
-
-const systemItems = [
-  { label: 'System', to: '/menu/system', icon: 'i-heroicons-cog-6-tooth' },
-  { label: 'Settings', to: '/menu/settings', icon: 'i-heroicons-adjustments-horizontal' }
-]
-
-const menuItems = [...strategyItems, ...systemItems]
-
 const isActive = (path: string) => {
   if (path === '/') return route.path === '/'
   return route.path === path || route.path.startsWith(path)
 }
 
 const currentPageTitle = computed(() => {
-  const allItems = [...navItems, ...menuItems]
+  const allItems = [...mainNavItems, ...strategyItems, ...systemItems]
     .sort((a, b) => b.to.length - a.to.length)
   const item = allItems.find(i => isActive(i.to))
   return item?.label || 'Finance'
@@ -66,7 +43,7 @@ const currentPageTitle = computed(() => {
       <!-- Navigation -->
       <nav class="flex-1 px-4 space-y-1 mt-4 overflow-y-auto overflow-x-hidden">
         <NuxtLink
-          v-for="item in navItems"
+          v-for="item in mainNavItems"
           :key="item.to"
           :to="item.to"
           class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group relative"
@@ -81,14 +58,14 @@ const currentPageTitle = computed(() => {
           <div v-if="item.to === '/capture' && isCollapsed" class="absolute -right-1 top-0 w-2 h-2 bg-primary-500 rounded-full" />
         </NuxtLink>
 
-        <!-- Menu Expansion in Sidebar -->
+        <!-- Strategy Section -->
         <div v-if="!isCollapsed" class="pt-8 pb-2">
           <div class="px-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
             Strategy
           </div>
           <div class="space-y-1">
             <NuxtLink
-              v-for="item in strategyItems"
+              v-for="item in strategyItems.filter(i => !i.disabled)"
               :key="item.to"
               :to="item.to"
               class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors"
@@ -100,13 +77,16 @@ const currentPageTitle = computed(() => {
               <span>{{ item.label }}</span>
             </NuxtLink>
           </div>
+        </div>
 
-          <div class="px-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 mt-6">
+        <!-- System Section -->
+        <div v-if="!isCollapsed" class="pt-6 pb-2">
+          <div class="px-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
             System
           </div>
           <div class="space-y-1">
             <NuxtLink
-              v-for="item in systemItems"
+              v-for="item in systemItems.filter(i => !i.disabled)"
               :key="item.to"
               :to="item.to"
               class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors"
@@ -182,7 +162,7 @@ const currentPageTitle = computed(() => {
       class="lg:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-t border-gray-200 px-2 py-3 z-40 flex justify-around items-center"
     >
       <NuxtLink
-        v-for="item in navItems"
+        v-for="item in mainNavItems"
         :key="item.to"
         :to="item.to"
         class="flex flex-col items-center gap-1 min-w-[64px] transition-all active:scale-95"
