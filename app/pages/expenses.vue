@@ -137,7 +137,7 @@ async function handleCaptured(data: { image: string, capturedAt: string, imageHa
 
 async function handleUpdate(updates: Partial<Expense>) {
   if (!selectedId.value) return
-  await updateExpense(selectedId.value, updates)
+  await updateExpense({ id: selectedId.value, ...updates })
 }
 
 async function handleDelete() {

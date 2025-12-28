@@ -78,12 +78,46 @@ const attentionItems = computed(() => {
 })
 
 const recentLogs = computed(() => logs.value.slice(0, 5))
+
+const animatedBudgetUsage = ref(0)
+const animatedGoalProgress = ref(0)
+
+onMounted(() => {
+  setTimeout(() => {
+    animatedBudgetUsage.value = budgetUsage.value
+    animatedGoalProgress.value = goalProgress.value
+  }, 100)
+})
 </script>
 
 <template>
   <div class="space-y-6">
     <div class="flex items-center justify-between">
       <h1 class="text-2xl font-bold">Dash</h1>
+    </div>
+
+    <div class="flex flex-wrap gap-3">
+      <UButton
+        to="/capture"
+        icon="i-heroicons-camera"
+        color="primary"
+        variant="solid"
+        label="Capture Receipt"
+      />
+      <UButton
+        to="/menu/assets"
+        icon="i-heroicons-circle-stack"
+        color="neutral"
+        variant="soft"
+        label="Update Assets"
+      />
+      <UButton
+        to="/goal"
+        icon="i-heroicons-home-modern"
+        color="neutral"
+        variant="soft"
+        label="View Goal"
+      />
     </div>
 
     <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -107,7 +141,7 @@ const recentLogs = computed(() => logs.value.slice(0, 5))
               <div class="text-lg font-semibold">{{ Math.round(budgetUsage) }}%</div>
             </div>
           </div>
-          <UProgress :value="budgetUsage" :color="budgetColor" size="sm" />
+          <UProgress :value="animatedBudgetUsage" :color="budgetColor" size="sm" class="transition-all duration-1000" />
         </div>
       </UCard>
 
@@ -129,7 +163,7 @@ const recentLogs = computed(() => logs.value.slice(0, 5))
               <div class="text-xs text-gray-500">Deposit: {{ formatCurrency(store.projectedDeposit) }}</div>
             </div>
           </div>
-          <UProgress :value="goalProgress" color="primary" size="sm" />
+          <UProgress :value="animatedGoalProgress" color="primary" size="sm" class="transition-all duration-1000" />
         </div>
       </UCard>
 
@@ -139,8 +173,10 @@ const recentLogs = computed(() => logs.value.slice(0, 5))
           <h3 class="font-semibold">Attention</h3>
         </template>
         <div class="space-y-3">
-          <div v-if="attentionItems.length === 0" class="text-sm text-gray-500 italic py-2">
-            Everything looks good!
+          <div v-if="attentionItems.length === 0" class="text-center py-6 bg-success-50 dark:bg-success-950/30 rounded-xl border border-success-100 dark:border-success-900/50">
+            <UIcon name="i-heroicons-check-badge" class="w-12 h-12 text-success-400 mx-auto mb-2" />
+            <div class="text-sm font-medium text-success-600">All caught up!</div>
+            <div class="text-xs text-gray-500">No actions needed right now</div>
           </div>
           <div v-for="item in attentionItems" :key="item.label" class="flex items-center gap-3 p-2 rounded-lg bg-gray-50 dark:bg-gray-800">
             <UIcon :name="item.icon" :class="`text-${item.color}-500`" class="w-5 h-5" />

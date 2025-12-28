@@ -30,7 +30,7 @@ const {
             type="date" 
             :value="store.config.deposit.targetDate"
             @input="(e) => store.config.deposit.targetDate = (e.target as HTMLInputElement).value"
-            class="text-sm font-bold text-gray-900 border-none p-0 focus:ring-0 w-32"
+            class="text-sm font-bold text-gray-900 border-none p-0 focus:ring-0 w-32 cursor-pointer hover:bg-gray-50 rounded px-1 -mx-1 transition-colors"
           />
         </div>
       </div>

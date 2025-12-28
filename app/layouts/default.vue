@@ -22,8 +22,7 @@ const navItems = [
   { label: 'Menu', to: '/menu', icon: 'i-heroicons-bars-3' }
 ]
 
-// Secondary Menu Items (for Desktop Sidebar expansion)
-const menuItems = [
+const strategyItems = [
   { label: 'Income', to: '/menu/income', icon: 'i-heroicons-user-group' },
   { label: 'Assets', to: '/menu/assets', icon: 'i-heroicons-circle-stack' },
   { label: 'Budget', to: '/menu/budget', icon: 'i-heroicons-chart-pie' },
@@ -31,9 +30,22 @@ const menuItems = [
   { label: 'Costs', to: '/menu/costs', icon: 'i-heroicons-calculator' }
 ]
 
+const systemItems = [
+  { label: 'System', to: '/menu/system', icon: 'i-heroicons-cog-6-tooth' },
+  { label: 'Settings', to: '/menu/settings', icon: 'i-heroicons-adjustments-horizontal' }
+]
+
+const menuItems = [...strategyItems, ...systemItems]
+
+const isActive = (path: string) => {
+  if (path === '/') return route.path === '/'
+  return route.path === path || route.path.startsWith(path)
+}
+
 const currentPageTitle = computed(() => {
   const allItems = [...navItems, ...menuItems]
-  const item = allItems.find(i => i.to === route.path || (route.path.startsWith(i.to) && i.to !== '/'))
+    .sort((a, b) => b.to.length - a.to.length)
+  const item = allItems.find(i => isActive(i.to))
   return item?.label || 'Finance'
 })
 </script>
@@ -58,7 +70,7 @@ const currentPageTitle = computed(() => {
           :key="item.to"
           :to="item.to"
           class="flex items-center gap-3 px-3 py-2.5 rounded-xl transition-all group relative"
-          :class="$route.path === item.to || ($route.path.startsWith(item.to) && item.to !== '/' && item.to !== '/menu')
+          :class="isActive(item.to)
             ? 'bg-primary-50 text-primary-600 font-bold' 
             : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'"
         >
@@ -72,11 +84,29 @@ const currentPageTitle = computed(() => {
         <!-- Menu Expansion in Sidebar -->
         <div v-if="!isCollapsed" class="pt-8 pb-2">
           <div class="px-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2">
-            Strategy & Wealth
+            Strategy
           </div>
           <div class="space-y-1">
             <NuxtLink
-              v-for="item in menuItems"
+              v-for="item in strategyItems"
+              :key="item.to"
+              :to="item.to"
+              class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors"
+              :class="$route.path === item.to
+                ? 'bg-gray-100 text-gray-900 font-semibold' 
+                : 'text-gray-500 hover:bg-gray-50 hover:text-gray-900'"
+            >
+              <UIcon :name="item.icon" class="h-4 w-4" />
+              <span>{{ item.label }}</span>
+            </NuxtLink>
+          </div>
+
+          <div class="px-3 text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-2 mt-6">
+            System
+          </div>
+          <div class="space-y-1">
+            <NuxtLink
+              v-for="item in systemItems"
               :key="item.to"
               :to="item.to"
               class="flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors"
@@ -156,14 +186,14 @@ const currentPageTitle = computed(() => {
         :key="item.to"
         :to="item.to"
         class="flex flex-col items-center gap-1 min-w-[64px] transition-all active:scale-95"
-        :class="$route.path === item.to || ($route.path.startsWith(item.to) && item.to !== '/' && item.to !== '/menu')
+        :class="isActive(item.to)
           ? 'text-primary-600' 
           : 'text-gray-400'"
       >
         <div 
           class="h-9 w-12 flex items-center justify-center rounded-2xl transition-all"
           :class="[
-            $route.path === item.to || ($route.path.startsWith(item.to) && item.to !== '/' && item.to !== '/menu') 
+            isActive(item.to) 
               ? 'bg-primary-50' 
               : '',
             item.to === '/capture' ? 'bg-primary-600 text-white shadow-lg shadow-primary-200' : ''
