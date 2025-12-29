@@ -19,7 +19,6 @@ export function useNavigation() {
   const mainNavItems: NavItem[] = [
     { label: 'Dashboard', to: '/', icon: 'i-heroicons-home' },
     { label: 'Expenses', to: '/expenses', icon: 'i-heroicons-banknotes' },
-    { label: 'Capture', to: '/capture', icon: 'i-heroicons-camera' },
     { label: 'Goal', to: '/goal', icon: 'i-heroicons-home-modern' },
     { label: 'Menu', to: '/menu', icon: 'i-heroicons-bars-3' }
   ]

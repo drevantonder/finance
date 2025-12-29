@@ -50,13 +50,6 @@ const recentLogs = computed(() => logs.value.slice(0, 5))
 
     <div class="flex flex-wrap gap-3">
       <UButton
-        to="/capture"
-        icon="i-heroicons-camera"
-        color="primary"
-        variant="solid"
-        label="Capture Receipt"
-      />
-      <UButton
         to="/menu/assets"
         icon="i-heroicons-circle-stack"
         color="neutral"

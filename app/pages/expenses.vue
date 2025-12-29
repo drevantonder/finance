@@ -228,7 +228,9 @@ function isDuplicate(expense: Expense) {
         @toggle-all="toggleAll"
       >
         <template #add-button>
-          <ReceiptCapture :is-loading="isLoading" @captured="handleCaptured" />
+          <div class="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 hover:bg-primary-200 transition-colors">
+            <UIcon name="i-heroicons-plus" class="w-5 h-5" />
+          </div>
         </template>
       </ExpensesExpenseHeader>
 
