@@ -1,86 +1,125 @@
-<script setup lang="ts">
-  const store = useUploadQueue()
-  
-  const emit = defineEmits(['click'])
-  const { isOnline } = useNetworkStatus()
-  const { isConnected: isSSEConnected } = useRealtimeSync()
-  
-  const icon = computed(() => {
-    if (!isOnline.value) return 'i-heroicons-cloud-slash'
-    if (store.hasErrors) return 'i-heroicons-exclamation-triangle'
-    if (store.processingCount > 0) return 'i-heroicons-sparkles'
-    if (store.isProcessing) return 'i-heroicons-arrow-up-tray'
-    return 'i-heroicons-cloud'
-  })
-  
-  const color = computed(() => {
-    if (!isOnline.value) return 'text-warning-500'
-    if (store.hasErrors) return 'text-error-500'
-    if (store.processingCount > 0) return 'text-info-500'
-    if (store.isProcessing) return 'text-primary-500'
-    if (!isSSEConnected.value) return 'text-neutral-400'
-    return 'text-success-500'
-  })
-  
-  const badgeCount = computed(() => {
-    if (store.hasErrors) return store.errorCount
-    if (store.hasQueued) return store.queuedCount
-    return 0
-  })
-  
-  const showBadge = computed(() => badgeCount.value > 0)
-  
-  const statusText = computed(() => {
-    if (!isOnline.value) return 'Offline'
-    if (store.hasErrors) return `${store.errorCount} failed`
-    
-    if (store.processingCount > 0) return 'Processing...'
-    const uploading = store.queue.find(i => i.status === 'uploading')
-    
-    if (uploading) return 'Uploading...'
-    if (store.hasQueued) return `${store.queuedCount} queued`
-    if (!isSSEConnected.value) return 'Connecting...'
-    return 'Synced'
-  })
+ <script setup lang="ts">
+ import { useUploadQueue } from '~/composables/useUploadQueue'
+ import { useRealtimeSync } from '~/composables/useRealtimeSync'
+ import { useQueryClient } from '@tanstack/vue-query'
+
+ const store = useUploadQueue()
+ const queryClient = useQueryClient()
+ const sessionStore = useSessionStore()
+ const { isConnected } = useRealtimeSync()
+ const isOnline = useOnline()
+
+ const isSyncing = computed(() => queryClient.isFetching() > 0 || sessionStore.isLoading || sessionStore.isSyncing)
+
+const status = computed(() => {
+  // 1. Error state (highest priority)
+  if (store.errorCount > 0) {
+    return {
+      icon: 'i-heroicons-exclamation-circle',
+      color: 'red',
+      text: `${store.errorCount} Failed`,
+      bg: 'bg-red-50 text-red-600 border-red-100',
+      badge: 'bg-red-500 text-white'
+    }
+  }
+
+  // 2. Processing state (Gemini analyzing)
+  if (store.processingCount > 0) {
+    return {
+      icon: 'i-heroicons-sparkles',
+      color: 'indigo',
+      text: 'Processing...',
+      bg: 'bg-indigo-50 text-indigo-600 border-indigo-100',
+      badge: 'bg-indigo-500 text-white',
+      animate: true
+    }
+  }
+
+  // 3. Uploading state
+  if (store.uploadingCount > 0) {
+    return {
+      icon: 'i-heroicons-arrow-path',
+      color: 'blue',
+      text: 'Uploading...',
+      bg: 'bg-blue-50 text-blue-600 border-blue-100',
+      badge: 'bg-blue-500 text-white',
+      spin: true
+    }
+  }
+
+  // 4. Queued state (waiting for connection/slot)
+  if (store.queuedCount > 0) {
+    return {
+      icon: 'i-heroicons-clock',
+      color: 'orange',
+      text: `${store.queuedCount} Queued`,
+      bg: 'bg-orange-50 text-orange-600 border-orange-100',
+      badge: 'bg-orange-500 text-white'
+    }
+  }
+
+   // 5. Offline state
+  if (!isOnline.value) {
+    return {
+      icon: 'i-heroicons-signal-slash',
+      color: 'gray',
+      text: 'Offline',
+      bg: 'bg-gray-100 text-gray-500 border-gray-200',
+      badge: 'bg-gray-500 text-white'
+    }
+  }
+
+  // 6. Syncing state (background sync)
+  if (isSyncing.value) {
+    return {
+      icon: 'i-heroicons-arrow-path',
+      color: 'primary',
+      text: 'Syncing...',
+      bg: 'bg-primary-50 text-primary-600 border-primary-100',
+      badge: 'bg-primary-500 text-white',
+      spin: true
+    }
+  }
+
+  // 7. Idle/Synced state
+  return {
+    icon: 'i-heroicons-cloud',
+    color: 'gray',
+    text: 'Synced',
+    bg: 'hover:bg-gray-50 text-gray-500 border-transparent',
+    badge: 'bg-gray-500 text-white'
+  }
+})
 </script>
 
 <template>
-    <button
-      class="relative p-2 rounded-lg hover:bg-neutral-100 dark:hover:bg-neutral-800 transition-colors group flex items-center gap-2"
-      :title="statusText"
-      @click="emit('click')"
-    >
-      <div class="relative">
-        <UIcon
-          :name="icon"
-          class="w-6 h-6 transition-transform group-active:scale-95"
-          :class="[
-            color,
-            (store.isProcessing || store.processingCount > 0) && isOnline ? 'animate-pulse' : ''
-          ]"
-        />
-        
-        <Transition
-          enter-active-class="transition duration-200 ease-out"
-          enter-from-class="transform scale-0"
-          enter-to-class="transform scale-100"
-          leave-active-class="transition duration-150 ease-in"
-          leave-from-class="transform scale-100"
-          leave-to-class="transform scale-0"
-        >
-          <span
-            v-if="showBadge"
-            class="absolute -top-1 -right-1 flex items-center justify-center min-w-[18px] h-[18px] px-1 text-[10px] font-bold text-white rounded-full ring-2 ring-white dark:ring-neutral-900"
-            :class="store.hasErrors ? 'bg-error-500' : 'bg-primary-500'"
-          >
-            {{ badgeCount }}
-          </span>
-        </Transition>
-      </div>
+  <button
+    class="w-full flex items-center gap-3 px-3 py-2 rounded-lg border transition-all duration-200 group text-sm"
+    :class="status.bg"
+  >
+    <div class="relative flex items-center justify-center">
+      <UIcon 
+        :name="status.icon" 
+        class="w-5 h-5 flex-shrink-0"
+        :class="{
+          'animate-pulse': status.animate,
+          'animate-spin': status.spin
+        }"
+      />
       
-      <div role="status" aria-live="polite" class="sr-only">
-        {{ statusText }}
-      </div>
-    </button>
+      <!-- Badge for counts -->
+      <span 
+        v-if="store.errorCount > 0 || store.processingCount > 0 || store.uploadingCount > 0 || store.queuedCount > 0"
+        class="absolute -top-1.5 -right-1.5 flex h-3.5 min-w-[14px] items-center justify-center rounded-full px-1 text-[9px] font-bold ring-2 ring-white shadow-sm"
+        :class="status.badge"
+      >
+        {{ store.errorCount || store.processingCount || store.uploadingCount || store.queuedCount }}
+      </span>
+    </div>
+
+    <span class="font-medium truncate">
+      {{ status.text }}
+    </span>
+  </button>
 </template>
 

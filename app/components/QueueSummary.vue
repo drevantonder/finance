@@ -1,6 +1,6 @@
 <script setup lang="ts">
  const store = useUploadQueue()
- const { isOnline } = useNetworkStatus()
+ const isOnline = useOnline()
  
  const overallProgress = computed(() => {
    if (store.queue.length === 0) return 0
@@ -16,11 +16,11 @@
    <div v-if="hasActivity" class="p-4 bg-primary-50 dark:bg-primary-950/30 border-b border-primary-100 dark:border-primary-900/50">
     <div class="flex items-center justify-between mb-2">
       <div class="flex items-center gap-2">
-        <UIcon 
-          :name="isOnline ? 'i-heroicons-arrow-up-tray' : 'i-heroicons-cloud-slash'" 
-          class="w-5 h-5 text-primary-600 dark:text-primary-400"
-          :class="{ 'animate-bounce': store.isProcessing && isOnline }"
-        />
+         <UIcon
+           :name="isOnline ? 'i-heroicons-arrow-up-tray' : 'i-heroicons-signal-slash'"
+           class="w-5 h-5 text-primary-600 dark:text-primary-400"
+           :class="{ 'animate-bounce': store.isProcessing && isOnline }"
+         />
         <span class="text-sm font-semibold text-primary-900 dark:text-primary-100">
           <template v-if="isOnline">
             <template v-if="store.processingCount > 0">

@@ -38,22 +38,15 @@ onMounted(() => {
      </UDrawer>
    </template>
    
-    <template v-else>
-      <USlideover v-model:open="isOpen" title="Upload Queue">
-        <template #content>
-          <div class="flex flex-col h-full">
-            <div class="p-4 border-b border-neutral-200 dark:border-neutral-800 flex items-center justify-between">
-              <DialogTitle class="font-bold">Upload Queue</DialogTitle>
-              <UButton icon="i-heroicons-x-mark" color="neutral" variant="ghost" @click="isOpen = false" />
-            </div>
-            <DialogDescription class="sr-only">
-              View and manage your upload queue, including pending, processing, and completed items.
-            </DialogDescription>
-            <div class="flex-grow overflow-hidden">
-              <QueueContent />
-            </div>
-          </div>
-        </template>
-      </USlideover>
-    </template>
+     <template v-else>
+        <USlideover v-model:open="isOpen" title="Upload Queue" description="View and manage your upload queue">
+         <template #content>
+           <div class="flex flex-col h-full">
+             <div class="flex-grow overflow-hidden">
+               <QueueContent />
+             </div>
+           </div>
+         </template>
+       </USlideover>
+     </template>
 </template>

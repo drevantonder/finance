@@ -5,7 +5,7 @@ const route = useRoute()
 const isCollapsed = ref(false)
 const { mainNavItems, strategyItems, systemItems } = useNavigation()
 
-const { isOnline } = useNetworkStatus()
+const isOnline = useOnline()
 const uploadQueue = useUploadQueue()
 const { processFile } = useFileProcessor()
 
@@ -131,11 +131,8 @@ const currentPageTitle = computed(() => {
       </nav>
 
       <!-- Sidebar Bottom -->
-      <div class="p-4 border-t border-gray-100">
-         <!-- Queue Indicator -->
-         <div class="flex items-center justify-center mb-3">
-           <QueueIndicator @click="isQueuePanelOpen = true" />
-         </div>
+      <div class="mt-auto p-4 space-y-3 border-t border-gray-200">
+        <QueueIndicator @click="isQueuePanelOpen = true" class="mb-3" />
          
          <!-- Divider -->
          <div class="h-px bg-gray-200 w-full mb-3" />
@@ -159,10 +156,11 @@ const currentPageTitle = computed(() => {
          <!-- Collapse Toggle -->
          <button
             @click="isCollapsed = !isCollapsed"
-            class="w-full py-2 flex items-center gap-2 text-sm text-gray-500 hover:text-primary-600 transition-colors rounded-lg hover:bg-gray-50 px-3"
+            class="w-full py-2 flex items-center text-sm text-gray-500 hover:text-primary-600 transition-colors rounded-lg hover:bg-gray-50 px-3"
+            :class="isCollapsed ? 'justify-center' : 'justify-start gap-2'"
           >
             <UIcon :name="isCollapsed ? 'i-heroicons-chevron-double-right' : 'i-heroicons-chevron-double-left'" class="h-4 w-4" />
-            <span v-if="!isCollapsed">Collapse</span>
+            <span v-if="!isCollapsed">Collapse Sidebar</span>
           </button>
        </div>
     </aside>

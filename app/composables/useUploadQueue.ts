@@ -20,7 +20,7 @@ const IDB_KEY = 'upload_queue'
 export const useUploadQueue = defineStore('uploadQueue', () => {
   const queue = ref<QueueItem[]>([])
   const isProcessing = ref(false)
-  const { isOnline } = useNetworkStatus()
+  const isOnline = useOnline()
   const toast = useToast()
 
   // Load from IndexedDB on init
@@ -162,6 +162,7 @@ export const useUploadQueue = defineStore('uploadQueue', () => {
     // Computed arrays for UI
     queuedItems: computed(() => queue.value.filter(i => i.status === 'queued')),
     uploadingItems: computed(() => queue.value.filter(i => i.status === 'uploading')),
+    processingItems: computed(() => queue.value.filter(i => i.status === 'processing')),
     errorItems: computed(() => queue.value.filter(i => i.status === 'error')),
     completedItems: computed(() => queue.value.filter(i => i.status === 'complete')),
     
