@@ -37,8 +37,10 @@ import { ref, computed } from 'vue'
 import { Doughnut } from 'vue-chartjs'
 import { useSessionStore } from '~/composables/useSessionStore'
 import { formatCurrency } from '~/composables/useFormatter'
+import { useStockPrices } from '~/composables/useStockPrices'
 
 const store = useSessionStore()
+const stockPrices = useStockPrices()
 const view = ref<'budget' | 'deposit'>('budget')
 
 const budgetData = computed(() => {
@@ -57,8 +59,9 @@ const budgetData = computed(() => {
     else if (i.frequency === 'yearly') amount /= 12
     else if (i.frequency === 'quarterly') amount /= 3
     
-    if (totals[i.category] !== undefined) {
-      totals[i.category] += amount
+    const category = i.category
+    if (category && totals[category] !== undefined) {
+      totals[category] += amount
     }
   })
 
@@ -66,21 +69,24 @@ const budgetData = computed(() => {
   const firstPoint = store.smartResult?.series[0]
   if (firstPoint) {
     totals.hecs = firstPoint.totalHecsRepayment || 0
+  } else {
+    totals.hecs = 0
   }
 
   return [
-    { label: 'Essential', value: totals.essential, color: '#f43f5e' }, // rose-500
-    { label: 'Recurring', value: totals.recurring, color: '#f59e0b' }, // amber-500
-    { label: 'Goal Savings', value: totals.goal, color: '#a855f7' },  // purple-500
-    { label: 'HECS', value: totals.hecs, color: '#f97316' }           // orange-500
+    { label: 'Essential', value: totals.essential || 0, color: '#f43f5e' }, // rose-500
+    { label: 'Recurring', value: totals.recurring || 0, color: '#f59e0b' }, // amber-500
+    { label: 'Goal Savings', value: totals.goal || 0, color: '#a855f7' },  // purple-500
+    { label: 'HECS', value: totals.hecs || 0, color: '#f97316' }           // orange-500
   ].filter(d => d.value > 0)
 })
 
 const depositData = computed(() => {
   const deposit = store.config.deposit
   const cash = deposit.cashSavings || 0
-  const stocks = deposit.holdings?.reduce((acc, h) => acc + (h.shares * (store.stockPrices[h.symbol] || 0)), 0) || 0
-  const fhss = deposit.fhssContributions?.reduce((acc, c) => acc + c.amount, 0) || 0
+  const stockPricesData = stockPrices.stockData.value
+  const stocks = deposit.holdings?.reduce((acc, h) => acc + (h.shares * (stockPricesData[h.symbol]?.price || 0)), 0) || 0
+  const fhss = deposit.fhssContributions?.reduce((acc, c) => acc + (c.amount || 0), 0) || 0
 
   return [
     { label: 'Cash Savings', value: cash, color: '#10b981' }, // emerald-500
@@ -91,12 +97,12 @@ const depositData = computed(() => {
 
 const currentDataPoints = computed(() => view.value === 'budget' ? budgetData.value : depositData.value)
 
-const totalValue = computed(() => currentDataPoints.value.reduce((acc, d) => acc + d.value, 0))
+const totalValue = computed(() => currentDataPoints.value.reduce((acc, d) => acc + (d.value || 0), 0))
 
 const chartData = computed(() => ({
   labels: currentDataPoints.value.map(d => d.label),
   datasets: [{
-    data: currentDataPoints.value.map(d => d.value),
+    data: currentDataPoints.value.map(d => d.value || 0) as number[],
     backgroundColor: currentDataPoints.value.map(d => d.color),
     borderWidth: 0,
     hoverOffset: 4,
@@ -113,7 +119,7 @@ const chartOptions = {
       labels: {
         boxWidth: 10,
         padding: 15,
-        font: { size: 11, weight: '500' },
+        font: { size: 11, weight: 500 },
         usePointStyle: true
       }
     },

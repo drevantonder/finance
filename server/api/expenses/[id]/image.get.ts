@@ -19,6 +19,6 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 404, statusMessage: 'Expense not found' })
   }
 
-  return blob.serve(event, result[0].imageKey)
+  return blob.serve(event, result[0]?.imageKey || '')
 })
 

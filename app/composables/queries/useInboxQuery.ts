@@ -37,7 +37,10 @@ export function useApproveInboxMutation() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (id: string) => $fetch(`/api/inbox/${id}/approve`, { method: 'POST' }),
+    mutationFn: async (id: string) => {
+      await $fetch(`/api/inbox/${id}/approve`, { method: 'post' as const })
+      return id
+    },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.inbox.all })
       queryClient.invalidateQueries({ queryKey: queryKeys.expenses.all })
@@ -49,7 +52,10 @@ export function useProcessInboxMutation() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (id: string) => $fetch(`/api/inbox/${id}/process`, { method: 'POST' }),
+    mutationFn: async (id: string) => {
+      await $fetch(`/api/inbox/${id}/process`, { method: 'post' as const })
+      return id
+    },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.inbox.all })
       const previous = queryClient.getQueryData<InboxItem[]>(queryKeys.inbox.all)

@@ -14,7 +14,7 @@ export default defineEventHandler(async (event) => {
       .where(eq(expenses.id, id))
       .limit(1)
 
-    if (result && result.length > 0 && result[0].imageKey) {
+    if (result && result.length > 0 && result[0]?.imageKey) {
       const imageKey = result[0].imageKey
       // 2. Delete from R2
       await blob.delete(imageKey)
@@ -30,9 +30,10 @@ export default defineEventHandler(async (event) => {
       .where(eq(expenses.id, id))
 
     // Notify other devices
-    const { user } = await requireUserSession(event)
-    if (user?.email) {
-      await broadcastExpensesChanged(user.email)
+    const session = await requireUserSession(event)
+    const email = (session.user as any).email
+    if (email) {
+      await broadcastExpensesChanged(email)
     }
 
     return { success: true }

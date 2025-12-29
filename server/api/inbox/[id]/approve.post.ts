@@ -16,10 +16,11 @@ export default defineEventHandler(async (event) => {
   const result = await processInboxItem(id)
 
   // Notify other devices
-  const { user } = await requireUserSession(event)
-  if (user?.email) {
-    await broadcastInboxChanged(user.email)
-    await broadcastExpensesChanged(user.email)
+  const session = await requireUserSession(event)
+  const email = (session.user as any).email
+  if (email) {
+    await broadcastInboxChanged(email)
+    await broadcastExpensesChanged(email)
   }
 
   return result

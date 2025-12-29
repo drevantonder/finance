@@ -3,8 +3,9 @@ import { inboxItems, inboxAttachments } from '~~/server/db/schema'
 import { eq, desc, inArray } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
-  const { user } = await requireUserSession(event)
-  if (!user?.email) {
+  const session = await requireUserSession(event)
+  const email = (session.user as any).email
+  if (!email) {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
 

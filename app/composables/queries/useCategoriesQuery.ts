@@ -36,7 +36,10 @@ export function useDeleteCategoryMutation() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (id: string) => $fetch(`/api/categories/${id}`, { method: 'DELETE' }),
+    mutationFn: async (id: string) => {
+      await $fetch(`/api/categories/${id}`, { method: 'DELETE' as const })
+      return id
+    },
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.categories.all })
     },

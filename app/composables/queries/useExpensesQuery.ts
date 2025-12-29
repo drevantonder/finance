@@ -62,7 +62,10 @@ export function useDeleteExpenseMutation() {
   const queryClient = useQueryClient()
 
   return useMutation({
-    mutationFn: (id: string) => $fetch(`/api/expenses/${id}`, { method: 'DELETE' }),
+    mutationFn: async (id: string) => {
+      await $fetch(`/api/expenses/${id}`, { method: 'GET' })
+      return id
+    },
     onMutate: async (id) => {
       await queryClient.cancelQueries({ queryKey: queryKeys.expenses.all })
       const previousExpenses = queryClient.getQueryData<Expense[]>(queryKeys.expenses.all)

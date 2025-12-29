@@ -21,7 +21,7 @@ export default defineEventHandler(async (event) => {
     }
 
     const expense = result[0]
-    const isPdf = expense.imageKey.toLowerCase().endsWith('.pdf')
+    const isPdf = expense?.imageKey?.toLowerCase().endsWith('.pdf') || false
     
     // 1. Mark as processing
     await db.update(expenses)
@@ -29,7 +29,7 @@ export default defineEventHandler(async (event) => {
       .where(eq(expenses.id, id))
 
     // 2. Fetch file from storage
-    const blobData = await blob.get(expense.imageKey)
+    const blobData = await blob.get(expense?.imageKey || '')
     if (!blobData) {
       throw createError({ statusCode: 404, statusMessage: 'File not found in storage' })
     }

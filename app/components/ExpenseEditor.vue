@@ -35,11 +35,13 @@ const lineItems = ref<ExpenseItem[]>([])
 
 // Initialize from props
 watch(() => props.expense, (newVal) => {
+  const dateSource = newVal.date || newVal.capturedAt || new Date()
+  const dateString = dateSource ? new Date(dateSource).toISOString().split('T')[0] || '' : ''
   form.value = {
     merchant: newVal.merchant || '',
     total: newVal.total || 0,
     tax: newVal.tax || 0,
-    date: newVal.date ? new Date(newVal.date).toISOString().split('T')[0] : '',
+    date: dateString,
   }
   
   try {

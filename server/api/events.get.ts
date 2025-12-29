@@ -8,16 +8,17 @@ interface SSEClient {
 const clients = new Map<string, SSEClient>()
 
 export default defineEventHandler(async (event) => {
-  const { user } = await requireUserSession(event)
+  const session = await requireUserSession(event)
+  const email = (session.user as any).email
   
-  if (!user?.email) {
+  if (!email) {
     throw createError({ statusCode: 401, statusMessage: 'Unauthorized' })
   }
 
   const stream = createEventStream(event)
   const clientId = crypto.randomUUID()
   
-  clients.set(clientId, { stream, userId: user.email })
+  clients.set(clientId, { stream, userId: email })
   
   const heartbeat = setInterval(async () => {
     await stream.push({ event: 'heartbeat', data: '' })

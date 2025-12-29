@@ -13,8 +13,9 @@ export default defineNitroPlugin((nitroApp) => {
     
     try {
       // 1. Parse Email
-      const rawResponse = new Response(message.raw)
-      const rawArrayBuffer = await rawResponse.arrayBuffer()
+      const rawArrayBuffer = message.raw instanceof ArrayBuffer 
+        ? message.raw 
+        : await (message.raw as any).arrayBuffer()
       const parser = new PostalMime()
       const email = await parser.parse(rawArrayBuffer)
 
@@ -71,7 +72,7 @@ export default defineNitroPlugin((nitroApp) => {
           filename: attachment.filename,
           mimeType: attachment.mimeType,
           storageKey,
-          sizeBytes: attachment.content.byteLength
+          sizeBytes: typeof attachment.content === 'string' ? attachment.content.length : attachment.content.byteLength
         })
       }
 

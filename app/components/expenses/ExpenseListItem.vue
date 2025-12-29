@@ -17,8 +17,8 @@ const emit = defineEmits<{
   (e: 'toggle', event: MouseEvent): void
 }>()
 
-const { data: categoriesData = [] } = useCategoriesQuery()
-const getCategoryColor = (name: string) => categoriesData.value.find(c => c.name === name)?.color || '#9ca3af'
+const { data: categoriesData } = useCategoriesQuery()
+const getCategoryColor = (name: string) => categoriesData.value?.find((c: any) => c.name === name)?.color || '#9ca3af'
 
 
 // Categories Logic

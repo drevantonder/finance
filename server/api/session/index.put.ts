@@ -17,9 +17,10 @@ export default defineEventHandler(async (event) => {
     const updatedAt = await upsertSession(config)
 
     // Notify other devices
-    const { user } = await requireUserSession(event)
-    if (user?.email) {
-      await broadcastSessionChanged(user.email)
+    const session = await requireUserSession(event)
+    const email = (session.user as any).email
+    if (email) {
+      await broadcastSessionChanged(email)
     }
 
     return { success: true, updatedAt }
