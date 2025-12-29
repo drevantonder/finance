@@ -72,7 +72,27 @@ export const useSessionStore = defineStore('session', () => {
     try {
       const data = await $fetch<{ config: SessionConfig; updatedAt: number }>('/api/session')
       if (data?.config) {
-        config.value = data.config
+        // Deep merge server config with defaults to ensure all nested objects exist
+        config.value = {
+          ...structuredClone(DEFAULT_CONFIG),
+          ...data.config,
+          budget: {
+            ...structuredClone(DEFAULT_CONFIG.budget),
+            ...data.config.budget,
+          },
+          deposit: {
+            ...structuredClone(DEFAULT_CONFIG.deposit),
+            ...data.config.deposit,
+          },
+          loan: {
+            ...structuredClone(DEFAULT_CONFIG.loan),
+            ...data.config.loan,
+          },
+          costs: {
+            ...structuredClone(DEFAULT_CONFIG.costs),
+            ...data.config.costs,
+          },
+        }
         isLoaded.value = true
       }
     } catch (err: any) {
