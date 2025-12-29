@@ -32,11 +32,24 @@ export default defineNuxtConfig({
       ]
     },
     workbox: {
-      navigateFallback: '/',
-      globPatterns: ['**/*.{js,css,html,png,svg,ico}']
+      globPatterns: ['**/*.{js,css,png,svg,ico,woff,woff2}'],
+      navigateFallbackDenylist: [/./],
+      runtimeCaching: [
+        {
+          urlPattern: /^https:\/\/.*\.(?:png|jpg|jpeg|svg|gif|webp)$/,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'images',
+            expiration: {
+              maxEntries: 100,
+              maxAgeSeconds: 60 * 60 * 24 * 30
+            }
+          }
+        }
+      ]
     },
     devOptions: {
-      enabled: true
+      enabled: false
     }
   },
 
