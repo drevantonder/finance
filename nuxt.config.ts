@@ -83,6 +83,10 @@ export default defineNuxtConfig({
   compatibilityDate: '2025-07-15',
   devtools: { enabled: true },
 
+  ui: {
+    colorMode: false
+  },
+
   // Production-only: Cloudflare Workers preset and specific drivers
   $production: {
     hub: {
