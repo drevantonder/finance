@@ -99,7 +99,7 @@
 
         <div class="space-y-1">
           <label class="text-xs font-medium text-gray-600">Journey Start Date</label>
-          <UInput v-model="localConfig?.journeyStartDate" type="date" size="lg" />
+          <UInput v-model="localConfig.journeyStartDate" type="date" size="lg" />
           <p class="text-[10px] text-gray-400">When to start projection (defaults to today)</p>
         </div>
       </div>
