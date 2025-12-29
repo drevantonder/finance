@@ -37,11 +37,6 @@ export function useRealtimeSync() {
       queryClient.invalidateQueries({ queryKey: queryKeys.inbox.all })
     })
     
-    eventSource.addEventListener('session-changed', () => {
-      const store = useSessionStore()
-      store.load()
-    })
-    
     eventSource.addEventListener('categories-changed', () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.categories.all })
     })

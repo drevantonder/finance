@@ -15,14 +15,6 @@ export default defineEventHandler(async (event) => {
   
   try {
     const updatedAt = await upsertSession(config)
-
-    // Notify other devices
-    const session = await requireUserSession(event)
-    const email = (session.user as any).email
-    if (email) {
-      await broadcastSessionChanged(email)
-    }
-
     return { success: true, updatedAt }
   } catch (err: unknown) {
     console.error('Save session error:', err)
