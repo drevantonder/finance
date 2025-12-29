@@ -22,6 +22,8 @@ export default defineOAuthGoogleEventHandler({
         picture: user.picture
       },
       loggedInAt: Date.now()
+    }, {
+      maxAge: 60 * 60 * 24 * 30
     })
 
     return sendRedirect(event, '/')
