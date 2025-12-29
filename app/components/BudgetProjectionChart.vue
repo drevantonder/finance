@@ -70,8 +70,8 @@ const fortnightlyData = computed(() => {
     })
     
     // Also include goals hitting deadline this month
-    const monthGoalsHittingDeadline = store.config.budget.budgetItems.filter(i => 
-      i.category === 'goal' && 
+    const monthGoalsHittingDeadline = (store.config.budget?.budgetItems || []).filter(i =>
+      i.category === 'goal' &&
       i.deadline?.startsWith(monthStr) &&
       !i.completedAt
     )

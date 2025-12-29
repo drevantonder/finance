@@ -89,5 +89,5 @@ const props = defineProps<{
   targetDate: string
 }>()
 
-const targetDateLabel = computed(() => formatDateLabel(props.targetDate, 'short'))
+const targetDateLabel = computed(() => props.targetDate ? formatDateLabel(props.targetDate, 'short') : '')
 </script>
