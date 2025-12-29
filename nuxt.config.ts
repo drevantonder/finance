@@ -1,5 +1,44 @@
 export default defineNuxtConfig({
-  modules: ['@nuxt/ui', '@pinia/nuxt', '@vueuse/nuxt', '@nuxthub/core', 'nuxt-auth-utils'],
+  modules: ['@nuxt/ui', '@pinia/nuxt', '@vueuse/nuxt', '@nuxthub/core', 'nuxt-auth-utils', '@vite-pwa/nuxt'],
+
+  pwa: {
+    registerType: 'autoUpdate',
+    manifest: {
+      name: 'Finance',
+      short_name: 'Finance',
+      theme_color: '#000000',
+      icons: [
+        {
+          src: 'pwa-64x64.png',
+          sizes: '64x64',
+          type: 'image/png'
+        },
+        {
+          src: 'pwa-192x192.png',
+          sizes: '192x192',
+          type: 'image/png'
+        },
+        {
+          src: 'pwa-512x512.png',
+          sizes: '512x512',
+          type: 'image/png'
+        },
+        {
+          src: 'maskable-icon-512x512.png',
+          sizes: '512x512',
+          type: 'image/png',
+          purpose: 'maskable'
+        }
+      ]
+    },
+    workbox: {
+      navigateFallback: '/',
+      globPatterns: ['**/*.{js,css,html,png,svg,ico}']
+    },
+    devOptions: {
+      enabled: true
+    }
+  },
 
   // Default: auto-detect storage backends
   hub: {

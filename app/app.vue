@@ -7,6 +7,7 @@ useRealtimeSync()
 
 <template>
   <UApp>
+    <NuxtPwaManifest />
     <NuxtLayout>
       <NuxtPage />
     </NuxtLayout>

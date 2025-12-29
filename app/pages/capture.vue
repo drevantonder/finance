@@ -12,6 +12,7 @@ const pendingUploads = ref(0)
 const successCount = ref(0)
 const lastCapture = ref<Expense | null>(null)
 const captureComponent = ref<any>(null)
+const showFallback = ref(false)
 
 onMounted(() => {
   nextTick(() => {
@@ -53,9 +54,14 @@ function done() {
 function scanAnother() {
   successCount.value = 0
   lastCapture.value = null
+  showFallback.value = false
   nextTick(() => {
     captureComponent.value?.triggerCamera()
   })
+}
+
+function handleCancelled() {
+  showFallback.value = true
 }
 </script>
 
@@ -132,9 +138,10 @@ function scanAnother() {
         </div>
       </div>
 
-      <!-- Initial State -->
+      <!-- Initial/Fallback State -->
       <div v-else class="w-full h-full flex flex-col items-center justify-center space-y-10">
         <div 
+          v-if="showFallback"
           class="w-full aspect-square max-w-sm bg-white/5 border-2 border-dashed border-white/20 rounded-[40px] flex flex-col items-center justify-center gap-6 cursor-pointer active:bg-white/10 transition-all hover:border-primary-500/50 group"
           @click="captureComponent?.triggerCamera()"
         >
@@ -147,9 +154,7 @@ function scanAnother() {
           </div>
         </div>
         
-        <div class="hidden">
-          <ReceiptCapture ref="captureComponent" @captured="handleCaptured" />
-        </div>
+        <ReceiptCapture ref="captureComponent" @captured="handleCaptured" @cancelled="handleCancelled" />
       </div>
     </div>
   </div>

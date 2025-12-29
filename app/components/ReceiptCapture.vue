@@ -7,6 +7,7 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'captured', data: { image: string, capturedAt: string, imageHash: string }): void
+  (e: 'cancelled'): void
 }>()
 
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -122,7 +123,10 @@ async function processFile(file: File, index: number, total: number): Promise<vo
 async function handleFileChange(event: Event) {
   const target = event.target as HTMLInputElement
   const files = target.files
-  if (!files || files.length === 0) return
+  if (!files || files.length === 0) {
+    emit('cancelled')
+    return
+  }
 
   // Reset state
   errorMessage.value = null
