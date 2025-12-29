@@ -1,6 +1,9 @@
 export default defineNuxtConfig({
   modules: ['@nuxt/ui', '@pinia/nuxt', '@vueuse/nuxt', '@nuxthub/core', 'nuxt-auth-utils', '@vite-pwa/nuxt'],
 
+  // SPA mode - enables full offline support with PWA
+  ssr: false,
+
   pwa: {
     registerType: 'autoUpdate',
     manifest: {
@@ -32,8 +35,10 @@ export default defineNuxtConfig({
       ]
     },
     workbox: {
-      globPatterns: ['**/*.{js,css,png,svg,ico,woff,woff2}'],
-      navigateFallbackDenylist: [/./],
+      globPatterns: ['**/*.{js,css,html,png,svg,ico,woff,woff2}'],
+      // SPA: serve index.html for all navigation requests (enables offline)
+      navigateFallback: '/index.html',
+      navigateFallbackDenylist: [/^\/api/],
       runtimeCaching: [
         {
           urlPattern: /^https:\/\/.*\.(?:png|jpg|jpeg|svg|gif|webp)$/,
