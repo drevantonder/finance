@@ -49,8 +49,10 @@ export async function processInboxItem(id: string) {
     // 5. Extract with Gemini
     const extraction = await extractReceiptData(extractionInput)
     
-    // 6. Create Expense (with duplicate detection)
+    // 6. Create or Update Expense (with duplicate detection)
+    // If inbox item already has an expenseId (reprocessing), pass it to update existing
     const result = await createExpenseIfNotDuplicate({
+      id: item.expenseId || undefined,
       imageKey: document?.storageKey || image?.storageKey || 'email-body',
       merchant: extraction.merchant || 'Unknown',
       date: extraction.date,

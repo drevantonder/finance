@@ -9,21 +9,45 @@ export default defineEventHandler(async (event) => {
   if (!id) throw createError({ statusCode: 400, statusMessage: 'ID is required' })
 
   try {
-    // 1. Get the image key first
+    // 1. Get the expense and check for linked inbox item
     const result = await db.select()
       .from(expenses)
       .where(eq(expenses.id, id))
       .limit(1)
 
-    if (result && result.length > 0 && result[0]?.imageKey) {
-      const imageKey = result[0].imageKey
-      // 2. Delete from R2
-      await blob.delete(imageKey)
+    const expense = result?.[0]
+    if (expense?.imageKey && expense.imageKey !== 'email-body') {
+      const imageKey = expense.imageKey
+      
+      // Check if this blob belongs to an inbox attachment
+      // Inbox blobs have paths like "inbox/{inboxItemId}/filename.pdf"
+      const isInboxBlob = imageKey.startsWith('inbox/')
+      
+      if (isInboxBlob) {
+        // Check if the inbox item still exists
+        const linkedInbox = await db.select({ id: inboxItems.id })
+          .from(inboxItems)
+          .where(eq(inboxItems.expenseId, id))
+          .get()
+        
+        if (!linkedInbox) {
+          // Inbox item was deleted, safe to delete the blob
+          await blob.delete(imageKey).catch(e => 
+            console.warn(`[ExpenseDelete] Failed to delete orphaned inbox blob: ${imageKey}`, e)
+          )
+        }
+        // If inbox item exists, don't delete - the blob belongs to the inbox
+      } else {
+        // Regular receipts/ blob - safe to delete
+        await blob.delete(imageKey).catch(e => 
+          console.warn(`[ExpenseDelete] Failed to delete blob: ${imageKey}`, e)
+        )
+      }
     }
 
-    // 2.5 Clear references in inbox items
+    // 2. Clear references in inbox items (unlink but don't delete)
     await db.update(inboxItems)
-      .set({ expenseId: null })
+      .set({ expenseId: null, status: 'pending' })
       .where(eq(inboxItems.expenseId, id))
 
     // 3. Delete from DB

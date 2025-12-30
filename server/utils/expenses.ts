@@ -114,14 +114,26 @@ export async function createExpenseIfNotDuplicate(
   }
 
   if (input.id) {
-    await db.update(expenses).set(values).where(eq(expenses.id, input.id))
-  } else {
-    await db.insert(expenses).values({
-      ...values,
-      id,
-      createdAt: now,
-    })
+    // Check if expense still exists (might have been deleted)
+    const existingExpense = await db.select({ id: expenses.id })
+      .from(expenses)
+      .where(eq(expenses.id, input.id))
+      .get()
+    
+    if (existingExpense) {
+      await db.update(expenses).set(values).where(eq(expenses.id, input.id))
+      return { id: input.id, isDuplicate: false }
+    }
+    // Expense was deleted, fall through to insert with new ID
   }
+  
+  // Insert new expense
+  const newId = input.id || crypto.randomUUID()
+  await db.insert(expenses).values({
+    ...values,
+    id: newId,
+    createdAt: now,
+  })
 
-  return { id, isDuplicate: false }
+  return { id: newId, isDuplicate: false }
 }

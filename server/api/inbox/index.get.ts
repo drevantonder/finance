@@ -1,6 +1,7 @@
 import { db } from 'hub:db'
+import { blob } from 'hub:blob'
 import { inboxItems, inboxAttachments } from '~~/server/db/schema'
-import { eq, desc, inArray } from 'drizzle-orm'
+import { desc, inArray } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
   const session = await requireUserSession(event)
@@ -21,9 +22,20 @@ export default defineEventHandler(async (event) => {
       .from(inboxAttachments)
       .where(inArray(inboxAttachments.inboxItemId, itemIds))
 
+    // Check blob existence for all attachments in parallel
+    const attachmentsWithStatus = await Promise.all(
+      allAttachments.map(async (att) => {
+        const exists = await blob.head(att.storageKey).catch(() => null)
+        return {
+          ...att,
+          blobExists: !!exists
+        }
+      })
+    )
+
     // Group attachments by inboxItemId
     const attachmentsByItemId = new Map<string, any[]>()
-    for (const att of allAttachments) {
+    for (const att of attachmentsWithStatus) {
       const existing = attachmentsByItemId.get(att.inboxItemId) || []
       existing.push(att)
       attachmentsByItemId.set(att.inboxItemId, existing)

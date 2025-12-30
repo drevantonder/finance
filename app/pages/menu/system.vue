@@ -125,65 +125,95 @@ const stats = computed(() => [
           <h3 class="font-bold">Email Inbox Health</h3>
         </template>
         <div v-if="inbox?.length" class="space-y-3">
-        <div v-for="item in inbox.slice(0, 15)" :key="item.id" class="flex items-center justify-between text-sm p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800">
-          <div class="min-w-0 flex-1 mr-4">
-            <div class="font-bold text-gray-900 dark:text-white truncate">{{ item.subject }}</div>
-            <div class="text-xs text-gray-500 truncate">From: {{ item.fromAddress }}</div>
+          <div v-for="item in inbox.slice(0, 15)" :key="item.id" class="text-sm p-3 bg-gray-50 dark:bg-gray-800/50 rounded-xl border border-gray-100 dark:border-gray-800">
+            <div class="flex items-center justify-between">
+              <div class="min-w-0 flex-1 mr-4">
+                <div class="font-bold text-gray-900 dark:text-white truncate">{{ item.subject }}</div>
+                <div class="text-xs text-gray-500 truncate">From: {{ item.fromAddress }}</div>
+              </div>
+              <div class="flex items-center gap-2">
+                <!-- Action buttons for unauthorized/error items -->
+                <UButton
+                  v-if="item.status === 'unauthorized'"
+                  icon="i-heroicons-check"
+                  size="xs"
+                  color="success"
+                  variant="soft"
+                  :loading="isApproving"
+                  @click="approveInbox(item.id)"
+                >
+                  Approve
+                </UButton>
+                <UButton
+                  v-if="item.status === 'error'"
+                  icon="i-heroicons-arrow-path"
+                  size="xs"
+                  color="warning"
+                  variant="soft"
+                  :loading="isProcessing"
+                  @click="processInbox(item.id)"
+                >
+                  Retry
+                </UButton>
+                <UButton
+                  v-if="item.status === 'complete'"
+                  icon="i-heroicons-arrow-path"
+                  size="xs"
+                  color="neutral"
+                  variant="ghost"
+                  :loading="isProcessing"
+                  @click="processInbox(item.id)"
+                  title="Re-extract data from this receipt"
+                >
+                  Reprocess
+                </UButton>
+                <UButton
+                  v-if="item.status === 'unauthorized' || item.status === 'error'"
+                  icon="i-heroicons-trash"
+                  size="xs"
+                  color="error"
+                  variant="ghost"
+                  @click="deleteInbox(item.id)"
+                />
+                <UBadge 
+                  :color="item.status === 'complete' ? 'success' : (item.status === 'error' ? 'error' : (item.status === 'unauthorized' ? 'warning' : 'neutral'))" 
+                  size="xs" 
+                  variant="subtle"
+                  class="flex-shrink-0 font-bold capitalize"
+                >
+                  {{ item.status }}
+                </UBadge>
+              </div>
+            </div>
+            <!-- Attachments row -->
+            <div class="mt-2 flex items-center gap-2 flex-wrap">
+              <template v-if="(item.attachments?.length ?? 0) > 0">
+                <div 
+                  v-for="att in item.attachments" 
+                  :key="att.id"
+                  class="flex items-center gap-1 text-[10px] px-2 py-0.5 rounded-full"
+                  :class="att.blobExists 
+                    ? 'bg-success-100 text-success-700 dark:bg-success-900/30 dark:text-success-400' 
+                    : 'bg-error-100 text-error-700 dark:bg-error-900/30 dark:text-error-400'"
+                  :title="att.blobExists ? 'File exists in storage' : 'File missing from storage'"
+                >
+                  <UIcon 
+                    :name="att.mimeType === 'application/pdf' ? 'i-heroicons-document' : 'i-heroicons-photo'" 
+                    class="w-3 h-3" 
+                  />
+                  <span class="truncate max-w-24">{{ att.filename || 'unnamed' }}</span>
+                  <UIcon 
+                    :name="att.blobExists ? 'i-heroicons-check-circle' : 'i-heroicons-x-circle'" 
+                    class="w-3 h-3" 
+                  />
+                </div>
+              </template>
+              <div v-else class="text-[10px] text-gray-400 italic flex items-center gap-1">
+                <UIcon name="i-heroicons-envelope" class="w-3 h-3" />
+                Email body only (no attachments)
+              </div>
+            </div>
           </div>
-          <div class="flex items-center gap-2">
-            <!-- Action buttons for unauthorized/error items -->
-            <UButton
-              v-if="item.status === 'unauthorized'"
-              icon="i-heroicons-check"
-              size="xs"
-              color="success"
-              variant="soft"
-              :loading="isApproving"
-              @click="approveInbox(item.id)"
-            >
-              Approve
-            </UButton>
-            <UButton
-              v-if="item.status === 'error'"
-              icon="i-heroicons-arrow-path"
-              size="xs"
-              color="warning"
-              variant="soft"
-              :loading="isProcessing"
-              @click="processInbox(item.id)"
-            >
-              Retry
-            </UButton>
-            <UButton
-              v-if="item.status === 'complete'"
-              icon="i-heroicons-arrow-path"
-              size="xs"
-              color="neutral"
-              variant="ghost"
-              :loading="isProcessing"
-              @click="processInbox(item.id)"
-              title="Re-extract data from this receipt"
-            >
-              Reprocess
-            </UButton>
-            <UButton
-              v-if="item.status === 'unauthorized' || item.status === 'error'"
-              icon="i-heroicons-trash"
-              size="xs"
-              color="error"
-              variant="ghost"
-              @click="deleteInbox(item.id)"
-            />
-            <UBadge 
-              :color="item.status === 'complete' ? 'success' : (item.status === 'error' ? 'error' : (item.status === 'unauthorized' ? 'warning' : 'neutral'))" 
-              size="xs" 
-              variant="subtle"
-              class="flex-shrink-0 font-bold capitalize"
-            >
-              {{ item.status }}
-            </UBadge>
-          </div>
-        </div>
           <div v-if="inbox.length > 15" class="pt-2 text-center text-xs text-gray-400">
             Showing latest 15 of {{ inbox.length }} items
           </div>

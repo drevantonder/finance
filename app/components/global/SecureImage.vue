@@ -13,6 +13,7 @@ const error = ref(false)
 const detectedMimeType = ref<string | null>(null)
 
 const isPdf = computed(() => detectedMimeType.value === 'application/pdf')
+const isHtml = computed(() => detectedMimeType.value?.startsWith('text/html'))
 
 async function loadImage() {
   if (!props.src) return
@@ -62,16 +63,17 @@ onBeforeUnmount(() => {
     </template>
     
     <img 
-      v-else-if="objectUrl && !isPdf" 
+      v-else-if="objectUrl && !isPdf && !isHtml" 
       :src="objectUrl" 
       :alt="alt" 
       class="w-full h-full object-contain"
     />
 
     <iframe
-      v-else-if="objectUrl && isPdf"
+      v-else-if="objectUrl && (isPdf || isHtml)"
       :src="objectUrl"
       class="w-full h-full border-0"
+      sandbox="allow-same-origin"
     />
   </div>
 </template>

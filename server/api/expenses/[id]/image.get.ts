@@ -23,9 +23,67 @@ export default defineEventHandler(async (event) => {
   const expense = result[0]!
   const imageKey = expense.imageKey || ''
 
-  // Handle email-body case (no image available)
+  // Handle email-body case - return the email HTML/text content
   if (imageKey === 'email-body') {
-    throw createError({ statusCode: 404, statusMessage: 'No image available - receipt was extracted from email body text' })
+    // Find the linked inbox item to get email content
+    const inboxItem = await db.select({
+      htmlBody: inboxItems.htmlBody,
+      textBody: inboxItems.textBody,
+      subject: inboxItems.subject,
+      fromAddress: inboxItems.fromAddress
+    })
+      .from(inboxItems)
+      .where(eq(inboxItems.expenseId, id))
+      .get()
+
+    if (inboxItem && (inboxItem.htmlBody || inboxItem.textBody)) {
+      // Return as HTML with proper content type
+      const content = inboxItem.htmlBody || `<pre style="white-space: pre-wrap; font-family: monospace;">${inboxItem.textBody}</pre>`
+      
+      // Wrap in a styled container
+      const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <style>
+    body { 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      margin: 0; 
+      padding: 16px;
+      background: #f9fafb;
+    }
+    .email-header {
+      background: #1f2937;
+      color: white;
+      padding: 12px 16px;
+      margin: -16px -16px 16px -16px;
+      font-size: 12px;
+    }
+    .email-header strong { color: #9ca3af; }
+    .email-content {
+      background: white;
+      border-radius: 8px;
+      padding: 16px;
+      box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+  </style>
+</head>
+<body>
+  <div class="email-header">
+    <div><strong>From:</strong> ${inboxItem.fromAddress || 'Unknown'}</div>
+    <div><strong>Subject:</strong> ${inboxItem.subject || '(no subject)'}</div>
+  </div>
+  <div class="email-content">
+    ${content}
+  </div>
+</body>
+</html>`
+
+      setHeader(event, 'Content-Type', 'text/html; charset=utf-8')
+      return html
+    }
+
+    throw createError({ statusCode: 404, statusMessage: 'No email content available' })
   }
 
   // 1. Check if blob exists
