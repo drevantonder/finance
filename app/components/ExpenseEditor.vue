@@ -104,6 +104,17 @@ const imageRef = ref<{ $el: HTMLElement } | null>(null)
 const isZoomed = ref(false)
 const zoomPos = ref({ x: 50, y: 50 })
 
+// Tab handling
+const activeTab = ref<'details' | 'source'>('details')
+const tabItems = computed(() => [
+  { label: 'Details', slot: 'details', icon: 'i-heroicons-document-text' },
+  { 
+    label: 'Source', 
+    slot: 'source', 
+    icon: isAIProcessing.value ? 'i-heroicons-arrow-path' : 'i-heroicons-photo' 
+  }
+])
+
 function handleImageMove(e: MouseEvent) {
   if (!imageRef.value || (props.expense.imageKey || '').toLowerCase().endsWith('.pdf')) return
   
@@ -190,6 +201,26 @@ function handleImageLeave() {
       </div>
     </div>
 
+    <!-- Mobile Tabs -->
+    <div class="lg:hidden border-b border-gray-100 bg-gray-50/50">
+      <div class="flex">
+        <button
+          v-for="item in tabItems"
+          :key="item.label"
+          class="flex-1 py-3 px-4 text-sm font-medium transition-colors flex items-center justify-center gap-2"
+          :class="[
+            activeTab === item.slot 
+              ? 'text-primary-600 border-b-2 border-primary-600 bg-white' 
+              : 'text-gray-500 hover:text-gray-700'
+          ]"
+          @click="activeTab = item.slot as any"
+        >
+          <UIcon :name="item.icon" :class="{ 'animate-spin': item.label === 'Source' && isAIProcessing }" />
+          {{ item.label }}
+        </button>
+      </div>
+    </div>
+
     <!-- Content Split -->
     <div class="flex-1 flex flex-col lg:flex-row overflow-hidden relative">
       <!-- Loading Overlay -->
@@ -201,7 +232,10 @@ function handleImageLeave() {
       </div>
       
       <!-- Left: Form -->
-      <div class="flex-1 overflow-y-auto p-6 lg:p-8 space-y-8 border-b lg:border-b-0 lg:border-r border-gray-200 min-w-0">
+      <div 
+        class="flex-1 overflow-y-auto p-6 lg:p-8 space-y-8 border-b lg:border-b-0 lg:border-r border-gray-200 min-w-0"
+        :class="[activeTab === 'details' ? 'flex flex-col' : 'hidden lg:flex lg:flex-col']"
+      >
         
         <!-- Primary Details -->
         <section class="space-y-6">
@@ -304,7 +338,10 @@ function handleImageLeave() {
       </div>
 
       <!-- Right: Image/PDF Preview -->
-      <div class="flex-1 bg-gray-50 flex flex-col relative group min-h-[500px] lg:min-h-0">
+      <div 
+        class="flex-1 bg-gray-50 flex flex-col relative group lg:min-h-0"
+        :class="[activeTab === 'source' ? 'flex' : 'hidden lg:flex']"
+      >
         <div v-if="!imageError" class="absolute inset-0 flex items-center justify-center p-4">
           <SecureImage 
             ref="imageRef"
