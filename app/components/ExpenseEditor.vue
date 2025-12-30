@@ -336,7 +336,7 @@ function handleImageLeave() {
               </div>
               <div v-if="expense.currency && expense.currency !== 'AUD'" class="text-[10px] text-gray-400 font-medium mt-0.5">
                 Original: {{ expense.currency }} {{ formatCurrency(expense.originalTotal || 0, expense.currency) }}
-                <span v-if="expense.exchangeRate" class="ml-1 opacity-70">(@ {{ expense.exchangeRate.toFixed(4) }})</span>
+                <span v-if="expense.exchangeRate" class="ml-1 opacity-70">(@ {{ Number(expense.exchangeRate).toFixed(4) }})</span>
               </div>
             </div>
           </div>
