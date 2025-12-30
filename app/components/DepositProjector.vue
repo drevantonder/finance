@@ -556,15 +556,6 @@ onMounted(async () => {
       }
     }
   }
-  
-  // Fetch prices for allocation symbols
-  const allocSymbols = (localConfig.value.investmentStrategy?.allocations || [])
-    .map(a => a.symbol)
-    .filter(s => s)
-  
-  if (allocSymbols.length > 0) {
-    await stockPrices.initializePrices(allocSymbols)
-  }
 })
 
 // === FHSS LOGIC ===

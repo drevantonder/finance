@@ -94,6 +94,16 @@ export const useSessionStore = defineStore('session', () => {
           },
         }
         isLoaded.value = true
+
+        // Initialize stock prices from cache/API
+        const symbols = [
+          ...(config.value.deposit.holdings?.map(h => h.symbol) || []),
+          ...(config.value.deposit.investmentStrategy?.allocations?.map(a => a.symbol) || [])
+        ].filter(Boolean)
+        
+        if (symbols.length > 0) {
+          stockPrices.initializePrices(symbols)
+        }
       }
     } catch (err: any) {
       error.value = err
