@@ -34,21 +34,30 @@ export default defineNitroPlugin((nitroApp) => {
       const envelopeFrom = message.from.toLowerCase()
       const headerFrom = (email.from?.address || '').toLowerCase()
       
-      // Log all headers to find auth information
-      const allHeaders = Object.fromEntries(message.headers.entries())
-      console.log(`[EmailInbox] All headers:`, JSON.stringify(allHeaders, null, 2))
+      // Check Cloudflare authentication results from parsed email headers
+      // Cloudflare adds Authentication-Results header to the raw email
+      let dkimPass = false
+      let spfPass = false
+      let authDetails = ''
 
-      // Check Cloudflare authentication results (DKIM/SPF)
-      // Use word boundaries to prevent substring attacks
-      const authResults = message.headers.get('Authentication-Results') || ''
-      const arcAuthResults = message.headers.get('ARC-Authentication-Results') || ''
-      const allAuthResults = `${authResults} ${arcAuthResults}`
+      if (email.headers) {
+        for (const header of email.headers) {
+          const key = header.key?.toLowerCase() || ''
+          const value = header.value?.toLowerCase() || ''
+          
+          if (key === 'authentication-results') {
+            authDetails = header.value || ''
+            dkimPass = value.includes('dkim=pass')
+            spfPass = value.includes('spf=pass')
+          }
+          
+          if (key === 'received-spf') {
+            spfPass = spfPass || value.includes('pass')
+          }
+        }
+      }
 
-      const dkimPass = /\bdkim=pass\b/i.test(allAuthResults)
-      const spfPass = /\bspf=pass\b/i.test(allAuthResults)
-      
       // Require DKIM pass OR (SPF pass with envelope-header alignment)
-      // This prevents envelope spoofing attacks
       const hasPassedAuth = dkimPass || (spfPass && envelopeFrom === headerFrom)
 
       // Only trust headerFrom after authentication passes
@@ -61,6 +70,17 @@ export default defineNitroPlugin((nitroApp) => {
         : null
 
       const isVerified = !!authResult
+
+      console.log(`[EmailInbox] Email verification:`, {
+        envelopeFrom,
+        headerFrom,
+        dkimPass,
+        spfPass,
+        hasPassedAuth,
+        authDetails,
+        isVerified,
+        authorizedEmail: authResult?.email || 'none'
+      })
       
       if (!isVerified) {
         console.warn(`[EmailInbox] Unauthorized email from ${headerFrom} (Envelope: ${envelopeFrom}, Auth: ${hasPassedAuth})`)
@@ -69,7 +89,7 @@ export default defineNitroPlugin((nitroApp) => {
           level: 'warn',
           message: `Unauthorized email from ${headerFrom}`,
           source: 'email',
-          details: JSON.stringify({ envelopeFrom, headerFrom, hasPassedAuth, dkimPass, spfPass }),
+          details: JSON.stringify({ envelopeFrom, headerFrom, dkimPass, spfPass, authDetails }),
           createdAt: new Date()
         }).catch(() => {})
       }
