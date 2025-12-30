@@ -30,7 +30,7 @@ export default defineEventHandler(async (event) => {
     const session = await requireUserSession(event)
     const email = (session.user as any).email
     if (email) {
-      await broadcastExpensesChanged(email)
+      broadcastExpensesChanged(email)
     }
 
     const result = await db.select().from(expenses).where(eq(expenses.id, id)).limit(1)

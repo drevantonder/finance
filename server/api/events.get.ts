@@ -33,18 +33,20 @@ export default defineEventHandler(async (event) => {
   return stream.send()
 })
 
-export async function notifyUser(userId: string, eventType: string, data?: unknown) {
+export function notifyUser(userId: string, eventType: string, data?: unknown) {
   const message = JSON.stringify(data ?? { timestamp: Date.now() })
-  const promises = []
   
-  for (const [, client] of clients) {
+  for (const [clientId, client] of clients) {
     if (client.userId === userId) {
-      promises.push(client.stream.push({ 
+      // Fire-and-forget push to avoid blocking request context
+      // Catch errors silently as they usually mean the stream is closed or cross-context
+      client.stream.push({ 
         event: eventType, 
         data: message
-      }))
+      }).catch((err) => {
+        // Silently remove stale clients if they error
+        clients.delete(clientId)
+      })
     }
   }
-  
-  await Promise.all(promises)
 }

@@ -1,17 +1,17 @@
 import { notifyUser } from '../api/events.get'
 
-export async function broadcastExpensesChanged(userId: string) {
-  await notifyUser(userId, 'expenses-changed')
+export function broadcastExpensesChanged(userId: string) {
+  notifyUser(userId, 'expenses-changed')
 }
 
-export async function broadcastInboxChanged(userId: string) {
-  await notifyUser(userId, 'inbox-changed')
+export function broadcastInboxChanged(userId: string) {
+  notifyUser(userId, 'inbox-changed')
 }
 
-export async function broadcastSessionChanged(userId: string) {
-  await notifyUser(userId, 'session-changed')
+export function broadcastSessionChanged(userId: string) {
+  notifyUser(userId, 'session-changed')
 }
 
-export async function broadcastCategoriesChanged(userId: string) {
-  await notifyUser(userId, 'categories-changed')
+export function broadcastCategoriesChanged(userId: string) {
+  notifyUser(userId, 'categories-changed')
 }

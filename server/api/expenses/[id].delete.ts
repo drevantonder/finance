@@ -33,7 +33,7 @@ export default defineEventHandler(async (event) => {
     const session = await requireUserSession(event)
     const email = (session.user as any).email
     if (email) {
-      await broadcastExpensesChanged(email)
+      broadcastExpensesChanged(email)
     }
 
     return { success: true }
