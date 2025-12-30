@@ -53,7 +53,7 @@ const currentPageTitle = computed(() => {
 </script>
 
 <template>
-  <div class="min-h-screen bg-gray-50 flex flex-col lg:flex-row">
+  <div class="h-[100dvh] bg-gray-50 flex flex-col lg:flex-row overflow-hidden">
     <DropZone @files-dropped="handleFilesDropped" />
     
     <!-- Desktop Sidebar -->
@@ -182,8 +182,8 @@ const currentPageTitle = computed(() => {
     </header>
 
     <!-- Content Area -->
-    <main class="flex-1 min-w-0">
-      <div class="max-w-7xl mx-auto p-4 lg:p-10 pb-28 lg:pb-10">
+    <main class="flex-1 min-w-0 relative h-full flex flex-col overflow-hidden">
+      <div class="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-10 pb-28 lg:pb-10 relative overflow-y-auto">
         <slot />
       </div>
     </main>

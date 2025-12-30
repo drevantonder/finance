@@ -233,7 +233,7 @@ function selectAllDuplicates() {
 </script>
 
 <template>
-  <div class="h-[calc(100dvh-4rem)] md:h-[calc(100vh-4rem)] flex flex-col md:flex-row bg-white overflow-hidden pb-[72px] md:pb-0">
+  <div class="absolute inset-0 flex flex-col md:flex-row bg-white overflow-hidden">
     
     <!-- Left Pane: Expense List -->
     <div 
@@ -241,7 +241,7 @@ function selectAllDuplicates() {
       :class="[
         isDetailOpen ? 'w-full md:w-[380px] shrink-0 absolute inset-0 md:relative' : 'w-full max-w-4xl mx-auto border-x border-gray-100',
         // Hide list on mobile when detail is open
-        isDetailOpen ? 'hidden md:flex' : 'flex' 
+        isDetailOpen ? 'hidden md:flex' : 'flex h-full' 
       ]"
     >
       <!-- Header -->
@@ -279,7 +279,7 @@ function selectAllDuplicates() {
       </div>
 
       <!-- List -->
-      <div v-else class="flex-1 overflow-y-auto divide-y divide-gray-50">
+      <div v-else class="flex-1 overflow-y-auto divide-y divide-gray-50 pb-20 md:pb-0">
         <ExpensesExpenseListItem
           v-for="expense in sortedExpenses"
           :key="expense.id"
