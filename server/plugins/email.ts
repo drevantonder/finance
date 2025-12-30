@@ -34,19 +34,15 @@ export default defineNitroPlugin((nitroApp) => {
       const envelopeFrom = message.from.toLowerCase()
       const headerFrom = (email.from?.address || '').toLowerCase()
       
+      // Log all headers to find auth information
+      const allHeaders = Object.fromEntries(message.headers.entries())
+      console.log(`[EmailInbox] All headers:`, JSON.stringify(allHeaders, null, 2))
+
       // Check Cloudflare authentication results (DKIM/SPF)
       // Use word boundaries to prevent substring attacks
       const authResults = message.headers.get('Authentication-Results') || ''
       const arcAuthResults = message.headers.get('ARC-Authentication-Results') || ''
       const allAuthResults = `${authResults} ${arcAuthResults}`
-
-      console.log(`[EmailInbox] Auth headers:`, {
-        authResults,
-        arcAuthResults,
-        allAuthResults,
-        envelopeFrom,
-        headerFrom
-      })
 
       const dkimPass = /\bdkim=pass\b/i.test(allAuthResults)
       const spfPass = /\bspf=pass\b/i.test(allAuthResults)
