@@ -34,6 +34,11 @@ export default defineNitroPlugin((nitroApp) => {
       const envelopeFrom = message.from.toLowerCase()
       const headerFrom = (email.from?.address || '').toLowerCase()
       
+      // Detect Gmail auto-forward (CAF = Content Addressable Forwarding)
+      // Pattern: user+caf_=original=domain.com@gmail.com
+      const gmailCafMatch = envelopeFrom.match(/^([^+]+)\+caf_=.+@gmail\.com$/)
+      const gmailForwarder = gmailCafMatch ? `${gmailCafMatch[1]}@gmail.com` : null
+
       // Check Cloudflare authentication results from parsed email headers
       // Cloudflare adds Authentication-Results header to the raw email
       let dkimPass = false
@@ -57,17 +62,31 @@ export default defineNitroPlugin((nitroApp) => {
         }
       }
 
-      // Require DKIM pass OR (SPF pass with envelope-header alignment)
-      const hasPassedAuth = dkimPass || (spfPass && envelopeFrom === headerFrom)
-
       // Only trust headerFrom after authentication passes
-      // Never trust unauthenticated envelope addresses
-      const authResult = hasPassedAuth 
-        ? await db.select()
+      // For Gmail forwards: verify the forwarding Gmail is authorized AND DKIM passes
+      let authResult: { email: string } | null = null
+      let isGmailForward = false
+
+      if (hasPassedAuth) {
+        if (gmailForwarder && dkimPass) {
+          // Gmail CAF forward - check if the forwarding Gmail is authorized
+          const forwarderAuth = await db.select()
+            .from(authorizedUsers)
+            .where(eq(authorizedUsers.email, gmailForwarder))
+            .get()
+          
+          if (forwarderAuth) {
+            isGmailForward = true
+            authResult = { email: headerFrom }
+          }
+        } else {
+          // Direct email - check if sender is authorized
+          authResult = await db.select()
             .from(authorizedUsers)
             .where(eq(authorizedUsers.email, headerFrom))
             .get()
-        : null
+        }
+      }
 
       const isVerified = !!authResult
 
@@ -77,19 +96,25 @@ export default defineNitroPlugin((nitroApp) => {
         dkimPass,
         spfPass,
         hasPassedAuth,
+        isGmailForward,
+        gmailForwarder,
         authDetails,
         isVerified,
         authorizedEmail: authResult?.email || 'none'
       })
       
       if (!isVerified) {
-        console.warn(`[EmailInbox] Unauthorized email from ${headerFrom} (Envelope: ${envelopeFrom}, Auth: ${hasPassedAuth})`)
+        const reason = gmailForwarder 
+          ? `Gmail forwarder ${gmailForwarder} not authorized`
+          : `Sender ${headerFrom} not authorized`
+        
+        console.warn(`[EmailInbox] Unauthorized: ${reason} (Auth: ${hasPassedAuth})`)
         await db.insert(logs).values({
           id: crypto.randomUUID(),
           level: 'warn',
-          message: `Unauthorized email from ${headerFrom}`,
+          message: `Unauthorized email: ${reason}`,
           source: 'email',
-          details: JSON.stringify({ envelopeFrom, headerFrom, dkimPass, spfPass, authDetails }),
+          details: JSON.stringify({ envelopeFrom, headerFrom, gmailForwarder, dkimPass, spfPass, authDetails }),
           createdAt: new Date()
         }).catch(() => {})
       }

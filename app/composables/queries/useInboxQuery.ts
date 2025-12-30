@@ -77,3 +77,33 @@ export function useProcessInboxMutation() {
     },
   })
 }
+
+export function useDeleteInboxMutation() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      await $fetch(`/api/inbox/${id}`, { method: 'delete' as const })
+      return id
+    },
+    onMutate: async (id) => {
+      await queryClient.cancelQueries({ queryKey: queryKeys.inbox.all })
+      const previous = queryClient.getQueryData<InboxItem[]>(queryKeys.inbox.all)
+      
+      // Optimistically remove from list
+      queryClient.setQueryData<InboxItem[]>(queryKeys.inbox.all, (old = []) =>
+        old.filter(item => item.id !== id)
+      )
+
+      return { previous }
+    },
+    onError: (_err, _id, context) => {
+      if (context?.previous) {
+        queryClient.setQueryData(queryKeys.inbox.all, context.previous)
+      }
+    },
+    onSettled: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.inbox.all })
+    },
+  })
+}

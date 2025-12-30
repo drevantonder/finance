@@ -12,7 +12,6 @@ export default defineEventHandler(async (event) => {
   try {
     const items = await db.select()
       .from(inboxItems)
-      .where(eq(inboxItems.verified, true)) // or adjust based on your logic
       .orderBy(desc(inboxItems.receivedAt))
 
     if (items.length === 0) return []
