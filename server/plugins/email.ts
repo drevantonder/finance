@@ -39,7 +39,15 @@ export default defineNitroPlugin((nitroApp) => {
       const authResults = message.headers.get('Authentication-Results') || ''
       const arcAuthResults = message.headers.get('ARC-Authentication-Results') || ''
       const allAuthResults = `${authResults} ${arcAuthResults}`
-      
+
+      console.log(`[EmailInbox] Auth headers:`, {
+        authResults,
+        arcAuthResults,
+        allAuthResults,
+        envelopeFrom,
+        headerFrom
+      })
+
       const dkimPass = /\bdkim=pass\b/i.test(allAuthResults)
       const spfPass = /\bspf=pass\b/i.test(allAuthResults)
       
