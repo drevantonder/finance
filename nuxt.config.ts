@@ -36,9 +36,9 @@ export default defineNuxtConfig({
     },
     workbox: {
       globPatterns: ['**/*.{js,css,html,png,svg,ico,woff,woff2}'],
-      // SPA: serve index.html for all navigation requests (enables offline)
-      navigateFallback: '/index.html',
-      navigateFallbackDenylist: [/^\/api/],
+      // Disable navigateFallback - let Nuxt handle SPA routing
+      // This avoids the "non-precached-url" error when index.html isn't in manifest
+      navigateFallback: null,
       runtimeCaching: [
         {
           urlPattern: /^https:\/\/.*\.(?:png|jpg|jpeg|svg|gif|webp)$/,
