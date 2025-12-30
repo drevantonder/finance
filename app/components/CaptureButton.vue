@@ -152,7 +152,7 @@ const menuItems = [
       ref="captureBtn"
       @click="openCamera"
       @contextmenu.prevent
-      class="h-14 w-14 -mt-6 flex items-center justify-center rounded-full bg-primary-600 text-white shadow-lg transition-all active:scale-95 touch-none"
+      class="h-14 w-14 -mt-6 flex items-center justify-center rounded-full bg-primary-600 text-white shadow-lg transition-all active:scale-95 touch-none select-none"
       aria-label="Capture receipt"
     >
       <UIcon name="i-heroicons-camera" class="h-7 w-7" />
