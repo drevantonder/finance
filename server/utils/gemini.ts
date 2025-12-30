@@ -116,7 +116,9 @@ If a field is unclear, provide your best estimate.`
     parts.push({ text: `DATA TO EXTRACT FROM:\n${input.text}` })
   }
 
-  const response = await ai.models.generateContent({
+  // Wrap the Gemini call with a timeout (25 seconds to stay under Cloudflare's 30s limit)
+  const timeoutMs = 25000
+  const responsePromise = ai.models.generateContent({
     model: "gemini-3-flash-preview",
     contents: [{ role: "user", parts }],
     config: {
@@ -124,6 +126,12 @@ If a field is unclear, provide your best estimate.`
       responseSchema,
     },
   })
+
+  const timeoutPromise = new Promise<never>((_, reject) => {
+    setTimeout(() => reject(new Error('Gemini API timeout after 25 seconds')), timeoutMs)
+  })
+
+  const response = await Promise.race([responsePromise, timeoutPromise])
 
 
   // Improved logging for debugging

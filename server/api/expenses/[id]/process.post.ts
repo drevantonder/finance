@@ -73,8 +73,8 @@ export default defineEventHandler(async (event) => {
         })
         .where(eq(expenses.id, id))
         
-      // Log success
-      await $fetch('/api/logs', {
+      // Log success (fire-and-forget)
+      $fetch('/api/logs', {
         method: 'POST',
         body: {
           level: 'success',
@@ -89,8 +89,8 @@ export default defineEventHandler(async (event) => {
         .set({ status: 'error', updatedAt: new Date() })
         .where(eq(expenses.id, id))
         
-      // Log error
-      await $fetch('/api/logs', {
+      // Log error (fire-and-forget)
+      $fetch('/api/logs', {
         method: 'POST',
         body: {
           level: 'error',
