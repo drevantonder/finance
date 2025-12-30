@@ -233,7 +233,7 @@ function selectAllDuplicates() {
 </script>
 
 <template>
-  <div class="h-[calc(100vh-4rem)] flex flex-col md:flex-row bg-white overflow-hidden">
+  <div class="h-[calc(100dvh-4rem)] md:h-[calc(100vh-4rem)] flex flex-col md:flex-row bg-white overflow-hidden pb-[72px] md:pb-0">
     
     <!-- Left Pane: Expense List -->
     <div 

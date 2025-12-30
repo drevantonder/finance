@@ -1,5 +1,7 @@
 import { defineStore } from 'pinia'
 import { set, get, del } from 'idb-keyval'
+import { useQueryClient } from '@tanstack/vue-query'
+import { queryKeys } from '~/types/queries'
 import type { ProcessedFile } from './useFileProcessor'
 
 export interface QueueItem {
@@ -21,9 +23,10 @@ export const useUploadQueue = defineStore('uploadQueue', () => {
   const queue = ref<QueueItem[]>([])
   const isProcessing = ref(false)
   const isOnline = useOnline()
-  const toast = useToast()
+    const toast = useToast()
+    const queryClient = useQueryClient()
 
-  // Load from IndexedDB on init
+    // Load from IndexedDB on init
   const init = async () => {
     const saved = await get<QueueItem[]>(IDB_KEY)
     if (saved) {
@@ -127,6 +130,9 @@ export const useUploadQueue = defineStore('uploadQueue', () => {
         merchant: (response as any).merchant,
         total: (response as any).total
       }
+
+      // Refresh the expense list
+      queryClient.invalidateQueries({ queryKey: queryKeys.expenses.all })
 
       if (isDuplicate) {
         toast.add({
