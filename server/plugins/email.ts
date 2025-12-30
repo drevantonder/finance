@@ -64,7 +64,8 @@ export default defineNitroPlugin((nitroApp) => {
 
       // Only trust headerFrom after authentication passes
       // For Gmail forwards: verify the forwarding Gmail is authorized AND DKIM passes
-      let authResult: { email: string } | null = null
+      const hasPassedAuth = dkimPass || spfPass
+      let authResult: { email: string } | undefined = undefined
       let isGmailForward = false
 
       if (hasPassedAuth) {
