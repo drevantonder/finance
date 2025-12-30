@@ -322,16 +322,22 @@ function handleImageLeave() {
                 />
               </div>
             </div>
-            <div class="flex items-center gap-2">
-              <span class="text-gray-400 text-sm">$</span>
-              <UInput 
-                v-model="form.total" 
-                type="number" 
-                step="0.01"
-                variant="none"
-                class="w-32 text-right font-bold text-xl !p-0"
-                :ui="{ base: 'text-white placeholder-gray-500' }"
-              />
+            <div class="flex flex-col items-end">
+              <div class="flex items-center gap-2">
+                <span class="text-gray-400 text-sm">$</span>
+                <UInput 
+                  v-model="form.total" 
+                  type="number" 
+                  step="0.01"
+                  variant="none"
+                  class="w-32 text-right font-bold text-xl !p-0"
+                  :ui="{ base: 'text-white placeholder-gray-500' }"
+                />
+              </div>
+              <div v-if="expense.currency && expense.currency !== 'AUD'" class="text-[10px] text-gray-400 font-medium mt-0.5">
+                Original: {{ expense.currency }} {{ formatCurrency(expense.originalTotal || 0, expense.currency) }}
+                <span v-if="expense.exchangeRate" class="ml-1 opacity-70">(@ {{ expense.exchangeRate.toFixed(4) }})</span>
+              </div>
             </div>
           </div>
         </section>

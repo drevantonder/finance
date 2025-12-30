@@ -4,6 +4,7 @@ import { categories } from '~~/server/db/schema'
 export interface ReceiptExtraction {
   total: number
   tax: number
+  currency: string
   merchant: string
   date: string
   items: Array<{
@@ -27,6 +28,10 @@ const responseSchema = {
     tax: {
       type: "number",
       description: "The tax or GST amount (0 if not shown)",
+    },
+    currency: {
+      type: "string",
+      description: "ISO 4217 currency code (e.g. AUD, USD, EUR, GBP). Default to AUD if not specified.",
     },
     merchant: {
       type: "string",
@@ -74,7 +79,7 @@ const responseSchema = {
       },
     },
   },
-  required: ["total", "merchant", "date"],
+  required: ["total", "merchant", "date", "currency"],
 }
 
 export async function extractReceiptData(input: { image?: string, text?: string }): Promise<ReceiptExtraction> {
@@ -95,6 +100,7 @@ export async function extractReceiptData(input: { image?: string, text?: string 
   const prompt = `Extract receipt details from the provided ${input.image ? 'image' : 'text'}.
 - total: Final total amount paid
 - tax: GST/tax amount (0 if not visible)
+- currency: ISO 4217 currency code (e.g. AUD, USD, EUR, GBP)
 - merchant: Store or seller name
 - date: Receipt date (YYYY-MM-DD)
 - items: List of items with name, qty, unit, unitPrice, lineTotal, category (${categoryContext}), and taxable (boolean).

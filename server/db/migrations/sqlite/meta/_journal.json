@@ -36,6 +36,13 @@
       "when": 1766561333614,
       "tag": "0004_add_inbox_tables",
       "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "6",
+      "when": 1767097286553,
+      "tag": "0005_brave_silver_samurai",
+      "breakpoints": true
     }
   ]
 }

@@ -21,6 +21,9 @@ export const expenses = sqliteTable('expenses', {
   date: text('date'),
   items: text('items'), // JSON stringified array of line items
   rawExtraction: text('raw_extraction'), // Full JSON from Gemini
+  currency: text('currency').notNull().default('AUD'),
+  originalTotal: real('original_total'),
+  exchangeRate: real('exchange_rate'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
 })

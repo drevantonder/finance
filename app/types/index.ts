@@ -302,6 +302,8 @@ export interface ExpenseItem {
   lineTotal: number
   category?: string
   taxable?: boolean
+  originalUnitPrice?: number
+  originalLineTotal?: number
 }
 
 export interface Expense {
@@ -314,6 +316,9 @@ export interface Expense {
   capturedAt: string | Date
   total: number | null
   tax: number | null
+  currency: string | null
+  originalTotal: number | null
+  exchangeRate: number | null
   merchant: string | null
   date: string | null // ISO date
   items: string | null // JSON string of ExpenseItem[]

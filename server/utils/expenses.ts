@@ -3,6 +3,7 @@ import { blob } from 'hub:blob'
 import { expenses } from '~~/server/db/schema'
 import { eq } from 'drizzle-orm'
 import { generateReceiptHash } from './hash'
+import { getExchangeRate } from './exchange'
 
 export interface CreateExpenseInput {
   id?: string
@@ -11,6 +12,7 @@ export interface CreateExpenseInput {
   merchant: string
   date: string
   total: number
+  currency?: string | null
   tax?: number | null
   items: any[]
   rawExtraction: any
@@ -33,6 +35,35 @@ export async function createExpenseIfNotDuplicate(
   const merchant = input.merchant || 'Unknown'
   const receiptString = `${merchant.toLowerCase().trim()}_${input.date}_${Number(input.total).toFixed(2)}`
   const receiptHash = await generateReceiptHash(receiptString)
+
+  // 1. Currency Handling
+  const currency = input.currency || 'AUD'
+  let total = input.total
+  let tax = input.tax
+  let items = input.items || []
+  let originalTotal: number | null = null
+  let exchangeRate: number | null = null
+
+  if (currency !== 'AUD') {
+    exchangeRate = await getExchangeRate(currency, 'AUD', input.date)
+    if (exchangeRate) {
+      originalTotal = input.total
+      total = Number((input.total * exchangeRate).toFixed(2))
+      if (tax) tax = Number((tax * exchangeRate).toFixed(2))
+
+      // Convert items
+      items = items.map((item: any) => ({
+        ...item,
+        originalUnitPrice: item.unitPrice,
+        originalLineTotal: item.lineTotal,
+        unitPrice: Number((item.unitPrice * exchangeRate!).toFixed(2)),
+        lineTotal: Number((item.lineTotal * exchangeRate!).toFixed(2))
+      }))
+    } else {
+      // API failed or rate missing - store original but keep total as-is (flagged via currency)
+      originalTotal = input.total
+    }
+  }
 
   // Check for existing duplicate
   const existing = await db.select({ id: expenses.id })
@@ -69,13 +100,16 @@ export async function createExpenseIfNotDuplicate(
     receiptHash,
     merchant,
     date: input.date,
-    total: input.total,
-    tax: input.tax,
-    items: JSON.stringify(input.items),
+    total,
+    currency,
+    originalTotal,
+    exchangeRate,
+    tax,
+    items: JSON.stringify(items),
     rawExtraction: JSON.stringify(input.rawExtraction),
     capturedAt: input.capturedAt,
     status: 'complete' as const,
-    schemaVersion: 3,
+    schemaVersion: 4,
     updatedAt: now,
   }
 

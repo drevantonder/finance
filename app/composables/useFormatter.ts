@@ -1,8 +1,10 @@
-export function formatCurrency(amount: any, options?: { abbrev?: boolean; decimals?: number }): string {
+export function formatCurrency(amount: any, options?: { abbrev?: boolean; decimals?: number; currency?: string } | string): string {
   const num = Number(amount)
   if (amount === null || amount === undefined || isNaN(num)) return '$0'
   
-  const { abbrev = false, decimals = 0 } = options || {}
+  // Support passing currency code as second arg for convenience
+  const opts = typeof options === 'string' ? { currency: options } : options
+  const { abbrev = false, decimals = 0, currency = 'AUD' } = opts || {}
   const abs = Math.abs(num)
 
   if (abbrev && abs >= 1_000_000) {
@@ -15,7 +17,7 @@ export function formatCurrency(amount: any, options?: { abbrev?: boolean; decima
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
     style: 'currency',
-    currency: 'AUD',
+    currency,
   })
 }
 

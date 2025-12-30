@@ -64,6 +64,7 @@ export default defineEventHandler(async (event) => {
         merchant: extraction.merchant || 'Unknown',
         date: extraction.date,
         total: extraction.total,
+        currency: extraction.currency,
         tax: extraction.tax,
         items: extraction.items,
         rawExtraction: extraction,
