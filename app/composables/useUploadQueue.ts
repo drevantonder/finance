@@ -120,41 +120,21 @@ export const useUploadQueue = defineStore('uploadQueue', () => {
       const expenseId = (response as any).id
       const isDuplicate = (response as any).isDuplicate
       
+      // AI processing now happens inline in index.post.ts, so expense is already complete
+      nextItem.status = 'complete'
+      nextItem.result = {
+        id: expenseId,
+        merchant: (response as any).merchant,
+        total: (response as any).total
+      }
+
       if (isDuplicate) {
-        nextItem.status = 'complete'
-        nextItem.result = {
-          id: expenseId,
-          merchant: (response as any).merchant,
-          total: (response as any).total
-        }
         toast.add({
           title: 'Duplicate detected',
           description: `Receipt from ${nextItem.result.merchant || 'merchant'} already exists. Linked to existing record.`,
           color: 'info'
         })
-        return
       }
-
-      // Now process with Gemini
-      nextItem.status = 'processing'
-      
-      try {
-        const processResponse = await $fetch(`/api/expenses/${expenseId}/process`, {
-          method: 'POST'
-        })
-        
-        nextItem.result = {
-          id: expenseId,
-          merchant: (processResponse as any).merchant,
-          total: (processResponse as any).total
-        }
-      } catch (processError) {
-        // Processing failed but upload succeeded - still mark as complete
-        // The expense exists, just wasn't auto-processed
-        nextItem.result = { id: expenseId }
-      }
-
-      nextItem.status = 'complete'
       
       // Batch completion notification could be added here or in the UI layer
     } catch (e: any) {
