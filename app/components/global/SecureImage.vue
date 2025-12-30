@@ -25,10 +25,10 @@ async function loadResource() {
   error.value = false
   htmlContent.value = null
   
-  if (objectUrl.value) {
+  if (objectUrl.value && objectUrl.value.startsWith('blob:')) {
     URL.revokeObjectURL(objectUrl.value)
-    objectUrl.value = null
   }
+  objectUrl.value = null
   
   try {
     const blob = await $fetch<Blob>(props.src, { responseType: 'blob' })
@@ -40,6 +40,10 @@ async function loadResource() {
         text = `<pre style="white-space: pre-wrap; font-family: monospace; padding: 1rem;">${text}</pre>`
       }
       htmlContent.value = text
+    } else if (blob.type === 'application/pdf') {
+      // For PDFs, use the direct URL to avoid "blob: blocked" issues in some browsers
+      // Since it's our own API, cookie-based auth will work
+      objectUrl.value = props.src
     } else {
       objectUrl.value = URL.createObjectURL(blob)
     }
@@ -54,7 +58,7 @@ async function loadResource() {
 watch(() => props.src, loadResource, { immediate: true })
 
 onBeforeUnmount(() => {
-  if (objectUrl.value) {
+  if (objectUrl.value && objectUrl.value.startsWith('blob:')) {
     URL.revokeObjectURL(objectUrl.value)
   }
 })
