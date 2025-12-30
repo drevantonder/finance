@@ -169,20 +169,12 @@ If a field is unclear, provide your best estimate.`
     console.log('Using direct Google Gemini API with Gemini 3 Flash Preview')
   }
 
-  // Wrap the Gemini call with a timeout (25 seconds to stay under Cloudflare's 30s limit)
-  const timeoutMs = 25000
-  const controller = new AbortController()
-  const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
-
   try {
     const response = await fetch(apiUrl, {
       method: 'POST',
       headers,
       body: JSON.stringify(requestBody),
-      signal: controller.signal,
     })
-
-    clearTimeout(timeoutId)
 
     if (!response.ok) {
       const errorText = await response.text()
@@ -213,10 +205,6 @@ If a field is unclear, provide your best estimate.`
 
     return JSON.parse(text) as ReceiptExtraction
   } catch (e) {
-    clearTimeout(timeoutId)
-    if (e instanceof Error && e.name === 'AbortError') {
-      throw new Error('Gemini API timeout after 25 seconds')
-    }
     throw e
   }
 }
