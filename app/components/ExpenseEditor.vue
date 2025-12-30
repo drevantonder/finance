@@ -115,8 +115,13 @@ const tabItems = computed(() => [
   }
 ])
 
+const isZoomable = computed(() => {
+  const key = (props.expense.imageKey || '').toLowerCase()
+  return !key.endsWith('.pdf') && key !== 'email-body'
+})
+
 function handleImageMove(e: MouseEvent) {
-  if (!imageRef.value || (props.expense.imageKey || '').toLowerCase().endsWith('.pdf')) return
+  if (!imageRef.value || !isZoomable.value) return
   
   const el = imageRef.value.$el
   const rect = el.getBoundingClientRect()
@@ -354,10 +359,10 @@ function handleImageLeave() {
             :src="getImageUrl(expense.id)" 
             className="w-full h-full rounded-lg shadow-md bg-white transition-transform duration-200" 
             :class="[
-              (expense.imageKey || '').toLowerCase().endsWith('.pdf') ? '' : 'cursor-zoom-in',
+              isZoomable ? 'cursor-zoom-in' : '',
               isZoomed ? 'cursor-zoom-out' : ''
             ]"
-            :style="!(expense.imageKey || '').toLowerCase().endsWith('.pdf') ? { 
+            :style="isZoomable ? { 
               transform: isZoomed ? 'scale(2.5)' : 'scale(1)',
               transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`
             } : {}"
