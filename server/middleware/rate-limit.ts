@@ -17,7 +17,7 @@ export default defineEventHandler((event) => {
 
   // Stricter limit for AI processing
   const isAiProcess = event.path.includes('/process') || (event.path === '/api/expenses' && event.method === 'POST')
-  const limit = isAiProcess ? 5 : maxRequests
+  const limit = isAiProcess ? 10 : maxRequests
 
   const record = store.get(ip) || { count: 0, resetAt: now + windowMs }
 
