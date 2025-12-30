@@ -1,21 +1,32 @@
 import PostalMime from 'postal-mime'
-import { eq, sql } from 'drizzle-orm'
+import { eq } from 'drizzle-orm'
 import { db } from 'hub:db'
 import { blob } from 'hub:blob'
-import { inboxItems, inboxAttachments, authorizedUsers } from '../db/schema'
+import { inboxItems, inboxAttachments, authorizedUsers, logs } from '../db/schema'
 import { processInboxItem } from '../utils/inbox'
+
+interface CloudflareEmailMessage {
+  from: string
+  to: string
+  headers: Headers
+  raw: ReadableStream
+  rawSize: number
+}
+
+interface CloudflareEmailContext {
+  waitUntil: (promise: Promise<any>) => void
+}
 
 export default defineNitroPlugin((nitroApp) => {
   // @ts-ignore - Nitro hook for Cloudflare Email Routing
-  nitroApp.hooks.hook('cloudflare:email', async ({ message, env, context }) => {
+  nitroApp.hooks.hook('cloudflare:email', async ({ message, env, context }: { message: CloudflareEmailMessage, env: any, context: CloudflareEmailContext }) => {
     const id = crypto.randomUUID()
     const receivedAt = new Date().toISOString()
     
     try {
       // 1. Parse Email
-      const rawArrayBuffer = message.raw instanceof ArrayBuffer 
-        ? message.raw 
-        : await (message.raw as any).arrayBuffer()
+      // Use Response API to efficiently convert ReadableStream to ArrayBuffer
+      const rawArrayBuffer = await new Response(message.raw).arrayBuffer()
       const parser = new PostalMime()
       const email = await parser.parse(rawArrayBuffer)
 
@@ -49,6 +60,14 @@ export default defineNitroPlugin((nitroApp) => {
       
       if (!isVerified) {
         console.warn(`[EmailInbox] Unauthorized email from ${headerFrom} (Envelope: ${envelopeFrom}, Auth: ${hasPassedAuth})`)
+        await db.insert(logs).values({
+          id: crypto.randomUUID(),
+          level: 'warn',
+          message: `Unauthorized email from ${headerFrom}`,
+          source: 'email',
+          details: JSON.stringify({ envelopeFrom, headerFrom, hasPassedAuth, dkimPass, spfPass }),
+          createdAt: new Date()
+        }).catch(() => {})
       }
 
       // 3. Store Attachments in R2
@@ -102,8 +121,26 @@ export default defineNitroPlugin((nitroApp) => {
         context.waitUntil(processInboxItem(id))
       }
 
-    } catch (err) {
+    } catch (err: any) {
       console.error(`[EmailInbox] Failed to process incoming email:`, err)
+      // Log failure to database for visibility in UI
+      try {
+        await db.insert(logs).values({
+          id: crypto.randomUUID(),
+          level: 'error',
+          message: `Failed to process incoming email: ${err.message}`,
+          source: 'email',
+          details: JSON.stringify({ 
+            error: err.stack,
+            from: message.from,
+            to: message.to,
+            headers: Object.fromEntries(message.headers.entries())
+          }),
+          createdAt: new Date()
+        })
+      } catch (logErr) {
+        console.error('Failed to log email error:', logErr)
+      }
     }
   })
 })
