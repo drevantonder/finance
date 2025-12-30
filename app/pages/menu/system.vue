@@ -155,6 +155,18 @@ const stats = computed(() => [
               Retry
             </UButton>
             <UButton
+              v-if="item.status === 'complete'"
+              icon="i-heroicons-arrow-path"
+              size="xs"
+              color="neutral"
+              variant="ghost"
+              :loading="isProcessing"
+              @click="processInbox(item.id)"
+              title="Re-extract data from this receipt"
+            >
+              Reprocess
+            </UButton>
+            <UButton
               v-if="item.status === 'unauthorized' || item.status === 'error'"
               icon="i-heroicons-trash"
               size="xs"
