@@ -2,6 +2,7 @@ import { db } from 'hub:db'
 import { blob } from 'hub:blob'
 import { expenses, inboxItems } from '~~/server/db/schema'
 import { eq } from 'drizzle-orm'
+import { broadcastExpensesChanged } from '~~/server/utils/broadcast'
 
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')

@@ -91,6 +91,22 @@ export const useUploadQueue = defineStore('uploadQueue', () => {
     nextItem.lastAttempt = new Date().toISOString()
 
     try {
+      // Check for duplicate image BEFORE uploading
+      const { exists } = await $fetch<{ exists: boolean }>(`/api/expenses/check-hash?hash=${nextItem.file.hash}`)
+      if (exists) {
+        nextItem.status = 'error'
+        nextItem.errorType = 'duplicate'
+        nextItem.error = 'This image has already been uploaded'
+        toast.add({ 
+          title: 'Duplicate detected', 
+          description: 'This receipt image was already uploaded',
+          color: 'warning' 
+        })
+        isProcessing.value = false
+        setTimeout(processQueue, 500)
+        return
+      }
+
       // Upload the file
       const response = await $fetch('/api/expenses', {
         method: 'POST',
@@ -102,7 +118,23 @@ export const useUploadQueue = defineStore('uploadQueue', () => {
       })
 
       const expenseId = (response as any).id
+      const isDuplicate = (response as any).isDuplicate
       
+      if (isDuplicate) {
+        nextItem.status = 'complete'
+        nextItem.result = {
+          id: expenseId,
+          merchant: (response as any).merchant,
+          total: (response as any).total
+        }
+        toast.add({
+          title: 'Duplicate detected',
+          description: `Receipt from ${nextItem.result.merchant || 'merchant'} already exists. Linked to existing record.`,
+          color: 'info'
+        })
+        return
+      }
+
       // Now process with Gemini
       nextItem.status = 'processing'
       

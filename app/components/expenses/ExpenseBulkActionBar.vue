@@ -9,6 +9,7 @@ const emit = defineEmits<{
   (e: 'clear'): void
   (e: 'delete'): void
   (e: 'reprocess'): void
+  (e: 'select-duplicates'): void
 }>()
 
 const isConfirmingDelete = ref(false)
@@ -46,6 +47,17 @@ function cancelDelete() {
           size="sm" 
           class="rounded-full w-9 h-9 flex items-center justify-center hover:bg-gray-100" 
           @click="emit('reprocess')" 
+        />
+      </UTooltip>
+
+      <UTooltip text="Select Duplicates">
+        <UButton 
+          variant="ghost" 
+          color="warning" 
+          icon="i-heroicons-document-duplicate" 
+          size="sm" 
+          class="rounded-full w-9 h-9 flex items-center justify-center hover:bg-warning-50 text-warning-600" 
+          @click="emit('select-duplicates')" 
         />
       </UTooltip>
 

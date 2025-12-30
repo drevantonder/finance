@@ -3,7 +3,8 @@ import { blob } from 'hub:blob'
 import { expenses, logs } from '~~/server/db/schema'
 import { eq } from 'drizzle-orm'
 import { extractReceiptData } from '~~/server/utils/gemini'
-import { generateReceiptHash } from '~~/server/utils/hash'
+import { createExpenseIfNotDuplicate } from '~~/server/utils/expenses'
+import { broadcastExpensesChanged } from '~~/server/utils/broadcast'
 import { extractText, getDocumentProxy } from 'unpdf'
 
 export default defineEventHandler(async (event) => {
@@ -63,59 +64,48 @@ export default defineEventHandler(async (event) => {
     try {
       const extraction = await extractReceiptData(isPdf ? { text: pdfText } : { image: base64Data })
       
-      // Generate receipt hash: merchant_date_total
-      const merchant = extraction.merchant || 'unknown'
-      const receiptString = `${merchant.toLowerCase().trim()}_${extraction.date}_${Number(extraction.total).toFixed(2)}`
-      const receiptHash = await generateReceiptHash(receiptString)
+      const result = await createExpenseIfNotDuplicate({
+        id,
+        imageKey,
+        imageHash,
+        merchant: extraction.merchant || 'Unknown',
+        date: extraction.date,
+        total: extraction.total,
+        tax: extraction.tax,
+        items: extraction.items,
+        rawExtraction: extraction,
+        capturedAt: capturedAt ? new Date(capturedAt) : now,
+      })
 
-      await db.update(expenses)
-        .set({
-          status: 'complete',
-          total: extraction.total,
-          tax: extraction.tax,
-          merchant,
-          date: extraction.date,
-          items: JSON.stringify(extraction.items),
-          receiptHash,
-          schemaVersion: 3,
-          rawExtraction: JSON.stringify(extraction),
-          updatedAt: new Date(),
-        })
-        .where(eq(expenses.id, id))
+      if (result.isDuplicate) {
+        // Log that a duplicate was detected
+        await db.insert(logs).values({
+          id: crypto.randomUUID(),
+          level: 'info',
+          message: `Duplicate receipt detected: ${extraction.merchant || 'Unknown'} - linked to existing expense`,
+          source: 'expenses',
+          details: JSON.stringify({ imageHash, merchant: extraction.merchant, id: result.id }),
+          createdAt: new Date()
+        }).catch(e => console.error('Failed to log duplicate to DB:', e))
+      }
+
+      // Notify other devices
+      const session = await requireUserSession(event)
+      const email = (session.user as any).email
+      if (email) {
+        broadcastExpensesChanged(email)
+      }
+
+      // Return the expense (new or existing)
+      const finalExpense = await db.select().from(expenses).where(eq(expenses.id, result.id)).limit(1).get()
+      return {
+        ...finalExpense,
+        isDuplicate: result.isDuplicate
+      }
     } catch (processErr) {
-      console.error('Processing error:', processErr)
-      // Update status to error if AI fails
-      await db.update(expenses)
-        .set({ 
-          status: 'error', 
-          updatedAt: new Date() 
-        })
-        .where(eq(expenses.id, id))
-        
-      // Log the error for debugging
-      await db.insert(logs).values({
-        id: crypto.randomUUID(),
-        level: 'error',
-        message: `AI extraction failed for ${isPdf ? 'PDF' : 'Image'}`,
-        source: 'expenses',
-        details: JSON.stringify({ id, error: String(processErr) }),
-        createdAt: new Date()
-      }).catch(e => console.error('Failed to log error to DB:', e))
-
-      throw processErr
+      console.error('AI Processing error:', processErr)
+      await db.update(expenses).set({ status: 'failed', updatedAt: new Date() }).where(eq(expenses.id, id))
     }
-
-    // Fetch the updated expense to return
-    const result = await db.select().from(expenses).where(eq(expenses.id, id)).limit(1)
-    
-    // Notify other devices
-    const session = await requireUserSession(event)
-    const email = (session.user as any).email
-    if (email) {
-      broadcastExpensesChanged(email)
-    }
-
-    return result[0]
   } catch (err: unknown) {
     console.error('Create expense error:', err)
     throw createError({ statusCode: 500, statusMessage: 'Failed to save expense' })

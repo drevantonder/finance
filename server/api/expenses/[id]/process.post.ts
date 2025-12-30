@@ -3,33 +3,36 @@ import { blob } from 'hub:blob'
 import { expenses } from '~~/server/db/schema'
 import { eq } from 'drizzle-orm'
 import { extractReceiptData } from '~~/server/utils/gemini'
-import { generateReceiptHash } from '~~/server/utils/hash'
+import { createExpenseIfNotDuplicate } from '~~/server/utils/expenses'
+import { broadcastExpensesChanged } from '~~/server/utils/broadcast'
 import { extractText, getDocumentProxy } from 'unpdf'
 
 export default defineEventHandler(async (event) => {
   const id = getRouterParam(event, 'id')
   if (!id) throw createError({ statusCode: 400, statusMessage: 'ID is required' })
+  const expenseId = id as string
 
   try {
     const result = await db.select()
       .from(expenses)
-      .where(eq(expenses.id, id))
+      .where(eq(expenses.id, expenseId))
       .limit(1)
 
-    if (!result || result.length === 0) {
+    if (!result || result.length === 0 || !result[0]) {
       throw createError({ statusCode: 404, statusMessage: 'Expense not found' })
     }
 
     const expense = result[0]
-    const isPdf = expense?.imageKey?.toLowerCase().endsWith('.pdf') || false
+    const imageKey = expense.imageKey || ''
+    const isPdf = imageKey.toLowerCase().endsWith('.pdf')
     
     // 1. Mark as processing
     await db.update(expenses)
       .set({ status: 'processing', updatedAt: new Date() })
-      .where(eq(expenses.id, id))
+      .where(eq(expenses.id, expenseId))
 
     // 2. Fetch file from storage
-    const blobData = await blob.get(expense?.imageKey || '')
+    const blobData = await blob.get(imageKey)
     if (!blobData) {
       throw createError({ statusCode: 404, statusMessage: 'File not found in storage' })
     }
@@ -54,47 +57,54 @@ export default defineEventHandler(async (event) => {
     try {
       const extraction = await extractReceiptData(isPdf ? { text: pdfText } : { image: base64 })
       
-      const merchant = extraction.merchant || 'unknown'
-      const receiptString = `${merchant.toLowerCase().trim()}_${extraction.date}_${Number(extraction.total).toFixed(2)}`
-      const receiptHash = await generateReceiptHash(receiptString)
+      const result = await createExpenseIfNotDuplicate({
+        id: expenseId,
+        imageKey,
+        imageHash: expense.imageHash,
+        merchant: extraction.merchant || 'Unknown',
+        date: extraction.date,
+        total: extraction.total,
+        tax: extraction.tax,
+        items: extraction.items,
+        rawExtraction: extraction,
+        capturedAt: expense.capturedAt || new Date(),
+      })
 
-      await db.update(expenses)
-        .set({
-          status: 'complete',
-          total: extraction.total,
-          tax: extraction.tax,
-          merchant,
-          date: extraction.date,
-          items: JSON.stringify(extraction.items),
-          receiptHash,
-          schemaVersion: 3,
-          rawExtraction: JSON.stringify(extraction),
-          updatedAt: new Date(),
-        })
-        .where(eq(expenses.id, id))
+      // Notify other devices
+      const session = await requireUserSession(event)
+      const email = (session.user as any).email
+      if (email) {
+        broadcastExpensesChanged(email)
+      }
         
       // Log success (fire-and-forget)
       $fetch('/api/logs', {
         method: 'POST',
         body: {
-          level: 'success',
-          message: `Reprocessed receipt for ${merchant}`,
+          level: result.isDuplicate ? 'info' : 'success',
+          message: result.isDuplicate 
+            ? `Reprocessed receipt: detected duplicate and merged`
+            : `Reprocessed receipt for ${extraction.merchant || 'Unknown'}`,
           source: 'expenses',
-          details: JSON.stringify({ id, total: extraction.total })
+          details: JSON.stringify({ id: expenseId, total: extraction.total, isDuplicate: result.isDuplicate })
         }
       }).catch(() => {})
+
+      const final = await db.select().from(expenses).where(eq(expenses.id, result.id)).limit(1).get()
+      if (!final) throw new Error('Failed to retrieve updated expense')
+      return final
     } catch (processErr) {
       console.error('Processing error:', processErr)
       await db.update(expenses)
         .set({ status: 'error', updatedAt: new Date() })
-        .where(eq(expenses.id, id))
+        .where(eq(expenses.id, expenseId))
         
       // Log error (fire-and-forget)
       $fetch('/api/logs', {
         method: 'POST',
         body: {
           level: 'error',
-          message: `Failed to reprocess receipt ${id.slice(0, 8)}`,
+          message: `Failed to reprocess receipt ${expenseId.slice(0, 8)}`,
           source: 'expenses',
           details: JSON.stringify({ error: String(processErr) })
         }
@@ -106,9 +116,6 @@ export default defineEventHandler(async (event) => {
         message: processErr instanceof Error ? processErr.message : String(processErr)
       })
     }
-
-    const updated = await db.select().from(expenses).where(eq(expenses.id, id)).limit(1)
-    return updated[0]
   } catch (err: unknown) {
     console.error('Process expense error:', err)
     throw err

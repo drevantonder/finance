@@ -199,7 +199,36 @@ async function handleReprocess() {
 
 function isDuplicate(expense: Expense) {
   if (!expense.receiptHash || !expenses.value) return false
-  return expenses.value.some(e => e.id !== expense.id && e.receiptHash === expense.receiptHash)
+  
+  // Find all expenses with this hash
+  const matching = expenses.value.filter(e => e.receiptHash === expense.receiptHash)
+  if (matching.length < 2) return false
+
+  // Sort by capturedAt, keep oldest as primary
+  matching.sort((a, b) => new Date(a.capturedAt || 0).getTime() - new Date(b.capturedAt || 0).getTime())
+  
+  // If this isn't the first one, it's a duplicate
+  const first = matching[0]
+  return first ? first.id !== expense.id : false
+}
+
+function selectAllDuplicates() {
+  if (!expenses.value) return
+  
+  const duplicateIds = expenses.value
+    .filter(e => isDuplicate(e))
+    .map(e => e.id)
+
+  if (duplicateIds.length === 0) {
+    toast.add({ title: 'No duplicates found', color: 'info' })
+    return
+  }
+
+  checkedIds.value = new Set(duplicateIds)
+  toast.add({ 
+    title: `Selected ${duplicateIds.length} duplicate${duplicateIds.length !== 1 ? 's' : ''}`, 
+    color: 'success' 
+  })
 }
 </script>
 
@@ -271,6 +300,7 @@ function isDuplicate(expense: Expense) {
         @clear="clearSelection"
         @delete="bulkDelete"
         @reprocess="bulkReprocess"
+        @select-duplicates="selectAllDuplicates"
       />
     </div>
 

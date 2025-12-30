@@ -3,7 +3,7 @@ import { blob } from 'hub:blob'
 import { inboxItems, inboxAttachments, expenses, logs } from '~~/server/db/schema'
 import { eq } from 'drizzle-orm'
 import { extractReceiptData } from '~~/server/utils/gemini'
-import { generateReceiptHash } from '~~/server/utils/hash'
+import { createExpenseIfNotDuplicate } from '~~/server/utils/expenses'
 import { extractText, getDocumentProxy } from 'unpdf'
 
 /**
@@ -49,34 +49,23 @@ export async function processInboxItem(id: string) {
     // 5. Extract with Gemini
     const extraction = await extractReceiptData(extractionInput)
     
-    // 6. Create Expense
-    const expenseId = crypto.randomUUID()
-    const merchant = extraction.merchant || 'Unknown'
-    const receiptString = `${merchant.toLowerCase().trim()}_${extraction.date}_${Number(extraction.total).toFixed(2)}`
-    const receiptHash = await generateReceiptHash(receiptString)
-
-    await db.insert(expenses).values({
-      id: expenseId,
-      merchant,
+    // 6. Create Expense (with duplicate detection)
+    const result = await createExpenseIfNotDuplicate({
+      imageKey: document?.storageKey || image?.storageKey || 'email-body',
+      merchant: extraction.merchant || 'Unknown',
+      date: extraction.date,
       total: extraction.total,
       tax: extraction.tax,
-      date: extraction.date,
-      status: 'complete',
-      imageKey: document?.storageKey || image?.storageKey || 'email-body',
+      items: extraction.items,
+      rawExtraction: extraction,
       capturedAt: new Date(item.receivedAt),
-      items: JSON.stringify(extraction.items),
-      receiptHash,
-      schemaVersion: 3,
-      rawExtraction: JSON.stringify(extraction),
-      createdAt: new Date(),
-      updatedAt: new Date(),
     })
 
     // 7. Update Inbox Item
     await db.update(inboxItems)
       .set({ 
         status: 'complete', 
-        expenseId,
+        expenseId: result.id,
         verified: true 
       })
       .where(eq(inboxItems.id, id))
@@ -84,14 +73,16 @@ export async function processInboxItem(id: string) {
     // 8. Log Success
     await db.insert(logs).values({
       id: crypto.randomUUID(),
-      level: 'success',
-      message: `Processed email receipt from ${item.fromAddress}`,
+      level: result.isDuplicate ? 'info' : 'success',
+      message: result.isDuplicate 
+        ? `Duplicate email receipt from ${item.fromAddress} - linked to existing expense`
+        : `Processed email receipt from ${item.fromAddress}`,
       source: 'system',
-      details: JSON.stringify({ inboxId: id, expenseId, merchant }),
+      details: JSON.stringify({ inboxId: id, expenseId: result.id, merchant: extraction.merchant, isDuplicate: result.isDuplicate }),
       createdAt: new Date()
     })
 
-    return { success: true, expenseId }
+    return { success: true, expenseId: result.id, isDuplicate: result.isDuplicate }
 
   } catch (err: any) {
     console.error(`[InboxProcess] Error processing ${id}:`, err)

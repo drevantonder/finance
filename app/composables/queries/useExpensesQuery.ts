@@ -63,7 +63,7 @@ export function useDeleteExpenseMutation() {
 
   return useMutation({
     mutationFn: async (id: string) => {
-      await $fetch(`/api/expenses/${id}`, { method: 'GET' })
+      await $fetch(`/api/expenses/${id}`, { method: 'DELETE' as any })
       return id
     },
     onMutate: async (id) => {
