@@ -92,7 +92,7 @@ export default defineNuxtConfig({
   // Wrangler config (bindings, compatibility) is in wrangler.toml
   $production: {
     hub: {
-      blob: { bucketName: 'finance-receipts' },
+      blob: { driver: "cloudflare-r2", binding: "blob", bucketName: 'finance-receipts' },
       db: { dialect: 'sqlite', driver: 'd1' }
     },
     nitro: {
