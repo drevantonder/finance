@@ -96,7 +96,13 @@ export default defineNuxtConfig({
       db: { dialect: 'sqlite', driver: 'd1' }
     },
     nitro: {
-      preset: 'cloudflare_module'
+      preset: 'cloudflare_module',
+      rollupConfig: {
+        output: {
+          // Shim __dirname/__filename for Node.js compat in Workers
+          intro: 'const __dirname = "";const __filename = "";'
+        }
+      }
     }
   }
 })
