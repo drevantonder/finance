@@ -11,6 +11,7 @@
     "test": "vitest",
     "test:run": "vitest run",
     "db:generate": "drizzle-kit generate",
+    "db:migrate": "drizzle-kit migrate",
     "db:migrate:prod": "wrangler d1 migrations apply finance-db --remote",
     "db:pull:prod": "./scripts/pull-db.sh",
     "db:push:prod": "./scripts/push-db.sh",
