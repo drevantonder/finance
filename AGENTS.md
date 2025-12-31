@@ -5,20 +5,37 @@
 - Only commit locally if explicitly requested by the user
 - Focus on implementing features and fixes, not git workflow
 
+## Quick Start
+```bash
+pnpm install                    # Install dependencies
+cp .env.example .env            # Copy environment template
+# Fill in: NUXT_SESSION_PASSWORD, NUXT_GEMINI_API_KEY, NUXT_OAUTH_GOOGLE_*
+pnpm dev                        # Start dev server at localhost:3000
+```
+
 ## Commands
 ```bash
-pnpm dev              # Dev server (localhost:3000)
-pnpm build            # Production build
-pnpm test             # Run tests in watch mode
-pnpm test:run         # Run tests once
-pnpm vitest run test/unit/tax.test.ts  # Single test file
-pnpm nuxt typecheck   # TypeScript checking
+# Development
+pnpm dev                        # Dev server (localhost:3000)
+pnpm build                      # Production build
+pnpm nuxt typecheck             # TypeScript checking (no separate linter)
 
-# Database & Storage
-pnpm db:pull          # Pull production D1 database locally
-pnpm db:push          # Push local database to production
-pnpm blob:pull        # Pull R2 blobs locally
-pnpm blob:push        # Push local blobs to R2
+# Testing
+pnpm test                       # Watch mode
+pnpm test:run                   # Run once
+pnpm vitest run test/unit/tax.test.ts      # Single file
+pnpm vitest run --grep "HECS"              # By pattern
+
+# Database
+pnpm db:generate                # Generate migration from schema changes
+pnpm db:migrate                 # Apply migrations locally
+pnpm db:migrate:prod            # Apply migrations to production D1
+pnpm db:pull:prod               # Pull production D1 database locally
+pnpm db:push:prod               # Push local database to production
+
+# Blob Storage
+pnpm blob:pull:prod             # Pull R2 blobs locally
+pnpm blob:push:prod             # Push local blobs to R2
 ```
 
 ## Infrastructure
@@ -47,21 +64,13 @@ This app uses **two patterns** for data management:
 - Collection changes → `queryClient.invalidateQueries()`
 
 ### Directory Structure
-```
-app/
-├── components/       # Vue components (PascalCase)
-├── composables/      # Shared logic (useFoo.ts)
-│   └── queries/      # TanStack Query composables
-├── pages/            # File-based routing
-├── layouts/          # Page layouts
-├── plugins/          # Nuxt plugins (vue-query, chartjs)
-└── types/            # TypeScript interfaces
-server/
-├── api/              # API routes
-├── db/               # Drizzle schema & migrations
-├── middleware/       # Auth, rate limiting
-└── utils/            # Server utilities (gemini, broadcast)
-```
+- `app/components/` - Vue components (PascalCase)
+- `app/composables/` - Shared logic (`useFoo.ts`), includes `queries/` for TanStack Query
+- `app/pages/` - File-based routing
+- `app/types/` - TypeScript interfaces
+- `server/api/` - API routes
+- `server/db/` - Drizzle schema & migrations
+- `server/utils/` - Server utilities (gemini, broadcast)
 
 ## Code Style
 
@@ -88,15 +97,37 @@ Nuxt 4, Vue 3, Pinia, TanStack Query, Nuxt UI v4, Tailwind CSS 4, TypeScript str
 - Percentages stored as decimals internally (0.05 = 5%), displayed as `5%`
 - Currency displayed as `$123k` / `$45M` via `formatCurrency()`
 
+### Vue Component Patterns
+```vue
+<script setup lang="ts">
+const props = defineProps<{ expense: Expense; isLoading?: boolean }>()
+const emit = defineEmits<{
+  (e: 'update', updates: Partial<Expense>): void
+  (e: 'delete'): void
+}>()
+</script>
+```
+
 ### Imports
-- Use `~/` alias for app imports
+- Use `~/` alias for app imports: `import { formatCurrency } from '~/composables/useFormatter'`
 - Explicit imports from `~/composables/queries` (barrel exports)
 - Server imports: `~~/server/db/schema`, `hub:db`, `hub:blob`
 
 ### Error Handling
-- `Math.max(0, val)` to prevent negative values
-- `isFinite()` guard for division operations
-- Server errors: `throw createError({ statusCode: 4xx, statusMessage: '...' })`
+```typescript
+// Client: defensive math
+const rate = Math.max(0, val)
+if (!isFinite(result)) return 0
+
+// Server: createError pattern
+try {
+  const result = await db.select().from(expenses)
+  return result
+} catch (err: unknown) {
+  console.error('Fetch error:', err)
+  throw createError({ statusCode: 500, statusMessage: 'Failed to fetch' })
+}
+```
 
 ### Patterns
 - Iterative solvers for circular dependencies (e.g., house price ↔ stamp duty)
@@ -108,12 +139,6 @@ Nuxt 4, Vue 3, Pinia, TanStack Query, Nuxt UI v4, Tailwind CSS 4, TypeScript str
 - **Timeouts**: Avoid long-running processes; Workers have strict wall-clock limits
 
 ## Testing
-```bash
-pnpm vitest run test/unit/tax.test.ts    # Single file
-pnpm vitest run --grep "HECS"            # By pattern
-pnpm test                                 # Watch mode
-```
-
 Tests are in `test/unit/`. Focus areas: tax calculations, HECS thresholds, loan math.
 
 ## Domain Context
