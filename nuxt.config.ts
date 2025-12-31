@@ -100,6 +100,11 @@ export default defineNuxtConfig({
     },
     nitro: {
       preset: 'cloudflare_module',
+      // Include migrations as server assets for runtime access
+      serverAssets: [{
+        baseName: 'migrations',
+        dir: './server/db/migrations'
+      }],
       cloudflare: {
         nodeCompat: true,
         wrangler: {
