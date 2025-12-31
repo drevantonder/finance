@@ -88,36 +88,18 @@ export default defineNuxtConfig({
     colorMode: false
   },
 
-  // Production-only: Cloudflare Workers preset and specific drivers
+  // Production-only: Cloudflare Workers
+  // Wrangler config (bindings, compatibility) is in wrangler.toml
   $production: {
     hub: {
-      blob: {
-        driver: 'cloudflare-r2',
-        bucketName: 'finance-receipts',
-        binding: 'BLOB'
-      },
-      db: {
-        dialect: 'sqlite',
-        driver: 'd1',
-        connection: { databaseId: process.env.NUXT_HUB_CLOUDFLARE_DATABASE_ID }
-      }
+      blob: { bucketName: 'finance-receipts' },
+      db: { dialect: 'sqlite', driver: 'd1' }
     },
     nitro: {
       preset: 'cloudflare_module',
-      cloudflare: {
-        nodeCompat: true,
-        wrangler: {
-          compatibility_date: '2025-12-22',
-          compatibility_flags: ['nodejs_compat'],
-          observability: {
-            logs: {
-              enabled: true,
-            }
-          }
-        }
-      },
       rollupConfig: {
         output: {
+          // Shim __dirname/__filename for Node.js compat in Workers
           intro: 'const __dirname = "";const __filename = "";'
         }
       }

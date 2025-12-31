@@ -10,10 +10,12 @@
     "postinstall": "nuxt prepare",
     "test": "vitest",
     "test:run": "vitest run",
-    "db:pull": "./scripts/pull-db.sh",
-    "db:push": "./scripts/push-db.sh",
-    "blob:pull": "./scripts/pull-blobs.sh",
-    "blob:push": "./scripts/push-blobs.sh"
+    "db:generate": "drizzle-kit generate",
+    "db:migrate:prod": "wrangler d1 migrations apply finance-db --remote",
+    "db:pull:prod": "./scripts/pull-db.sh",
+    "db:push:prod": "./scripts/push-db.sh",
+    "blob:pull:prod": "./scripts/pull-blobs.sh",
+    "blob:push:prod": "./scripts/push-blobs.sh"
   },
   "dependencies": {
     "@google/genai": "^1.34.0",
@@ -48,6 +50,7 @@
     "@vite-pwa/nuxt": "^1.1.0",
     "drizzle-kit": "^0.31.8",
     "happy-dom": "^20.0.11",
+    "typescript": "^5.9.3",
     "vitest": "^4.0.16",
     "wrangler": "^4.56.0"
   }
