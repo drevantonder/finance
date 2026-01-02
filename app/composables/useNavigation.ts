@@ -19,6 +19,7 @@ export function useNavigation() {
   const mainNavItems: NavItem[] = [
     { label: 'Dashboard', to: '/', icon: 'i-heroicons-home' },
     { label: 'Expenses', to: '/expenses', icon: 'i-heroicons-banknotes' },
+    { label: 'Claims', to: '/menu/claims', icon: 'i-heroicons-document-check' },
     { label: 'Goal', to: '/goal', icon: 'i-heroicons-home-modern' },
     { label: 'Menu', to: '/menu', icon: 'i-heroicons-bars-3' }
   ]
@@ -33,8 +34,7 @@ export function useNavigation() {
   ]
 
   const systemItems: SubMenuItem[] = [
-    { label: 'System Health', to: '/menu/system', icon: 'i-heroicons-heart', description: 'Inbox debug, Logs', color: 'bg-rose-500' },
-    { label: 'Claims', to: '/menu/claims', icon: 'i-heroicons-document-check', description: 'MMR/MFB tracking', color: 'bg-indigo-500' }
+    { label: 'System Health', to: '/menu/system', icon: 'i-heroicons-heart', description: 'Inbox debug, Logs', color: 'bg-rose-500' }
   ]
 
   const navGroups: NavGroup[] = [

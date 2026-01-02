@@ -209,6 +209,14 @@ const currentPageTitle = computed(() => {
         <span class="text-[10px] font-bold uppercase tracking-wider">Expenses</span>
       </NuxtLink>
 
+      <!-- Claims -->
+      <NuxtLink to="/menu/claims" class="flex flex-col items-center gap-1 min-w-[64px] transition-all active:scale-95" :class="isActive('/menu/claims') ? 'text-primary-600' : 'text-gray-400'">
+        <div class="h-9 w-12 flex items-center justify-center rounded-2xl transition-all" :class="isActive('/menu/claims') ? 'bg-primary-50' : ''">
+          <UIcon name="i-heroicons-document-check" class="h-6 w-6" />
+        </div>
+        <span class="text-[10px] font-bold uppercase tracking-wider">Claims</span>
+      </NuxtLink>
+
       <!-- Capture (Middle) -->
       <CaptureButton />
 
