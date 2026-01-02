@@ -19,12 +19,12 @@ export function useNavigation() {
   const mainNavItems: NavItem[] = [
     { label: 'Dashboard', to: '/', icon: 'i-heroicons-home' },
     { label: 'Expenses', to: '/expenses', icon: 'i-heroicons-banknotes' },
-    { label: 'Claims', to: '/menu/claims', icon: 'i-heroicons-document-check' },
-    { label: 'Goal', to: '/goal', icon: 'i-heroicons-home-modern' },
+    { label: 'Claims', to: '/claims', icon: 'i-heroicons-document-check' },
     { label: 'Menu', to: '/menu', icon: 'i-heroicons-bars-3' }
   ]
 
   const strategyItems: SubMenuItem[] = [
+    { label: 'House Goal', to: '/goal', icon: 'i-heroicons-home-modern', description: 'Path to home ownership', color: 'bg-indigo-600' },
     { label: 'Income Strategy', to: '/menu/income', icon: 'i-heroicons-user-group', description: 'TMN, Salary, Household', color: 'bg-blue-500' },
     { label: 'Expense Categories', to: '/menu/categories', icon: 'i-heroicons-tag', description: 'Receipt categorization', color: 'bg-amber-500' },
     { label: 'Assets', to: '/menu/assets', icon: 'i-heroicons-banknotes', description: 'Cash, Stocks, FHSS', color: 'bg-emerald-500' },

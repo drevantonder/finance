@@ -191,7 +191,7 @@ const currentPageTitle = computed(() => {
     <!-- Mobile Bottom Navigation -->
     <nav 
       v-if="!$route.meta.hideNav"
-      class="lg:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-t border-gray-200 px-2 py-3 z-40 flex justify-around items-center"
+      class="lg:hidden fixed bottom-0 left-0 right-0 bg-white/80 backdrop-blur-lg border-t border-gray-200 px-4 pt-3 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] z-40 flex justify-around items-center"
     >
       <!-- Dashboard -->
       <NuxtLink to="/" class="flex flex-col items-center gap-1 min-w-[64px] transition-all active:scale-95" :class="isActive('/') ? 'text-primary-600' : 'text-gray-400'">
@@ -209,23 +209,15 @@ const currentPageTitle = computed(() => {
         <span class="text-[10px] font-bold uppercase tracking-wider">Expenses</span>
       </NuxtLink>
 
-      <!-- Claims -->
-      <NuxtLink to="/menu/claims" class="flex flex-col items-center gap-1 min-w-[64px] transition-all active:scale-95" :class="isActive('/menu/claims') ? 'text-primary-600' : 'text-gray-400'">
-        <div class="h-9 w-12 flex items-center justify-center rounded-2xl transition-all" :class="isActive('/menu/claims') ? 'bg-primary-50' : ''">
-          <UIcon name="i-heroicons-document-check" class="h-6 w-6" />
-        </div>
-        <span class="text-[10px] font-bold uppercase tracking-wider">Claims</span>
-      </NuxtLink>
-
       <!-- Capture (Middle) -->
       <CaptureButton />
 
-      <!-- Goal -->
-      <NuxtLink to="/goal" class="flex flex-col items-center gap-1 min-w-[64px] transition-all active:scale-95" :class="isActive('/goal') ? 'text-primary-600' : 'text-gray-400'">
-        <div class="h-9 w-12 flex items-center justify-center rounded-2xl transition-all" :class="isActive('/goal') ? 'bg-primary-50' : ''">
-          <UIcon name="i-heroicons-home-modern" class="h-6 w-6" />
+      <!-- Claims -->
+      <NuxtLink to="/claims" class="flex flex-col items-center gap-1 min-w-[64px] transition-all active:scale-95" :class="isActive('/claims') ? 'text-primary-600' : 'text-gray-400'">
+        <div class="h-9 w-12 flex items-center justify-center rounded-2xl transition-all" :class="isActive('/claims') ? 'bg-primary-50' : ''">
+          <UIcon name="i-heroicons-document-check" class="h-6 w-6" />
         </div>
-        <span class="text-[10px] font-bold uppercase tracking-wider">Goal</span>
+        <span class="text-[10px] font-bold uppercase tracking-wider">Claims</span>
       </NuxtLink>
 
       <!-- Menu -->
