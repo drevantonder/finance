@@ -70,7 +70,7 @@ export function useBulkExpenseClaimMutation() {
 export function useCreateClaimMutation() {
   const queryClient = useQueryClient()
   return useMutation({
-    mutationFn: async (data: Partial<Claim> & { expenseClaimIds: string[] }): Promise<unknown> => {
+    mutationFn: async (data: Partial<Claim> & { expenseIds: string[] }): Promise<unknown> => {
       return await $fetch('/api/claims', { method: 'POST', body: data })
     },
     onSettled: () => {

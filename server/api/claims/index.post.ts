@@ -4,9 +4,28 @@ import { claims, expenseClaims, expenses, categories } from '~~/server/db/schema
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
-  const { id, financialYear, claimDate, expenseClaimIds, notes } = body as { id: string, financialYear: string, claimDate: string, expenseClaimIds: string[], notes?: string }
+  const { id, financialYear, claimDate, expenseIds, notes } = body as { id: string, financialYear: string, claimDate: string, expenseIds: string[], notes?: string }
 
-  // Fetch all categories for P2C mapping lookup
+  // 1. Ensure expense_claim records exist for all these expenses
+  const existingClaims = await db.select()
+    .from(expenseClaims)
+    .where(inArray(expenseClaims.expenseId, expenseIds))
+    .all()
+
+  const existingExpenseIds = new Set(existingClaims.map(c => c.expenseId))
+  const missingExpenseIds = expenseIds.filter(id => !existingExpenseIds.has(id))
+
+  if (missingExpenseIds.length > 0) {
+    const newClaims = missingExpenseIds.map(expenseId => ({
+      id: crypto.randomUUID(),
+      expenseId,
+      status: 'pending',
+      createdAt: new Date()
+    }))
+    await db.insert(expenseClaims).values(newClaims)
+  }
+
+  // 2. Fetch all categories for P2C mapping lookup
   const allCategories = await db.select().from(categories)
   const categoryMap = new Map(
     allCategories.map(c => [
@@ -17,36 +36,36 @@ export default defineEventHandler(async (event) => {
 
   // Helper to derive P2C mapping from expense items
   function derivePtcMapping(expense: any) {
+    const base = { mfbPercent: null, mfbAmount: null, mmrAmount: null, gstAmount: expense.tax || 0 }
     try {
-      if (!expense.items) return { mfbPercent: null, mfbAmount: null, mmrAmount: null, gstAmount: null }
+      if (!expense.items) return base
 
       const items = JSON.parse(expense.items) as any[]
-      if (!items.length) return { mfbPercent: null, mfbAmount: null, mmrAmount: null, gstAmount: null }
+      if (!items.length) return base
 
       // Find item with highest lineTotal (dominant category)
       const dominantItem = items.reduce((prev, curr) =>
         (curr.lineTotal || 0) > (prev.lineTotal || 0) ? curr : prev
       )
 
-      if (!dominantItem.category) return { mfbPercent: null, mfbAmount: null, mmrAmount: null, gstAmount: null }
+      if (!dominantItem.category) return base
 
       const mapping = categoryMap.get(dominantItem.category)
-      if (!mapping || !mapping.mfbCategory) return { mfbPercent: null, mfbAmount: null, mmrAmount: null, gstAmount: null }
+      if (!mapping || !mapping.mfbCategory) return base
 
       const mfbPercent = mapping.mfbPercent ?? 100
       const total = expense.total || 0
       const mfbAmount = total * (mfbPercent / 100)
       const mmrAmount = total - mfbAmount
-      const gstAmount = expense.tax || 0
 
-      return { mfbPercent, mfbAmount, mmrAmount, gstAmount }
+      return { ...base, mfbPercent, mfbAmount, mmrAmount }
     } catch (e) {
       console.error('Error deriving PTC mapping:', e)
-      return { mfbPercent: null, mfbAmount: null, mmrAmount: null, gstAmount: null }
+      return base
     }
   }
 
-  // 1. Get expense claims with their expense data
+  // 3. Get all relevant expense_claims with their expense data
   const claimsWithExpenses = await db.select({
       claimId: expenseClaims.id,
       expenseId: expenseClaims.expenseId,
@@ -55,7 +74,7 @@ export default defineEventHandler(async (event) => {
     })
     .from(expenseClaims)
     .innerJoin(expenses, eq(expenseClaims.expenseId, expenses.id))
-    .where(inArray(expenseClaims.id, expenseClaimIds))
+    .where(inArray(expenseClaims.expenseId, expenseIds))
     .all()
 
   // 2. Derive P2C values for each expense
@@ -84,7 +103,7 @@ export default defineEventHandler(async (event) => {
     mfbAmount: totals.mfb,
     mmrAmount: totals.mmr,
     gstAmount: totals.gst,
-    expenseCount: expenseClaimIds.length,
+    expenseCount: expenseIds.length,
     notes,
     createdAt: new Date()
   }

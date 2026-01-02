@@ -17,32 +17,32 @@ export default defineEventHandler(async (event) => {
 
   // Helper to derive P2C mapping from expense items
   function derivePtcMapping(expense: any) {
+    const base = { ptcCategory: null, mfbPercent: null, mfbAmount: null, mmrAmount: null, gstAmount: expense.tax || 0 }
     try {
-      if (!expense.items) return { ptcCategory: null, mfbPercent: null, mfbAmount: null, mmrAmount: null, gstAmount: null }
+      if (!expense.items) return base
 
       const items = JSON.parse(expense.items) as any[]
-      if (!items.length) return { ptcCategory: null, mfbPercent: null, mfbAmount: null, mmrAmount: null, gstAmount: null }
+      if (!items.length) return base
 
       // Find item with highest lineTotal (dominant category)
       const dominantItem = items.reduce((prev, curr) =>
         (curr.lineTotal || 0) > (prev.lineTotal || 0) ? curr : prev
       )
 
-      if (!dominantItem.category) return { ptcCategory: null, mfbPercent: null, mfbAmount: null, mmrAmount: null, gstAmount: null }
+      if (!dominantItem.category) return base
 
       const mapping = categoryMap.get(dominantItem.category)
-      if (!mapping || !mapping.mfbCategory) return { ptcCategory: null, mfbPercent: null, mfbAmount: null, mmrAmount: null, gstAmount: null }
+      if (!mapping || !mapping.mfbCategory) return base
 
       const mfbPercent = mapping.mfbPercent ?? 100
       const total = expense.total || 0
       const mfbAmount = total * (mfbPercent / 100)
       const mmrAmount = total - mfbAmount
-      const gstAmount = expense.tax || 0
 
-      return { ptcCategory: mapping.mfbCategory, mfbPercent, mfbAmount, mmrAmount, gstAmount }
+      return { ...base, ptcCategory: mapping.mfbCategory, mfbPercent, mfbAmount, mmrAmount }
     } catch (e) {
       console.error('Error deriving PTC mapping:', e)
-      return { ptcCategory: null, mfbPercent: null, mfbAmount: null, mmrAmount: null, gstAmount: null }
+      return base
     }
   }
 

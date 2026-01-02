@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { ref, computed } from 'vue'
-import { useExpenseClaimsQuery, useBulkExpenseClaimMutation, useExpenseClaimMutation } from '~/composables/queries'
+import { useExpenseClaimsQuery, useBulkExpenseClaimMutation, useExpenseClaimMutation, useCreateClaimMutation } from '~/composables/queries'
 import { PTC_CATEGORIES } from '~/utils/ptcCategories'
 import { formatCurrency } from '~/composables/useFormatter'
 
@@ -66,14 +66,100 @@ const getUrgencyColor = (days: number) => {
 
 // Focus Mode / Assistant
 const isAssistantOpen = ref(false)
+const currentIndex = ref(0)
 const selectedForClaim = computed(() => 
   sortedRows.value?.filter(r => selectedExpenseIds.value.has(r.expense.id)) || []
 )
 
+const currentItem = computed(() => selectedForClaim.value[currentIndex.value])
+
 function startClaim() {
   if (selectedExpenseIds.value.size === 0) return
+  currentIndex.value = 0
   isAssistantOpen.value = true
 }
+
+// Copy Card Refs for shortcut triggering
+const cardDate = ref()
+const cardProvider = ref()
+const cardAmount = ref()
+const cardMfb = ref()
+const cardGst = ref()
+
+// Keyboard Navigation
+useEventListener('keydown', (e) => {
+  if (!isAssistantOpen.value) return
+
+  // Copy shortcuts (1-5)
+  if (e.key === '1') cardDate.value?.copyToClipboard()
+  if (e.key === '2') cardProvider.value?.copyToClipboard()
+  if (e.key === '3') cardAmount.value?.copyToClipboard()
+  if (e.key === '4') cardMfb.value?.copyToClipboard()
+  if (e.key === '5') cardGst.value?.copyToClipboard()
+
+  // Navigation
+  if (e.key === 'ArrowRight' || e.key === ' ') {
+    e.preventDefault()
+    if (currentIndex.value < selectedForClaim.value.length - 1) currentIndex.value++
+  }
+  if (e.key === 'ArrowLeft' || e.key === 'Backspace') {
+    e.preventDefault()
+    if (currentIndex.value > 0) currentIndex.value--
+  }
+  if (e.key === 'Escape') isAssistantOpen.value = false
+})
+
+// Receipt Zoom State
+const isZoomLocked = ref(false)
+const zoomPos = ref({ x: 50, y: 50 })
+const isHovering = ref(false)
+
+function handleImageMove(e: MouseEvent) {
+  if (isZoomLocked.value) return
+  const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
+  zoomPos.value = {
+    x: Math.max(0, Math.min(100, ((e.clientX - rect.left) / rect.width) * 100)),
+    y: Math.max(0, Math.min(100, ((e.clientY - rect.top) / rect.height) * 100))
+  }
+}
+
+function toggleZoomLock() {
+  isZoomLocked.value = !isZoomLocked.value
+}
+
+// Auto-scroll queue
+const queueRefs = ref<HTMLElement[]>([])
+watch(currentIndex, (newIdx) => {
+  const el = queueRefs.value[newIdx]
+  if (el) {
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' })
+  }
+})
+
+// Final Action
+const { mutateAsync: createClaim } = useCreateClaimMutation()
+const { getFinancialYear } = useDateUtils()
+
+async function finishClaim() {
+  const expenseIds = selectedForClaim.value.map(r => r.expense.id)
+  
+  try {
+    await createClaim({ 
+      id: crypto.randomUUID(),
+      financialYear: getFinancialYear(),
+      expenseIds,
+      claimDate: new Date().toISOString(),
+      notes: `Claimed via Assistant (${expenseIds.length} items)`
+    })
+    
+    isAssistantOpen.value = false
+    selectedExpenseIds.value = new Set()
+  } catch (err) {
+    console.error('Failed to finish claim:', err)
+  }
+}
+
+const getImageUrl = (id: string) => `/api/expenses/${id}/image`
 </script>
 
 <template>
@@ -101,6 +187,7 @@ function startClaim() {
           icon="i-heroicons-play" 
           color="primary" 
           label="Start Claim" 
+          class="hidden lg:flex"
           :disabled="selectedExpenseIds.size === 0"
           @click="startClaim"
         />
@@ -251,32 +338,216 @@ function startClaim() {
       </div>
     </UCard>
 
-    <!-- Claim Assistant Modal (Placeholder for now) -->
-    <UModal v-model:open="isAssistantOpen" title="Claim Assistant" fullscreen>
+    <!-- Claim Assistant Modal -->
+    <UModal 
+      v-model:open="isAssistantOpen" 
+      title="Claim Assistant" 
+      fullscreen
+      :ui="{
+        content: 'flex flex-col overflow-hidden bg-white',
+        body: 'p-0 flex-1 overflow-hidden flex flex-col',
+        header: 'hidden'
+      }"
+    >
       <template #body>
-        <div class="flex-1 flex gap-8 overflow-hidden h-full">
-          <!-- Queue -->
-          <div class="w-64 flex flex-col gap-3 overflow-y-auto">
-             <div 
-              v-for="(row, idx) in selectedForClaim" 
-              :key="row.expense.id"
-              class="p-4 rounded-xl border border-gray-100 bg-white shadow-sm"
-              :class="{ 'ring-2 ring-primary-500': idx === 0 }"
-            >
-              <div class="text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">{{ idx + 1 }}. {{ row.expense.merchant }}</div>
-              <div class="text-sm font-bold">{{ formatCurrency(row.expense.total) }}</div>
-            </div>
+        <!-- Toolbar -->
+        <div class="h-14 border-b border-gray-100 flex items-center justify-between px-6 bg-white shrink-0">
+          <div class="flex items-center gap-4">
+            <UButton
+              color="neutral"
+              variant="ghost"
+              icon="i-heroicons-x-mark"
+              size="sm"
+              @click="isAssistantOpen = false"
+            />
+            <h2 class="text-sm font-bold text-gray-900 flex items-center gap-2">
+              Claim Assistant
+              <span class="text-gray-400 font-normal px-2 py-0.5 bg-gray-50 rounded text-xs">
+                {{ currentIndex + 1 }} of {{ selectedForClaim.length }}
+              </span>
+            </h2>
           </div>
+
+          <div class="flex items-center gap-3">
+            <div class="hidden lg:flex items-center gap-4 mr-4 text-[10px] font-bold text-gray-400 uppercase tracking-widest">
+              <span class="flex items-center gap-1.5"><UKbd size="sm">1-5</UKbd> Copy</span>
+              <span class="flex items-center gap-1.5"><UKbd size="sm">Space</UKbd> Next</span>
+              <span class="flex items-center gap-1.5"><UKbd size="sm">Esc</UKbd> Close</span>
+            </div>
+            <UButton 
+              color="primary" 
+              icon="i-heroicons-check" 
+              label="Finish & Mark Claimed" 
+              @click="finishClaim"
+            />
+          </div>
+        </div>
+
+        <div class="flex-1 flex overflow-hidden">
+          <!-- Column 1: Queue (240px) -->
+          <aside class="w-72 border-r border-gray-100 bg-gray-50/30 flex flex-col overflow-hidden">
+            <div class="p-4 border-b border-gray-100 bg-white">
+              <h3 class="text-[10px] font-bold text-gray-400 uppercase tracking-widest">Queue</h3>
+            </div>
+            <div class="flex-1 overflow-y-auto p-3 space-y-2">
+              <button 
+                v-for="(row, idx) in selectedForClaim" 
+                :key="row.expense.id"
+                ref="queueRefs"
+                class="w-full text-left p-3 rounded-xl transition-all relative group"
+                :class="[
+                  currentIndex === idx 
+                    ? 'bg-white shadow-sm ring-1 ring-primary-500 border-transparent' 
+                    : 'hover:bg-gray-100/50 border border-transparent'
+                ]"
+                @click="currentIndex = idx"
+              >
+                <div class="flex items-start gap-3">
+                  <div 
+                    class="w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold shrink-0"
+                    :class="currentIndex === idx ? 'bg-primary-500 text-white' : 'bg-gray-200 text-gray-500'"
+                  >
+                    {{ idx + 1 }}
+                  </div>
+                  <div class="flex-1 min-w-0">
+                    <div class="text-xs font-bold text-gray-900 truncate">{{ row.expense.merchant || 'Unknown' }}</div>
+                    <div class="text-[10px] text-gray-500">{{ formatCurrency(row.expense.total) }}</div>
+                  </div>
+                  <div v-if="currentIndex === idx" class="text-primary-500">
+                    <UIcon name="i-heroicons-chevron-right" class="w-4 h-4" />
+                  </div>
+                </div>
+              </button>
+            </div>
+          </aside>
           
-          <!-- Assistant Body (Focus Area) -->
-          <div class="flex-1 bg-gray-50 rounded-2xl p-8 flex flex-col items-center justify-center border border-gray-100">
-            <div class="text-center max-w-sm">
-              <UIcon name="i-heroicons-rocket-launch" class="text-5xl text-primary-500 mb-4" />
-              <h3 class="text-lg font-bold text-gray-900">Focus Mode</h3>
-              <p class="text-sm text-gray-500 mt-2">The full Copy-Paste assistant is coming in the next step. For now, you can select and view your claimable items.</p>
-              <UButton class="mt-6" @click="isAssistantOpen = false">Close Assistant</UButton>
+          <!-- Column 2: Assistant Body (Focus Area) -->
+          <main class="flex-1 bg-white p-8 lg:p-12 overflow-y-auto">
+            <div class="max-w-4xl mx-auto space-y-8">
+              <div class="flex items-end justify-between">
+                <div>
+                  <h3 class="text-2xl font-bold text-gray-900">{{ currentItem?.expense.merchant }}</h3>
+                  <p class="text-sm text-gray-500">{{ new Date(currentItem?.expense.date || '').toLocaleDateString('en-AU', { dateStyle: 'full' }) }}</p>
+                </div>
+                <div class="text-right">
+                  <div class="text-3xl font-black text-gray-900">{{ formatCurrency(currentItem?.expense.total) }}</div>
+                  <div class="text-xs font-bold text-success-600 uppercase tracking-widest mt-1">Ready to copy</div>
+                </div>
+              </div>
+
+              <!-- Grid of Copy Cards -->
+              <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <CopyCard 
+                  ref="cardDate"
+                  label="1. Invoice Date" 
+                  :value="currentItem?.expense.date ? new Date(currentItem.expense.date).toLocaleDateString('en-AU') : ''" 
+                  shortcut-key="1"
+                />
+                <CopyCard 
+                  ref="cardProvider"
+                  label="2. Provider" 
+                  :value="currentItem?.expense.merchant || ''" 
+                  shortcut-key="2"
+                />
+                <CopyCard 
+                  ref="cardAmount"
+                  label="3. Amount" 
+                  :value="currentItem?.expense.total?.toFixed(2) || ''" 
+                  shortcut-key="3"
+                />
+                <CopyCard 
+                  ref="cardMfb"
+                  label="4. MFB %" 
+                  :value="(currentItem?.mfbPercent ?? 100) + '%'" 
+                  shortcut-key="4"
+                />
+                <CopyCard 
+                  ref="cardGst"
+                  label="5. GST Amount" 
+                  :value="currentItem?.gstAmount?.toFixed(2) || '0.00'" 
+                  shortcut-key="5"
+                />
+                <CopyCard 
+                  label="Category (Reference)" 
+                  :value="currentItem?.ptcCategory || ''" 
+                  is-reference
+                  :warning="!currentItem?.ptcCategory"
+                />
+              </div>
+
+              <!-- Navigation Footer -->
+              <div class="flex items-center justify-between pt-8 border-t border-gray-50">
+                <UButton 
+                  color="neutral" 
+                  variant="ghost" 
+                  icon="i-heroicons-arrow-left" 
+                  label="Previous" 
+                  :disabled="currentIndex === 0"
+                  @click="currentIndex--"
+                />
+                
+                <div class="flex items-center gap-1">
+                  <div 
+                    v-for="(_, idx) in selectedForClaim" 
+                    :key="idx"
+                    class="w-1.5 h-1.5 rounded-full transition-all"
+                    :class="currentIndex === idx ? 'bg-primary-500 w-4' : 'bg-gray-200'"
+                  />
+                </div>
+
+                <UButton 
+                  color="neutral" 
+                  variant="ghost" 
+                  icon="i-heroicons-arrow-right" 
+                  trailing
+                  label="Next" 
+                  :disabled="currentIndex === selectedForClaim.length - 1"
+                  @click="currentIndex++"
+                />
+              </div>
             </div>
-          </div>
+          </main>
+
+          <!-- Column 3: Receipt Preview (360px) -->
+          <aside class="w-96 border-l border-gray-100 bg-gray-50 flex flex-col overflow-hidden relative group">
+            <div class="absolute inset-0 flex items-center justify-center p-6">
+              <SecureImage 
+                v-if="currentItem"
+                :src="getImageUrl(currentItem.expense.id)" 
+                className="w-full h-full rounded-2xl shadow-xl bg-white transition-transform duration-200" 
+                :class="[
+                  'cursor-crosshair',
+                  isZoomLocked ? 'ring-4 ring-primary-500/30' : ''
+                ]"
+                :style="{ 
+                  transform: isHovering || isZoomLocked ? 'scale(2.5)' : 'scale(1)',
+                  transformOrigin: `${zoomPos.x}% ${zoomPos.y}%`
+                }"
+                @mousemove="handleImageMove"
+                @mouseenter="isHovering = true"
+                @mouseleave="isHovering = false"
+                @click="toggleZoomLock"
+                alt="Receipt"
+              />
+              
+              <!-- Zoom Indicator -->
+              <div 
+                class="absolute top-10 right-10 bg-black/50 backdrop-blur text-white text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest opacity-0 group-hover:opacity-100 transition-opacity pointer-events-none"
+              >
+                {{ isZoomLocked ? 'Zoom Locked' : 'Hover to Zoom' }}
+              </div>
+
+              <a 
+                v-if="currentItem"
+                :href="getImageUrl(currentItem.expense.id)" 
+                target="_blank"
+                class="absolute bottom-10 right-10 opacity-0 group-hover:opacity-100 transition-opacity bg-white/90 backdrop-blur text-xs px-4 py-2 rounded-full shadow-lg hover:bg-white flex items-center gap-2 font-bold text-gray-900 z-10 border border-gray-100"
+              >
+                <UIcon name="i-heroicons-arrow-top-right-on-square" />
+                View Original
+              </a>
+            </div>
+          </aside>
         </div>
       </template>
     </UModal>

@@ -56,10 +56,27 @@ export function countFortnightsInRange(
   return { count, partialFraction }
 }
 
+/**
+ * Get the P2C Financial Year string (e.g. "2024-25") for a given date.
+ * P2C Financial Year starts April 1st.
+ */
+export function getFinancialYear(date: Date = new Date()): string {
+  const month = date.getMonth() // 0-indexed
+  const year = date.getFullYear()
+  
+  // If Jan-Mar, we are in the FY starting the previous year
+  if (month < 3) {
+    return `${year - 1}-${year.toString().slice(-2)}`
+  }
+  // If Apr-Dec, we are in the FY starting this year
+  return `${year}-${(year + 1).toString().slice(-2)}`
+}
+
 export function useDateUtils() {
   return {
     isIncomeActiveOnDate,
     getActiveIncomeSources,
-    countFortnightsInRange
+    countFortnightsInRange,
+    getFinancialYear
   }
 }
