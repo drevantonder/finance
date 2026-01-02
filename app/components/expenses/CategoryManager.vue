@@ -150,7 +150,7 @@ async function confirmDelete() {
         <div class="flex-1 space-y-3">
           <div class="flex items-center gap-2">
             <input 
-              :model-value="cat.name" 
+              :value="cat.name" 
               @blur="e => updateCategory({ ...cat, name: (e.target as HTMLInputElement).value })"
               class="block w-full text-sm font-semibold text-gray-900 bg-transparent focus:outline-none focus:text-primary-600 transition-colors"
             />
@@ -160,7 +160,7 @@ async function confirmDelete() {
             </div>
           </div>
           <textarea 
-            :model-value="cat.description ?? ''" 
+            :value="cat.description ?? ''" 
             @blur="e => updateCategory({ ...cat, description: (e.target as HTMLTextAreaElement).value })"
             rows="1"
             placeholder="Describe this category for AI context..."
