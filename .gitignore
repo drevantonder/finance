@@ -24,3 +24,6 @@ node_modules
 
 .wrangler
 backups/
+
+# Power to Change docs
+docs/Power to Change/

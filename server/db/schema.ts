@@ -33,8 +33,32 @@ export const categories = sqliteTable('categories', {
   name: text('name').notNull(),
   description: text('description'),
   color: text('color'),
+  mfbCategory: text('mfb_category'),
+  defaultMfbPercent: integer('default_mfb_percent').default(100),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+})
+
+export const claims = sqliteTable('claims', {
+  id: text('id').primaryKey(),
+  financialYear: text('financial_year').notNull(),
+  claimDate: text('claim_date').notNull(),
+  totalAmount: real('total_amount').notNull(),
+  mfbAmount: real('mfb_amount').notNull(),
+  mmrAmount: real('mmr_amount').notNull(),
+  gstAmount: real('gst_amount').notNull(),
+  expenseCount: integer('expense_count').notNull(),
+  notes: text('notes'),
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now') * 1000)`),
+})
+
+export const expenseClaims = sqliteTable('expense_claims', {
+  id: text('id').primaryKey(),
+  expenseId: text('expense_id').notNull().references(() => expenses.id),
+  claimId: text('claim_id').references(() => claims.id),
+  status: text('status').notNull().default('pending'), // pending | claimed | archived
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now') * 1000)`),
+  claimedAt: integer('claimed_at', { mode: 'timestamp' }),
 })
 
 export const logs = sqliteTable('logs', {

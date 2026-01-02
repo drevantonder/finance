@@ -34,7 +34,7 @@ export function useNavigation() {
 
   const systemItems: SubMenuItem[] = [
     { label: 'System Health', to: '/menu/system', icon: 'i-heroicons-heart', description: 'Inbox debug, Logs', color: 'bg-rose-500' },
-    { label: 'Claims', to: '/menu/claims', icon: 'i-heroicons-document-check', description: 'MFB tracking (Coming Soon)', color: 'bg-indigo-500', disabled: true }
+    { label: 'Claims', to: '/menu/claims', icon: 'i-heroicons-document-check', description: 'MMR/MFB tracking', color: 'bg-indigo-500' }
   ]
 
   const navGroups: NavGroup[] = [

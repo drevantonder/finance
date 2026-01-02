@@ -15,3 +15,7 @@ export function broadcastSessionChanged(userId: string) {
 export function broadcastCategoriesChanged(userId: string) {
   notifyUser(userId, 'categories-changed')
 }
+
+export function broadcastClaimsChanged(userId: string) {
+  notifyUser(userId, 'claims-changed')
+}

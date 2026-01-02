@@ -26,6 +26,27 @@ cp .data/db/sqlite.db "$backup_file" 2>/dev/null || true
 rm -f .data/db/sqlite.db
 sqlite3 .data/db/sqlite.db < prod-dump.sql
 
+# Ensure NuxtHub's local migration tracking table exists
+# Production uses `d1_migrations`, NuxtHub dev uses `_hub_migrations`.
+# If `_hub_migrations` is missing, NuxtHub will try to re-run migrations.
+sqlite3 .data/db/sqlite.db <<'SQL'
+CREATE TABLE IF NOT EXISTS _hub_migrations (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  name TEXT UNIQUE,
+  applied_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP NOT NULL
+);
+DELETE FROM _hub_migrations;
+
+-- If the DB came from production, copy applied migrations from d1_migrations
+-- Strip .sql suffix since NuxtHub expects names without extension
+INSERT INTO _hub_migrations (name, applied_at)
+SELECT REPLACE(name, '.sql', ''), applied_at FROM d1_migrations ORDER BY id;
+SQL
+
+# Keep NuxtHub's local migrations folder in sync with repo migrations
+mkdir -p .data/db/migrations
+cp server/db/migrations/*.sql .data/db/migrations/
+
 echo "✅ Local dev database synced with production"
 echo "💾 Local backup file: $backup_file"
 

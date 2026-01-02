@@ -5,18 +5,18 @@ import { onMounted, onUnmounted, ref } from 'vue'
 export function useRealtimeSync() {
   const queryClient = useQueryClient()
   const isConnected = ref(false)
-  
+
   let eventSource: EventSource | null = null
 
   const connect = () => {
     if (!import.meta.client || eventSource) return
-    
+
     eventSource = new EventSource('/api/events')
-    
+
     eventSource.onopen = () => {
       isConnected.value = true
     }
-    
+
     eventSource.onerror = () => {
       isConnected.value = false
       // Reconnect after 5s
@@ -28,17 +28,21 @@ export function useRealtimeSync() {
         connect()
       }, 5_000)
     }
-    
+
     eventSource.addEventListener('expenses-changed', () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.expenses.all })
     })
-    
+
     eventSource.addEventListener('inbox-changed', () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.inbox.all })
     })
-    
+
     eventSource.addEventListener('categories-changed', () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.categories.all })
+    })
+
+    eventSource.addEventListener('claims-changed', () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.expenseClaims.all })
     })
   }
 

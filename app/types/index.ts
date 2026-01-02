@@ -332,8 +332,39 @@ export interface Category {
   name: string
   description: string | null
   color: string | null
+  mfbCategory: string | null
+  defaultMfbPercent: number | null
   createdAt: Date
   updatedAt: Date
+}
+
+export type ExpenseClaimStatus = 'pending' | 'claimed' | 'archived'
+
+export interface ExpenseClaim {
+  id: string
+  expenseId: string
+  claimId: string | null
+  ptcCategory: string | null
+  mfbPercent: number | null
+  mfbAmount: number | null
+  mmrAmount: number | null
+  gstAmount: number | null
+  status: ExpenseClaimStatus
+  createdAt: string | Date
+  claimedAt: string | Date | null
+}
+
+export interface Claim {
+  id: string
+  financialYear: string
+  claimDate: string
+  totalAmount: number
+  mfbAmount: number
+  mmrAmount: number
+  gstAmount: number
+  expenseCount: number
+  notes: string | null
+  createdAt: string | Date
 }
 
 export type LogLevel = 'info' | 'success' | 'warn' | 'error'

@@ -10,6 +10,11 @@
         "type": "remote",
         "url": "https://ui.nuxt.com/mcp",
         "enabled": true
+        },
+        "playwriter": {
+          "type": "local",
+          "command": ["npx", "playwriter"],
+          "enabled": true
         }
     }
   }

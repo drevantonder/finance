@@ -11,6 +11,8 @@ export default defineEventHandler(async (event) => {
     name: body.name,
     description: body.description,
     color: body.color || '#9ca3af',
+    mfbCategory: body.mfbCategory,
+    defaultMfbPercent: body.defaultMfbPercent,
     createdAt: now,
     updatedAt: now,
   }

@@ -14,4 +14,14 @@ export const queryKeys = {
   session: {
     all: ['session'] as const,
   },
+  claims: {
+    all: ['claims'] as const,
+    history: ['claims', 'history'] as const,
+    pending: ['claims', 'pending'] as const,
+    archived: ['claims', 'archived'] as const,
+  },
+  expenseClaims: {
+    all: ['expense-claims'] as const,
+    byStatus: (status: string) => ['expense-claims', status] as const,
+  },
 } as const

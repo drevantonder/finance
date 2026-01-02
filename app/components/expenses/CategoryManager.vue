@@ -3,6 +3,8 @@ import { ref, computed } from 'vue'
 import type { Category } from '~/types'
 import { useCategoriesQuery, useCategoryMutation, useDeleteCategoryMutation } from '~/composables/queries'
 
+import { PTC_CATEGORIES } from '~/utils/ptcCategories'
+
 const { data, isLoading } = useCategoriesQuery()
 const categories = computed(() => data.value ?? [])
 
@@ -139,25 +141,74 @@ async function confirmDelete() {
                 :key="color"
                 class="w-5 h-5 rounded-full border border-gray-100 hover:scale-110 transition-transform"
                 :style="{ backgroundColor: color }"
-                @click="cat.color = color; updateCategory(cat)"
+                @click="updateCategory({ ...cat, color })"
               />
             </div>
           </template>
         </UPopover>
         
-        <div class="flex-1 space-y-1">
-          <input 
-            v-model="cat.name" 
-            @blur="updateCategory(cat)"
-            class="block w-full text-sm font-semibold text-gray-900 bg-transparent focus:outline-none focus:text-primary-600 transition-colors"
-          />
+        <div class="flex-1 space-y-3">
+          <div class="flex items-center gap-2">
+            <input 
+              :model-value="cat.name" 
+              @blur="e => updateCategory({ ...cat, name: (e.target as HTMLInputElement).value })"
+              class="block w-full text-sm font-semibold text-gray-900 bg-transparent focus:outline-none focus:text-primary-600 transition-colors"
+            />
+            <div v-if="cat.mfbCategory" class="shrink-0 flex items-center gap-1 px-1.5 py-0.5 rounded bg-primary-50 text-[10px] font-bold text-primary-600 uppercase tracking-tight">
+              <UIcon name="i-heroicons-document-check" class="w-3 h-3" />
+              Linked
+            </div>
+          </div>
           <textarea 
-            v-model="cat.description" 
-            @blur="updateCategory(cat)"
+            :model-value="cat.description ?? ''" 
+            @blur="e => updateCategory({ ...cat, description: (e.target as HTMLTextAreaElement).value })"
             rows="1"
             placeholder="Describe this category for AI context..."
             class="block w-full text-xs text-gray-500 bg-transparent resize-none focus:outline-none focus:text-gray-900 transition-colors"
           ></textarea>
+
+          <!-- P2C Linking UI -->
+          <div class="pt-2 border-t border-gray-50 flex flex-col gap-2">
+            <div class="flex items-center justify-between gap-4">
+              <div class="flex-1">
+                <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">P2C Claim Category</label>
+                <div class="flex items-center gap-2">
+                  <USelectMenu
+                    :model-value="cat.mfbCategory as string"
+                    :items="PTC_CATEGORIES.map(c => c.path)"
+                    placeholder="Link to P2C Category..."
+                    class="flex-1"
+                    size="xs"
+                    searchable
+                    @update:model-value="val => { 
+                      const found = PTC_CATEGORIES.find(c => c.path === val);
+                      if (found) {
+                        updateCategory({ ...cat, mfbCategory: found.path, defaultMfbPercent: found.defaultMfbPercent });
+                      }
+                    }"
+                  />
+                  <UButton
+                    v-if="cat.mfbCategory"
+                    icon="i-heroicons-x-mark"
+                    color="neutral"
+                    variant="ghost"
+                    size="xs"
+                    @click="updateCategory({ ...cat, mfbCategory: null, defaultMfbPercent: null })"
+                  />
+                </div>
+              </div>
+              <div v-if="cat.mfbCategory" class="w-20">
+                <label class="block text-[10px] font-bold text-gray-400 uppercase tracking-widest mb-1">MFB %</label>
+                <UInput 
+                  :model-value="cat.defaultMfbPercent" 
+                  type="number" 
+                  size="xs" 
+                  suffix="%"
+                  @blur="e => updateCategory({ ...cat, defaultMfbPercent: parseFloat((e.target as HTMLInputElement).value) })"
+                />
+              </div>
+            </div>
+          </div>
         </div>
 
         <UButton 
