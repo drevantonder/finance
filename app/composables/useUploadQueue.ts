@@ -121,28 +121,20 @@ export const useUploadQueue = defineStore('uploadQueue', () => {
       })
 
       const expenseId = (response as any).id
-      const isDuplicate = (response as any).isDuplicate
       
-      // AI processing now happens inline in index.post.ts, so expense is already complete
-      nextItem.status = 'complete'
+      // Update status to processing (AI is running in background)
+      nextItem.status = 'processing'
       nextItem.result = {
-        id: expenseId,
-        merchant: (response as any).merchant,
-        total: (response as any).total
+        id: expenseId
       }
 
-      // Refresh the expense list
+      // Refresh the expense list to show the pending item
       queryClient.invalidateQueries({ queryKey: queryKeys.expenses.all })
-
-      if (isDuplicate) {
-        toast.add({
-          title: 'Duplicate detected',
-          description: `Receipt from ${nextItem.result.merchant || 'merchant'} already exists. Linked to existing record.`,
-          color: 'info'
-        })
-      }
       
-      // Batch completion notification could be added here or in the UI layer
+      // Auto-remove from queue after a short delay so user sees "Analyzing" status
+      setTimeout(() => {
+        removeItem(nextItem.id)
+      }, 5000)
     } catch (e: any) {
       nextItem.status = 'error'
       nextItem.error = e.statusMessage || e.message || 'Unknown error'

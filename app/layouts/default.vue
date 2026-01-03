@@ -183,6 +183,24 @@ const currentPageTitle = computed(() => {
 
     <!-- Content Area -->
     <main class="flex-1 min-w-0 relative h-full flex flex-col overflow-hidden">
+      <!-- Uploading Banner -->
+      <Transition
+        enter-active-class="transition duration-300 ease-out"
+        enter-from-class="transform -translate-y-4 opacity-0"
+        enter-to-class="transform translate-y-0 opacity-100"
+        leave-active-class="transition duration-200 ease-in"
+        leave-from-class="transform translate-y-0 opacity-100"
+        leave-to-class="transform -translate-y-4 opacity-0"
+      >
+        <div v-if="uploadQueue.uploadingCount > 0" class="bg-primary-600 text-white px-4 py-2 flex items-center justify-center gap-2 text-sm font-medium z-30 shadow-md">
+          <UIcon name="i-heroicons-arrow-path" class="h-4 w-4 animate-spin" />
+          <span>
+            Uploading {{ uploadQueue.uploadingCount > 1 ? `${uploadQueue.uploadingCount} items` : 'receipt' }}... 
+            Please keep the app open.
+          </span>
+        </div>
+      </Transition>
+
       <div class="flex-1 max-w-7xl w-full mx-auto p-4 lg:p-10 pb-28 lg:pb-10 relative overflow-y-auto">
         <slot />
       </div>

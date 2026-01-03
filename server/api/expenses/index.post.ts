@@ -60,52 +60,55 @@ export default defineEventHandler(async (event) => {
 
     await db.insert(expenses).values(newExpense)
 
-    // 4. Trigger AI processing
-    try {
-      const extraction = await extractReceiptData(isPdf ? { text: pdfText } : { image: base64Data })
-      
-      const result = await createExpenseIfNotDuplicate({
-        id,
-        imageKey,
-        imageHash,
-        merchant: extraction.merchant || 'Unknown',
-        date: extraction.date,
-        total: extraction.total,
-        currency: extraction.currency,
-        tax: extraction.tax,
-        items: extraction.items,
-        rawExtraction: extraction,
-        capturedAt: capturedAt ? new Date(capturedAt) : now,
-      })
+    // 4. Trigger AI processing in background
+    const session = await requireUserSession(event)
+    const email = (session.user as any).email
 
-      if (result.isDuplicate) {
-        // Log that a duplicate was detected
-        await db.insert(logs).values({
-          id: crypto.randomUUID(),
-          level: 'info',
-          message: `Duplicate receipt detected: ${extraction.merchant || 'Unknown'} - linked to existing expense`,
-          source: 'expenses',
-          details: JSON.stringify({ imageHash, merchant: extraction.merchant, id: result.id }),
-          createdAt: new Date()
-        }).catch(e => console.error('Failed to log duplicate to DB:', e))
-      }
+    event.waitUntil((async () => {
+      try {
+        const extraction = await extractReceiptData(isPdf ? { text: pdfText } : { image: base64Data })
+        
+        const result = await createExpenseIfNotDuplicate({
+          id,
+          imageKey,
+          imageHash,
+          merchant: extraction.merchant || 'Unknown',
+          date: extraction.date,
+          total: extraction.total,
+          currency: extraction.currency,
+          tax: extraction.tax,
+          items: extraction.items,
+          rawExtraction: extraction,
+          capturedAt: capturedAt ? new Date(capturedAt) : now,
+        })
 
-      // Notify other devices
-      const session = await requireUserSession(event)
-      const email = (session.user as any).email
-      if (email) {
-        broadcastExpensesChanged(email)
-      }
+        if (result.isDuplicate) {
+          await db.insert(logs).values({
+            id: crypto.randomUUID(),
+            level: 'info',
+            message: `Duplicate receipt detected: ${extraction.merchant || 'Unknown'} - linked to existing expense`,
+            source: 'expenses',
+            details: JSON.stringify({ imageHash, merchant: extraction.merchant, id: result.id }),
+            createdAt: new Date()
+          }).catch(e => console.error('Failed to log duplicate to DB:', e))
+        }
 
-      // Return the expense (new or existing)
-      const finalExpense = await db.select().from(expenses).where(eq(expenses.id, result.id)).limit(1).get()
-      return {
-        ...finalExpense,
-        isDuplicate: result.isDuplicate
+        // Notify other devices
+        if (email) {
+          broadcastExpensesChanged(email)
+        }
+      } catch (processErr) {
+        console.error('AI Processing error:', processErr)
+        await db.update(expenses).set({ status: 'failed', updatedAt: new Date() }).where(eq(expenses.id, id))
+        if (email) {
+          broadcastExpensesChanged(email)
+        }
       }
-    } catch (processErr) {
-      console.error('AI Processing error:', processErr)
-      await db.update(expenses).set({ status: 'failed', updatedAt: new Date() }).where(eq(expenses.id, id))
+    })())
+
+    return {
+      ...newExpense,
+      status: 'processing'
     }
   } catch (err: unknown) {
     console.error('Create expense error:', err)
