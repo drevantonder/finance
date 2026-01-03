@@ -82,7 +82,7 @@ const responseSchema = {
   required: ["total", "merchant", "date", "currency"],
 }
 
-export async function extractReceiptData(input: { image?: string, text?: string }): Promise<ReceiptExtraction> {
+export async function extractReceiptData(input: { image?: string, text?: string, mimeType?: string }): Promise<ReceiptExtraction> {
   const config = useRuntimeConfig()
   const apiKey = config.geminiApiKey
   const aiGatewayUrl = config.aiGatewayUrl
@@ -113,7 +113,7 @@ If a field is unclear, provide your best estimate.`
     parts.push({
       inlineData: {
         data: input.image,
-        mimeType: "image/jpeg",
+        mimeType: input.mimeType || "image/jpeg",
       },
     })
   } else if (input.text) {
@@ -141,11 +141,12 @@ If a field is unclear, provide your best estimate.`
     
     // For images, use vision format
     if (input.image) {
+      const imageMime = input.mimeType || 'image/jpeg'
       messages[0].content = [
         { type: 'text', text: prompt },
         { 
           type: 'image_url', 
-          image_url: { url: `data:image/jpeg;base64,${input.image}` }
+          image_url: { url: `data:${imageMime};base64,${input.image}` }
         }
       ]
     } else if (input.text) {

@@ -67,7 +67,7 @@ export default defineEventHandler(async (event) => {
 
     event.waitUntil((async () => {
       try {
-        const extraction = await extractReceiptData(isPdf ? { text: pdfText } : { image: base64Data })
+        const extraction = await extractReceiptData(isPdf ? { text: pdfText } : { image: base64Data, mimeType: contentType })
         
         const result = await createExpenseIfNotDuplicate({
           id,
