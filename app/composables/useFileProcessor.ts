@@ -54,7 +54,14 @@ export function useFileProcessor() {
         }
 
         ctx.drawImage(img, 0, 0, width, height)
-        resolve(canvas.toDataURL('image/jpeg', quality))
+        
+        // Try WebP first, fallback to JPEG
+        let finalDataUrl = canvas.toDataURL('image/webp', quality)
+        if (finalDataUrl.startsWith('data:image/png') || finalDataUrl.startsWith('data:image/octet-stream')) {
+          finalDataUrl = canvas.toDataURL('image/jpeg', quality)
+        }
+        
+        resolve(finalDataUrl)
       }
       img.onerror = () => reject(new Error('Failed to load image for resizing'))
       img.src = dataUrl
