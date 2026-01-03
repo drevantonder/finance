@@ -22,7 +22,9 @@ export default defineEventHandler(async (event) => {
 
   const id = crypto.randomUUID()
   const isPdf = image.startsWith('data:application/pdf')
-  const imageKey = `receipts/${id}.${isPdf ? 'pdf' : 'jpg'}`
+  const isWebp = image.startsWith('data:image/webp')
+  const ext = isPdf ? 'pdf' : isWebp ? 'webp' : 'jpg'
+  const imageKey = `receipts/${id}.${ext}`
   const now = new Date()
 
   try {
@@ -30,9 +32,8 @@ export default defineEventHandler(async (event) => {
     const base64Data = image.replace(/^data:.*?;base64,/, '')
     const buffer = Buffer.from(base64Data, 'base64')
     
-    await blob.put(imageKey, buffer, {
-      contentType: isPdf ? 'application/pdf' : 'image/jpeg'
-    })
+    const contentType = isPdf ? 'application/pdf' : isWebp ? 'image/webp' : 'image/jpeg'
+    await blob.put(imageKey, buffer, { contentType })
 
     // 2. Extract text if PDF
     let pdfText: string | undefined

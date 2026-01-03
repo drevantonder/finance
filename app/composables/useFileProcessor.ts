@@ -55,9 +55,10 @@ export function useFileProcessor() {
 
         ctx.drawImage(img, 0, 0, width, height)
         
-        // Try WebP first, fallback to JPEG
+        // Try WebP first, fallback to JPEG if unsupported
         let finalDataUrl = canvas.toDataURL('image/webp', quality)
-        if (finalDataUrl.startsWith('data:image/png') || finalDataUrl.startsWith('data:image/octet-stream')) {
+        if (!finalDataUrl.startsWith('data:image/webp')) {
+          console.warn('[FileProcessor] WebP encoding not supported, falling back to JPEG')
           finalDataUrl = canvas.toDataURL('image/jpeg', quality)
         }
         
