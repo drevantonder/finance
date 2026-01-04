@@ -97,8 +97,6 @@ const onTouchStart = (e: TouchEvent) => {
   longPressTimer.value = setTimeout(() => {
     isLongPress.value = true
     vibrate('success')
-    // Modify the input to file picker mode
-    setInputToFilePicker()
   }, 600)
 }
 
@@ -109,10 +107,12 @@ const onTouchEnd = (e: TouchEvent) => {
     longPressTimer.value = null
   }
   
-  // Reset to camera mode for next time
-  setTimeout(() => {
+  // Configure input BEFORE clicking based on gesture
+  if (isLongPress.value) {
+    setInputToFilePicker()
+  } else {
     resetInputToCamera()
-  }, 0)
+  }
   
   // Cancel the touch event so it doesn't trigger a click
   if (e.cancelable) {
@@ -122,6 +122,9 @@ const onTouchEnd = (e: TouchEvent) => {
   // Trigger the input click
   watchForCancel()
   fileInput.value?.click()
+  
+  // Reset isLongPress for next interaction
+  isLongPress.value = false
 }
 
 const onTouchCancel = () => {
@@ -129,14 +132,15 @@ const onTouchCancel = () => {
     clearTimeout(longPressTimer.value)
     longPressTimer.value = null
   }
-  resetInputToCamera()
+  isLongPress.value = false
 }
 
 // Desktop mouse support
-const onClick = () => {
-  if (!isLongPress.value) {
-    resetInputToCamera()
-  }
+const onClick = (e: MouseEvent) => {
+  // Only handle mouse events (desktop), not synthetic clicks from touch
+  if (e.detail === 0) return
+  
+  resetInputToCamera()
   watchForCancel()
   fileInput.value?.click()
 }
