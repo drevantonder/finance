@@ -9,14 +9,25 @@ const isOnline = useOnline()
 const uploadQueue = useUploadQueue()
 const { processFile } = useFileProcessor()
 
-// Queue panel state
-const isQueuePanelOpen = ref(false)
+// Upload tray state
+const isUploadTrayOpen = ref(false)
 
-
+// Prevent accidental close during upload
+const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+  if (uploadQueue.uploadingCount > 0) {
+    e.preventDefault()
+    e.returnValue = ''
+  }
+}
 
 onMounted(() => {
   store.load()
   uploadQueue.init()
+  window.addEventListener('beforeunload', handleBeforeUnload)
+})
+
+onUnmounted(() => {
+  window.removeEventListener('beforeunload', handleBeforeUnload)
 })
 
 // Handle files dropped via drag & drop
@@ -132,37 +143,40 @@ const currentPageTitle = computed(() => {
 
       <!-- Sidebar Bottom -->
       <div class="mt-auto p-4 space-y-3 border-t border-gray-200">
-        <QueueIndicator @click="isQueuePanelOpen = true" class="mb-3" />
+        <div class="mb-3 space-y-2">
+           <ConnectivityIndicator />
+           <UploadStatus @openTray="isUploadTrayOpen = true" />
+        </div>
          
-         <!-- Divider -->
-         <div class="h-px bg-gray-200 w-full mb-3" />
-         
-         <!-- User Info -->
-         <div class="flex items-center gap-3 overflow-hidden mb-3" :class="{ 'justify-center': isCollapsed }">
-            <UAvatar :src="(user as any)?.pictureUrl || (user as any)?.picture" :alt="(user as any)?.name || (user as any)?.email" size="sm" />
-            <div v-if="!isCollapsed" class="flex-1 min-w-0">
-              <div class="text-sm font-medium truncate">{{ (user as any)?.name || (user as any)?.email }}</div>
-              <UButton 
-                variant="link" 
-                color="neutral" 
-                size="xs" 
-                class="p-0 h-auto font-normal text-gray-500 hover:text-primary-600"
-                label="Sign out"
-                @click="logout"
-              />
-            </div>
-         </div>
-         
-         <!-- Collapse Toggle -->
-         <button
-            @click="isCollapsed = !isCollapsed"
-            class="w-full py-2 flex items-center text-sm text-gray-500 hover:text-primary-600 transition-colors rounded-lg hover:bg-gray-50 px-3"
-            :class="isCollapsed ? 'justify-center' : 'justify-start gap-2'"
-          >
-             <UIcon :key="isCollapsed ? 'collapsed' : 'expanded'" :name="isCollapsed ? 'i-heroicons-chevron-double-right' : 'i-heroicons-chevron-double-left'" class="h-4 w-4" />
-            <span v-if="!isCollapsed">Collapse Sidebar</span>
-          </button>
-       </div>
+          <!-- Divider -->
+          <div class="h-px bg-gray-200 w-full mb-3" />
+          
+          <!-- User Info -->
+          <div class="flex items-center gap-3 overflow-hidden mb-3" :class="{ 'justify-center': isCollapsed }">
+             <UAvatar :src="(user as any)?.pictureUrl || (user as any)?.picture" :alt="(user as any)?.name || (user as any)?.email" size="sm" />
+             <div v-if="!isCollapsed" class="flex-1 min-w-0">
+               <div class="text-sm font-medium truncate">{{ (user as any)?.name || (user as any)?.email }}</div>
+               <UButton 
+                 variant="link" 
+                 color="neutral" 
+                 size="xs" 
+                 class="p-0 h-auto font-normal text-gray-500 hover:text-primary-600"
+                 label="Sign out"
+                 @click="logout"
+               />
+             </div>
+          </div>
+          
+          <!-- Collapse Toggle -->
+          <button
+             @click="isCollapsed = !isCollapsed"
+             class="w-full py-2 flex items-center text-sm text-gray-500 hover:text-primary-600 transition-colors rounded-lg hover:bg-gray-50 px-3"
+             :class="isCollapsed ? 'justify-center' : 'justify-start gap-2'"
+           >
+              <UIcon :key="isCollapsed ? 'collapsed' : 'expanded'" :name="isCollapsed ? 'i-heroicons-chevron-double-right' : 'i-heroicons-chevron-double-left'" class="h-4 w-4" />
+             <span v-if="!isCollapsed">Collapse Sidebar</span>
+           </button>
+        </div>
     </aside>
 
     <!-- Mobile Header -->
@@ -173,7 +187,8 @@ const currentPageTitle = computed(() => {
           <span class="font-bold text-lg text-gray-900">{{ currentPageTitle }}</span>
         </div>
         <div class="flex items-center gap-3">
-          <QueueIndicator @click="isQueuePanelOpen = true" />
+          <ConnectivityIndicator />
+          <UploadStatus @openTray="isUploadTrayOpen = true" />
           <div class="relative">
             <UAvatar :src="(user as any)?.pictureUrl || (user as any)?.picture" :alt="(user as any)?.name || (user as any)?.email" size="sm" />
           </div>
@@ -247,7 +262,7 @@ const currentPageTitle = computed(() => {
       </NuxtLink>
     </nav>
 
-    <QueuePanel v-model:open="isQueuePanelOpen" />
+    <UploadTray v-model:open="isUploadTrayOpen" />
   </div>
 </template>
 
