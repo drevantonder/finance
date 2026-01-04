@@ -147,9 +147,6 @@ const currentPageTitle = computed(() => {
            <ConnectivityIndicator />
            <UploadStatus @openTray="isUploadTrayOpen = true" />
         </div>
-         
-          <!-- Divider -->
-          <div class="h-px bg-gray-200 w-full mb-3" />
           
           <!-- User Info -->
           <div class="flex items-center gap-3 overflow-hidden mb-3" :class="{ 'justify-center': isCollapsed }">
