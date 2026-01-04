@@ -6,6 +6,7 @@
 
 [copy]
     includeDirs = node_modules
+    includeDirs = .data
     excludeDirs = node_modules/.cache
     excludeDirs = node_modules/.npm
 
