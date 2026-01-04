@@ -19,6 +19,11 @@ const statusIcons: Record<ActivityLogLevel, string> = {
   error: 'i-heroicons-x-circle'
 }
 
+const entryIcon = computed(() => {
+  if (props.entry.stage === 'startup') return 'i-heroicons-rocket-launch'
+  return statusIcons[props.entry.level]
+})
+
 const formatTime = (date: Date | string) => {
   return new Date(date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
 }
@@ -39,7 +44,22 @@ const parsedMetadata = computed(() => {
   return props.entry.metadata
 })
 
-const stages = computed(() => parsedMetadata.value?.stages || null)
+const stages = computed(() => {
+  if (props.entry.stage === 'startup' && parsedMetadata.value) {
+    const m = parsedMetadata.value
+    return {
+      'ttfb': m.ttfb,
+      'dom-interactive': m.domInteractive,
+      'dom-complete': m.domComplete,
+      'nuxt-mount': m.nuxtMountMs,
+      'session-load': m.sessionLoadMs,
+      'sse-connect': m.sseConnectMs,
+      'fcp': m.fcp,
+      'lcp': m.lcp
+    }
+  }
+  return parsedMetadata.value?.stages || null
+})
 </script>
 
 <template>
@@ -69,7 +89,7 @@ const stages = computed(() => parsedMetadata.value?.stages || null)
         <div class="flex justify-between items-start gap-4">
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2 mb-1">
-              <UIcon :name="statusIcons[entry.level]" class="w-4 h-4" :class="statusColors[entry.level].replace('border-', 'text-')" />
+              <UIcon :name="entryIcon" class="w-4 h-4" :class="statusColors[entry.level].replace('border-', 'text-')" />
               <p class="text-sm font-semibold text-neutral-900 leading-none">{{ entry.message }}</p>
             </div>
             

@@ -11,10 +11,14 @@ export function useRealtimeSync() {
   const connect = () => {
     if (!import.meta.client || eventSource) return
 
+    const connectStart = performance.now()
     eventSource = new EventSource('/api/events')
 
     eventSource.onopen = () => {
       isConnected.value = true
+      window.dispatchEvent(new CustomEvent('sse:connected', {
+        detail: { durationMs: performance.now() - connectStart }
+      }))
     }
 
     eventSource.onerror = () => {

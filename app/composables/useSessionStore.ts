@@ -69,6 +69,7 @@ export const useSessionStore = defineStore('session', () => {
   async function load() {
     isLoading.value = true
     error.value = null
+    const start = performance.now()
     try {
       const data = await $fetch<{ config: SessionConfig; updatedAt: number }>('/api/session')
       if (data?.config) {
@@ -103,6 +104,13 @@ export const useSessionStore = defineStore('session', () => {
         
         if (symbols.length > 0) {
           stockPrices.initializePrices(symbols)
+        }
+
+        // Emit timing for startup logger
+        if (import.meta.client) {
+          window.dispatchEvent(new CustomEvent('session:loaded', {
+            detail: { durationMs: performance.now() - start }
+          }))
         }
       }
     } catch (err: any) {
