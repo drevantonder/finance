@@ -101,7 +101,7 @@ export async function extractReceiptData(input: { image?: string, text?: string,
 - total: Final total amount paid
 - tax: GST/tax amount (0 if not visible)
 - currency: ISO 4217 currency code (e.g. AUD, USD, EUR, GBP)
-- merchant: Store or seller name
+- merchant: Store or seller name. Use a clean, canonical name (e.g. "Coles" instead of "COLES 0742 - SUNNYBANK"). Remove location identifiers, store numbers, or legal suffixes like "Pty Ltd".
 - date: Receipt date (YYYY-MM-DD)
 - items: List of items with name, qty, unit, unitPrice, lineTotal, category (${categoryContext}), and taxable (boolean).
 

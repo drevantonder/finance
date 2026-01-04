@@ -4,6 +4,7 @@ import { expenses } from '~~/server/db/schema'
 import { eq } from 'drizzle-orm'
 import { generateReceiptHash } from './hash'
 import { getExchangeRate } from './exchange'
+import { findMatchingMerchant } from './merchants'
 
 export interface CreateExpenseInput {
   id?: string
@@ -31,8 +32,11 @@ export interface CreateExpenseResult {
 export async function createExpenseIfNotDuplicate(
   input: CreateExpenseInput
 ): Promise<CreateExpenseResult> {
+  // Normalize merchant name via fuzzy matching
+  const originalMerchant = input.merchant || 'Unknown'
+  const merchant = await findMatchingMerchant(originalMerchant)
+
   // Generate receipt hash: merchant_date_total
-  const merchant = input.merchant || 'Unknown'
   const receiptString = `${merchant.toLowerCase().trim()}_${input.date}_${Number(input.total).toFixed(2)}`
   const receiptHash = await generateReceiptHash(receiptString)
 
