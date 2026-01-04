@@ -20,7 +20,9 @@ export function useCropWorker() {
   const initWorker = () => {
     if (worker) return
 
-    worker = new Worker(new URL('../workers/cropWorker.worker.ts', import.meta.url))
+    worker = new Worker(new URL('../workers/cropWorker.worker.ts', import.meta.url), {
+      type: 'classic'
+    })
 
     worker.addEventListener('error', (err) => {
       console.error('[CropWorker] Worker error:', err)

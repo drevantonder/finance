@@ -36,6 +36,7 @@ export default defineNuxtConfig({
     },
     workbox: {
       globPatterns: ['**/*.{js,css,html,png,svg,ico,woff,woff2,wasm}'],
+      maximumFileSizeToCacheInBytes: 15 * 1024 * 1024, // 15 MiB to accommodate OpenCV
       navigateFallback: null,
       runtimeCaching: [
         {
