@@ -67,7 +67,12 @@ const watchForCancel = () => {
   window.addEventListener('focus', onFocus)
 }
 
-const onPointerDown = () => {
+// --- Interaction Handlers ---
+// We use separate Touch and Mouse handlers because Pointer Events can be flaky 
+// on iOS when dealing with long-press interactions and system gestures.
+
+// Shared logic for "Start Press"
+const startPress = () => {
   pressStartTime.value = Date.now()
   if (longPressTimer.value) clearTimeout(longPressTimer.value)
   longPressTimer.value = setTimeout(() => {
@@ -75,7 +80,8 @@ const onPointerDown = () => {
   }, 600)
 }
 
-const onPointerUp = (e: PointerEvent) => {
+// Shared logic for "End Press"
+const endPress = () => {
   if (longPressTimer.value) {
     clearTimeout(longPressTimer.value)
     longPressTimer.value = null
@@ -86,29 +92,39 @@ const onPointerUp = (e: PointerEvent) => {
   const duration = Date.now() - pressStartTime.value
   pressStartTime.value = 0
   
-  // Always watch for cancel to show hint if they don't pick anything
+  // Always watch for cancel to show hint
   watchForCancel()
 
   if (duration >= 600) {
     vibrate('tap')
-    // Use a small timeout to ensure the browser doesn't block the click
-    // after the pointerup event processing
-    setTimeout(() => {
-      fileInput.value?.click()
-    }, 0)
+    fileInput.value?.click()
   } else {
     vibrate('tap')
     cameraInput.value?.click()
   }
 }
 
-const onPointerCancel = () => {
+const cancelPress = () => {
   if (longPressTimer.value) {
     clearTimeout(longPressTimer.value)
     longPressTimer.value = null
   }
   pressStartTime.value = 0
 }
+
+// Touch Handlers (Mobile)
+const onTouchStart = () => startPress()
+const onTouchEnd = (e: TouchEvent) => {
+  // Prevent ghost clicks and default browser behavior
+  if (e.cancelable) e.preventDefault()
+  endPress()
+}
+const onTouchCancel = () => cancelPress()
+
+// Mouse Handlers (Desktop)
+const onMouseDown = () => startPress()
+const onMouseUp = () => endPress()
+const onMouseLeave = () => cancelPress()
 </script>
 
 <template>
@@ -154,12 +170,15 @@ const onPointerCancel = () => {
     <!-- Main Button -->
     <button
       ref="captureBtn"
-      @pointerdown="onPointerDown"
-      @pointerup="onPointerUp"
-      @pointercancel="onPointerCancel"
-      @pointerleave="onPointerCancel"
+      @touchstart.passive="onTouchStart"
+      @touchend="onTouchEnd"
+      @touchcancel="onTouchCancel"
+      @mousedown="onMouseDown"
+      @mouseup="onMouseUp"
+      @mouseleave="onMouseLeave"
       @contextmenu.prevent
       class="h-14 w-14 -mt-6 flex items-center justify-center rounded-full bg-primary-600 text-white shadow-lg transition-all active:scale-95 select-none touch-none"
+      style="-webkit-touch-callout: none; -webkit-user-select: none;"
       aria-label="Capture receipt"
     >
       <UIcon name="i-heroicons-camera" class="h-7 w-7" />
