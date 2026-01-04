@@ -13,6 +13,8 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const showTooltip = ref(false)
 const hasSeenTooltip = useSessionStorage('finance-capture-tooltip-seen', false)
 const fileSelected = ref(false)
+const longPressTimer = ref<any>(null)
+const isLongPress = ref(false)
 
 const handleFiles = async (files: FileList | null) => {
   if (!files || files.length === 0) return
@@ -58,6 +60,9 @@ const watchForCancel = () => {
 }
 
 const openCamera = () => {
+  // Don't open if we just did a long press
+  if (isLongPress.value) return
+  
   if (fileInput.value) {
     fileInput.value.setAttribute('capture', 'environment')
     fileInput.value.removeAttribute('multiple')
@@ -77,6 +82,48 @@ const openFilePicker = () => {
   vibrate('tap')
   watchForCancel()
   fileInput.value?.click()
+}
+
+// Touch-based long press detection for iOS
+const onTouchStart = (e: TouchEvent) => {
+  isLongPress.value = false
+  
+  if (longPressTimer.value) {
+    clearTimeout(longPressTimer.value)
+  }
+  
+  longPressTimer.value = setTimeout(() => {
+    isLongPress.value = true
+    vibrate('success')
+  }, 600)
+}
+
+const onTouchEnd = (e: TouchEvent) => {
+  if (longPressTimer.value) {
+    clearTimeout(longPressTimer.value)
+    longPressTimer.value = null
+  }
+  
+  // If long press detected, open file picker and prevent click
+  if (isLongPress.value) {
+    openFilePicker()
+    if (e.cancelable) {
+      e.preventDefault()
+    }
+    // Reset for next interaction
+    setTimeout(() => { isLongPress.value = false }, 0)
+    return
+  }
+  
+  // Short press - don't prevent default, let click event handle it
+}
+
+const onTouchCancel = () => {
+  if (longPressTimer.value) {
+    clearTimeout(longPressTimer.value)
+    longPressTimer.value = null
+  }
+  isLongPress.value = false
 }
 </script>
 
@@ -106,7 +153,7 @@ const openFilePicker = () => {
         class="absolute bottom-full mb-4 z-50 w-48 p-3 bg-neutral-900 text-white text-xs rounded-xl shadow-xl text-center"
       >
         <div class="font-bold mb-1">Pro Tip</div>
-        Right-click (desktop) or long-press (mobile) to upload PDFs or multiple images.
+        Long-press to upload PDFs or multiple images.
         <!-- Arrow -->
         <div class="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-8 border-transparent border-t-neutral-900" />
       </div>
@@ -115,9 +162,12 @@ const openFilePicker = () => {
     <!-- Main Button -->
     <button
       @click="openCamera"
-      @contextmenu.prevent="openFilePicker"
+      @contextmenu.prevent
+      @touchstart="onTouchStart"
+      @touchend="onTouchEnd"
+      @touchcancel="onTouchCancel"
       class="h-14 w-14 -mt-6 flex items-center justify-center rounded-full bg-primary-600 text-white shadow-lg transition-all active:scale-95 select-none"
-      style="-webkit-touch-callout: none; -webkit-user-select: none; user-select: none;"
+      style="touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; user-select: none;"
       aria-label="Capture receipt"
     >
       <UIcon name="i-heroicons-camera" class="h-7 w-7" />
