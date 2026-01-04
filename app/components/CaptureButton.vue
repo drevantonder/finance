@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onLongPress, useSessionStorage } from '@vueuse/core'
+import { useSessionStorage } from '@vueuse/core'
 import type { ProcessedFile } from '~/composables/useFileProcessor'
 
 const { addToQueue } = useUploadQueue()
@@ -15,11 +15,19 @@ const captureBtn = ref<HTMLElement | null>(null)
 const showTooltip = ref(false)
 const hasSeenTooltip = useSessionStorage('finance-capture-tooltip-seen', false)
 const fileSelected = ref(false)
+const pressStartTime = ref(0)
+const longPressTimer = ref<any>(null)
 
 const handleFiles = async (files: FileList | null) => {
   if (!files || files.length === 0) return
 
   fileSelected.value = true
+  // If they selected multiple files or a PDF, they've figured out the "pro" feature
+  const hasProFile = Array.from(files).some(f => f.type === 'application/pdf' || files.length > 1)
+  if (hasProFile) {
+    hasSeenTooltip.value = true
+  }
+  
   vibrate('tap')
 
   for (const file of Array.from(files)) {
@@ -48,9 +56,8 @@ const watchForCancel = () => {
 
   const onFocus = () => {
     setTimeout(() => {
-      if (!fileSelected.value && !hasSeenTooltip.value) {
+      if (!fileSelected.value) {
         showTooltip.value = true
-        hasSeenTooltip.value = true
         setTimeout(() => { showTooltip.value = false }, 5000)
       }
       window.removeEventListener('focus', onFocus)
@@ -60,17 +67,46 @@ const watchForCancel = () => {
   window.addEventListener('focus', onFocus)
 }
 
-const openCamera = () => {
-  vibrate('tap')
-  watchForCancel()
-  cameraInput.value?.click()
+const onPointerDown = () => {
+  pressStartTime.value = Date.now()
+  if (longPressTimer.value) clearTimeout(longPressTimer.value)
+  longPressTimer.value = setTimeout(() => {
+    vibrate('success')
+  }, 600)
 }
 
-// Long Press Logic - opens full file picker (includes PDFs + multiple files)
-onLongPress(captureBtn, () => {
-  vibrate('tap')
-  fileInput.value?.click()
-}, { delay: 600 })
+const onPointerUp = (e: PointerEvent) => {
+  if (longPressTimer.value) {
+    clearTimeout(longPressTimer.value)
+    longPressTimer.value = null
+  }
+
+  if (pressStartTime.value === 0) return
+
+  const duration = Date.now() - pressStartTime.value
+  pressStartTime.value = 0
+  
+  // Always watch for cancel to show hint if they don't pick anything
+  watchForCancel()
+
+  if (duration >= 600) {
+    vibrate('tap')
+    fileInput.value?.click()
+  } else {
+    vibrate('tap')
+    cameraInput.value?.click()
+  }
+  
+  e.preventDefault()
+}
+
+const onPointerCancel = () => {
+  if (longPressTimer.value) {
+    clearTimeout(longPressTimer.value)
+    longPressTimer.value = null
+  }
+  pressStartTime.value = 0
+}
 </script>
 
 <template>
@@ -116,9 +152,12 @@ onLongPress(captureBtn, () => {
     <!-- Main Button -->
     <button
       ref="captureBtn"
-      @click="openCamera"
+      @pointerdown="onPointerDown"
+      @pointerup="onPointerUp"
+      @pointercancel="onPointerCancel"
+      @pointerleave="onPointerCancel"
       @contextmenu.prevent
-      class="h-14 w-14 -mt-6 flex items-center justify-center rounded-full bg-primary-600 text-white shadow-lg transition-all active:scale-95 touch-none select-none"
+      class="h-14 w-14 -mt-6 flex items-center justify-center rounded-full bg-primary-600 text-white shadow-lg transition-all active:scale-95 select-none"
       aria-label="Capture receipt"
     >
       <UIcon name="i-heroicons-camera" class="h-7 w-7" />
