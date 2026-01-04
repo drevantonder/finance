@@ -1,6 +1,6 @@
 import { db } from 'hub:db'
 import { blob } from 'hub:blob'
-import { expenses, inboxItems } from '~~/server/db/schema'
+import { expenses, inboxItems, activityLog } from '~~/server/db/schema'
 import { eq } from 'drizzle-orm'
 import { broadcastExpensesChanged } from '~~/server/utils/broadcast'
 
@@ -50,7 +50,12 @@ export default defineEventHandler(async (event) => {
       .set({ expenseId: null, status: 'pending' })
       .where(eq(inboxItems.expenseId, id))
 
-    // 3. Delete from DB
+    // 3. Clear expense_id reference in activity log (preserves audit trail)
+    await db.update(activityLog)
+      .set({ expenseId: null })
+      .where(eq(activityLog.expenseId, id))
+
+    // 4. Delete from DB
     await db.delete(expenses)
       .where(eq(expenses.id, id))
 
