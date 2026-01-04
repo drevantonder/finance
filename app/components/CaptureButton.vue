@@ -6,27 +6,18 @@ const { addToQueue } = useUploadQueue()
 const { vibrate } = useNotifications()
 const toast = useToast()
 
-// Input - single input that we modify based on gesture
+// Input
 const fileInput = ref<HTMLInputElement | null>(null)
-const captureBtn = ref<HTMLElement | null>(null)
 
 // State
 const showTooltip = ref(false)
 const hasSeenTooltip = useSessionStorage('finance-capture-tooltip-seen', false)
 const fileSelected = ref(false)
-const longPressTimer = ref<any>(null)
-const isLongPress = ref(false)
 
 const handleFiles = async (files: FileList | null) => {
   if (!files || files.length === 0) return
 
   fileSelected.value = true
-  // If they selected multiple files or a PDF, they've figured out "pro" feature
-  const hasProFile = Array.from(files).some(f => f.type === 'application/pdf' || files.length > 1)
-  if (hasProFile) {
-    hasSeenTooltip.value = true
-  }
-  
   vibrate('tap')
 
   for (const file of Array.from(files)) {
@@ -66,81 +57,24 @@ const watchForCancel = () => {
   window.addEventListener('focus', onFocus)
 }
 
-// Reset input to default camera mode
-const resetInputToCamera = () => {
+const openCamera = () => {
   if (fileInput.value) {
     fileInput.value.setAttribute('capture', 'environment')
     fileInput.value.removeAttribute('multiple')
     fileInput.value.setAttribute('accept', 'image/*')
   }
+  vibrate('tap')
+  watchForCancel()
+  fileInput.value?.click()
 }
 
-// Convert input to file picker mode (for long-press)
-const setInputToFilePicker = () => {
+const openFilePicker = () => {
   if (fileInput.value) {
     fileInput.value.removeAttribute('capture')
     fileInput.value.setAttribute('multiple', '')
     fileInput.value.setAttribute('accept', 'image/*,application/pdf')
   }
-}
-
-const onTouchStart = (e: TouchEvent) => {
-  // Reset state
-  isLongPress.value = false
-  
-  // Clear any existing timer
-  if (longPressTimer.value) {
-    clearTimeout(longPressTimer.value)
-  }
-  
-  // Start long press detection
-  longPressTimer.value = setTimeout(() => {
-    isLongPress.value = true
-    vibrate('success')
-  }, 600)
-}
-
-const onTouchEnd = (e: TouchEvent) => {
-  // Clear the timer
-  if (longPressTimer.value) {
-    clearTimeout(longPressTimer.value)
-    longPressTimer.value = null
-  }
-  
-  // Configure input BEFORE clicking based on gesture
-  if (isLongPress.value) {
-    setInputToFilePicker()
-  } else {
-    resetInputToCamera()
-  }
-  
-  // Cancel the touch event so it doesn't trigger a click
-  if (e.cancelable) {
-    e.preventDefault()
-  }
-  
-  // Trigger the input click
-  watchForCancel()
-  fileInput.value?.click()
-  
-  // Reset isLongPress for next interaction
-  isLongPress.value = false
-}
-
-const onTouchCancel = () => {
-  if (longPressTimer.value) {
-    clearTimeout(longPressTimer.value)
-    longPressTimer.value = null
-  }
-  isLongPress.value = false
-}
-
-// Desktop mouse support
-const onClick = (e: MouseEvent) => {
-  // Only handle mouse events (desktop), not synthetic clicks from touch
-  if (e.detail === 0) return
-  
-  resetInputToCamera()
+  vibrate('tap')
   watchForCancel()
   fileInput.value?.click()
 }
@@ -148,7 +82,7 @@ const onClick = (e: MouseEvent) => {
 
 <template>
   <div class="relative flex flex-col items-center gap-1 min-w-[64px]">
-    <!-- Hidden Input - we modify attributes dynamically -->
+    <!-- Hidden Input -->
     <input
       ref="fileInput"
       type="file"
@@ -172,7 +106,7 @@ const onClick = (e: MouseEvent) => {
         class="absolute bottom-full mb-4 z-50 w-48 p-3 bg-neutral-900 text-white text-xs rounded-xl shadow-xl text-center"
       >
         <div class="font-bold mb-1">Pro Tip</div>
-        Long-press to upload PDFs or multiple images.
+        Right-click (desktop) or long-press (mobile) to upload PDFs or multiple images.
         <!-- Arrow -->
         <div class="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-8 border-transparent border-t-neutral-900" />
       </div>
@@ -180,12 +114,8 @@ const onClick = (e: MouseEvent) => {
 
     <!-- Main Button -->
     <button
-      ref="captureBtn"
-      @touchstart="onTouchStart"
-      @touchend="onTouchEnd"
-      @touchcancel="onTouchCancel"
-      @click="onClick"
-      @contextmenu.prevent
+      @click="openCamera"
+      @contextmenu.prevent="openFilePicker"
       class="h-14 w-14 -mt-6 flex items-center justify-center rounded-full bg-primary-600 text-white shadow-lg transition-all active:scale-95 select-none"
       style="-webkit-touch-callout: none; -webkit-user-select: none; user-select: none;"
       aria-label="Capture receipt"
@@ -196,4 +126,5 @@ const onClick = (e: MouseEvent) => {
     <span class="text-[10px] font-bold uppercase tracking-wider text-primary-600">Capture</span>
   </div>
 </template>
+
 
