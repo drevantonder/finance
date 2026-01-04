@@ -6,23 +6,22 @@ const { addToQueue } = useUploadQueue()
 const { vibrate } = useNotifications()
 const toast = useToast()
 
-// Inputs
+// Input - single input that we modify based on gesture
 const fileInput = ref<HTMLInputElement | null>(null)
-const cameraInput = ref<HTMLInputElement | null>(null)
 const captureBtn = ref<HTMLElement | null>(null)
 
 // State
 const showTooltip = ref(false)
 const hasSeenTooltip = useSessionStorage('finance-capture-tooltip-seen', false)
 const fileSelected = ref(false)
-const pressStartTime = ref(0)
 const longPressTimer = ref<any>(null)
+const isLongPress = ref(false)
 
 const handleFiles = async (files: FileList | null) => {
   if (!files || files.length === 0) return
 
   fileSelected.value = true
-  // If they selected multiple files or a PDF, they've figured out the "pro" feature
+  // If they selected multiple files or a PDF, they've figured out "pro" feature
   const hasProFile = Array.from(files).some(f => f.type === 'application/pdf' || files.length > 1)
   if (hasProFile) {
     hasSeenTooltip.value = true
@@ -67,85 +66,93 @@ const watchForCancel = () => {
   window.addEventListener('focus', onFocus)
 }
 
-// --- Interaction Handlers ---
-// We use separate Touch and Mouse handlers because Pointer Events can be flaky 
-// on iOS when dealing with long-press interactions and system gestures.
+// Reset input to default camera mode
+const resetInputToCamera = () => {
+  if (fileInput.value) {
+    fileInput.value.setAttribute('capture', 'environment')
+    fileInput.value.removeAttribute('multiple')
+    fileInput.value.setAttribute('accept', 'image/*')
+  }
+}
 
-// Shared logic for "Start Press"
-const startPress = () => {
-  pressStartTime.value = Date.now()
-  if (longPressTimer.value) clearTimeout(longPressTimer.value)
+// Convert input to file picker mode (for long-press)
+const setInputToFilePicker = () => {
+  if (fileInput.value) {
+    fileInput.value.removeAttribute('capture')
+    fileInput.value.setAttribute('multiple', '')
+    fileInput.value.setAttribute('accept', 'image/*,application/pdf')
+  }
+}
+
+const onTouchStart = (e: TouchEvent) => {
+  // Reset state
+  isLongPress.value = false
+  
+  // Clear any existing timer
+  if (longPressTimer.value) {
+    clearTimeout(longPressTimer.value)
+  }
+  
+  // Start long press detection
   longPressTimer.value = setTimeout(() => {
+    isLongPress.value = true
     vibrate('success')
+    // Modify the input to file picker mode
+    setInputToFilePicker()
   }, 600)
 }
 
-// Shared logic for "End Press"
-const endPress = () => {
-  if (longPressTimer.value) {
-    clearTimeout(longPressTimer.value)
-    longPressTimer.value = null
-  }
-
-  if (pressStartTime.value === 0) return
-
-  const duration = Date.now() - pressStartTime.value
-  pressStartTime.value = 0
-  
-  // Always watch for cancel to show hint
-  watchForCancel()
-
-  if (duration >= 600) {
-    vibrate('tap')
-    fileInput.value?.click()
-  } else {
-    vibrate('tap')
-    cameraInput.value?.click()
-  }
-}
-
-const cancelPress = () => {
-  if (longPressTimer.value) {
-    clearTimeout(longPressTimer.value)
-    longPressTimer.value = null
-  }
-  pressStartTime.value = 0
-}
-
-// Touch Handlers (Mobile)
-const onTouchStart = () => startPress()
 const onTouchEnd = (e: TouchEvent) => {
-  // Prevent ghost clicks and default browser behavior
-  if (e.cancelable) e.preventDefault()
-  endPress()
+  // Clear the timer
+  if (longPressTimer.value) {
+    clearTimeout(longPressTimer.value)
+    longPressTimer.value = null
+  }
+  
+  // Reset to camera mode for next time
+  setTimeout(() => {
+    resetInputToCamera()
+  }, 0)
+  
+  // Cancel the touch event so it doesn't trigger a click
+  if (e.cancelable) {
+    e.preventDefault()
+  }
+  
+  // Trigger the input click
+  watchForCancel()
+  fileInput.value?.click()
 }
-const onTouchCancel = () => cancelPress()
 
-// Mouse Handlers (Desktop)
-const onMouseDown = () => startPress()
-const onMouseUp = () => endPress()
-const onMouseLeave = () => cancelPress()
+const onTouchCancel = () => {
+  if (longPressTimer.value) {
+    clearTimeout(longPressTimer.value)
+    longPressTimer.value = null
+  }
+  resetInputToCamera()
+}
+
+// Desktop mouse support
+const onClick = () => {
+  if (!isLongPress.value) {
+    resetInputToCamera()
+  }
+  watchForCancel()
+  fileInput.value?.click()
+}
 </script>
 
 <template>
   <div class="relative flex flex-col items-center gap-1 min-w-[64px]">
-    <!-- Hidden Inputs -->
-    <div class="fixed top-0 left-0 w-0 h-0 overflow-hidden opacity-0 pointer-events-none">
-      <input
-        ref="cameraInput"
-        type="file"
-        accept="image/*"
-        capture="environment"
-        @change="e => handleFiles((e.target as HTMLInputElement).files)"
-      >
-      <input
-        ref="fileInput"
-        type="file"
-        accept="image/*,application/pdf"
-        multiple
-        @change="e => handleFiles((e.target as HTMLInputElement).files)"
-      >
-    </div>
+    <!-- Hidden Input - we modify attributes dynamically -->
+    <input
+      ref="fileInput"
+      type="file"
+      accept="image/*"
+      capture="environment"
+      @change="e => handleFiles((e.target as HTMLInputElement).files)"
+      class="fixed top-0 left-0 w-0 h-0 opacity-0 pointer-events-none"
+    >
 
     <!-- Tooltip -->
     <Transition
@@ -170,15 +177,13 @@ const onMouseLeave = () => cancelPress()
     <!-- Main Button -->
     <button
       ref="captureBtn"
-      @touchstart.passive="onTouchStart"
+      @touchstart="onTouchStart"
       @touchend="onTouchEnd"
       @touchcancel="onTouchCancel"
-      @mousedown="onMouseDown"
-      @mouseup="onMouseUp"
-      @mouseleave="onMouseLeave"
+      @click="onClick"
       @contextmenu.prevent
-      class="h-14 w-14 -mt-6 flex items-center justify-center rounded-full bg-primary-600 text-white shadow-lg transition-all active:scale-95 select-none touch-none"
-      style="-webkit-touch-callout: none; -webkit-user-select: none;"
+      class="h-14 w-14 -mt-6 flex items-center justify-center rounded-full bg-primary-600 text-white shadow-lg transition-all active:scale-95 select-none"
+      style="-webkit-touch-callout: none; -webkit-user-select: none; user-select: none;"
       aria-label="Capture receipt"
     >
       <UIcon name="i-heroicons-camera" class="h-7 w-7" />
@@ -187,3 +192,4 @@ const onMouseLeave = () => cancelPress()
     <span class="text-[10px] font-bold uppercase tracking-wider text-primary-600">Capture</span>
   </div>
 </template>
+
