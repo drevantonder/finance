@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onLongPress, useLocalStorage } from '@vueuse/core'
+import { onLongPress, useSessionStorage } from '@vueuse/core'
 import type { ProcessedFile } from '~/composables/useFileProcessor'
 
 const { addToQueue } = useUploadQueue()
@@ -9,13 +9,11 @@ const toast = useToast()
 // Inputs
 const fileInput = ref<HTMLInputElement | null>(null)
 const cameraInput = ref<HTMLInputElement | null>(null)
-const libraryInput = ref<HTMLInputElement | null>(null)
 const captureBtn = ref<HTMLElement | null>(null)
 
 // State
-const showMenu = ref(false)
 const showTooltip = ref(false)
-const hasSeenTooltip = useLocalStorage('finance-capture-tooltip-seen', false)
+const hasSeenTooltip = useSessionStorage('finance-capture-tooltip-seen', false)
 const fileSelected = ref(false)
 
 const handleFiles = async (files: FileList | null) => {
@@ -42,29 +40,23 @@ const handleFiles = async (files: FileList | null) => {
       console.error('Failed to process file:', e)
     }
   }
-  showMenu.value = false
 }
 
 // Detection for camera cancellation
 const watchForCancel = () => {
   fileSelected.value = false
-  
+
   const onFocus = () => {
-    // Wait a bit for the 'change' event to potentially fire first
     setTimeout(() => {
       if (!fileSelected.value && !hasSeenTooltip.value) {
         showTooltip.value = true
         hasSeenTooltip.value = true
-        
-        // Auto-hide tooltip after 5 seconds
-        setTimeout(() => {
-          showTooltip.value = false
-        }, 5000)
+        setTimeout(() => { showTooltip.value = false }, 5000)
       }
       window.removeEventListener('focus', onFocus)
     }, 300)
   }
-  
+
   window.addEventListener('focus', onFocus)
 }
 
@@ -74,42 +66,11 @@ const openCamera = () => {
   cameraInput.value?.click()
 }
 
-const openMenu = () => {
+// Long Press Logic - opens full file picker (includes PDFs + multiple files)
+onLongPress(captureBtn, () => {
   vibrate('tap')
-  showMenu.value = true
-  showTooltip.value = false // Hide tooltip if they actually found the menu
-}
-
-// Long Press Logic
-onLongPress(captureBtn, openMenu, { delay: 600 })
-
-const menuItems = [
-  {
-    label: 'Take Photo',
-    icon: 'i-heroicons-camera',
-    click: () => {
-      showMenu.value = false
-      openCamera()
-    }
-  },
-  {
-    label: 'Photo Library',
-    icon: 'i-heroicons-photo',
-    click: () => {
-      showMenu.value = false
-      libraryInput.value?.click()
-    }
-  },
-  {
-    label: 'Choose File',
-    description: 'Upload PDFs or multiple images',
-    icon: 'i-heroicons-document-plus',
-    click: () => {
-      showMenu.value = false
-      fileInput.value?.click()
-    }
-  }
-]
+  fileInput.value?.click()
+}, { delay: 600 })
 </script>
 
 <template>
@@ -121,12 +82,6 @@ const menuItems = [
         type="file"
         accept="image/*"
         capture="environment"
-        @change="e => handleFiles((e.target as HTMLInputElement).files)"
-      >
-      <input
-        ref="libraryInput"
-        type="file"
-        accept="image/*"
         @change="e => handleFiles((e.target as HTMLInputElement).files)"
       >
       <input
@@ -152,7 +107,7 @@ const menuItems = [
         class="absolute bottom-full mb-4 z-50 w-48 p-3 bg-neutral-900 text-white text-xs rounded-xl shadow-xl text-center"
       >
         <div class="font-bold mb-1">Pro Tip</div>
-        Long-press the button to upload PDFs or images from your gallery.
+        Long-press to upload PDFs or multiple images.
         <!-- Arrow -->
         <div class="absolute top-full left-1/2 -translate-x-1/2 -mt-1 border-8 border-transparent border-t-neutral-900" />
       </div>
@@ -170,27 +125,5 @@ const menuItems = [
     </button>
     
     <span class="text-[10px] font-bold uppercase tracking-wider text-primary-600">Capture</span>
-
-    <!-- Options Slideover (Mobile Bottom Sheet) -->
-    <USlideover v-model:open="showMenu" side="bottom" title="Capture Options">
-      <template #content>
-        <div class="p-4 flex flex-col gap-2">
-          <button
-            v-for="item in menuItems"
-            :key="item.label"
-            @click="item.click"
-            class="flex items-center gap-4 w-full p-4 rounded-2xl active:bg-neutral-100 text-left transition-colors"
-          >
-            <div class="flex items-center justify-center h-12 w-12 rounded-xl bg-neutral-100 text-neutral-600">
-              <UIcon :name="item.icon" class="h-6 w-6" />
-            </div>
-            <div>
-              <div class="font-semibold text-neutral-900">{{ item.label }}</div>
-              <div v-if="item.description" class="text-xs text-neutral-500">{{ item.description }}</div>
-            </div>
-          </button>
-        </div>
-      </template>
-    </USlideover>
   </div>
 </template>
