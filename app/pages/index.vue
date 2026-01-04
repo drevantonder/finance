@@ -3,8 +3,9 @@ import { computed } from 'vue'
 import { useSessionStore } from '~/composables/useSessionStore'
 import { useExpensesQuery } from '~/composables/queries'
 import { useProjectionResults } from '~/composables/useProjectionResults'
-import { useLogger } from '~/composables/useLogger'
 import { formatCurrency } from '~/composables/useFormatter'
+import { useQuery } from '@tanstack/vue-query'
+import type { ActivityLog } from '~/types'
 import AssetsChart from '~/components/AssetsChart.vue'
 import BudgetProjectionChart from '~/components/BudgetProjectionChart.vue'
 import FinancialCompositionChart from '~/components/FinancialCompositionChart.vue'
@@ -12,7 +13,15 @@ import FinancialCompositionChart from '~/components/FinancialCompositionChart.vu
 const store = useSessionStore()
 const { data: expenses } = useExpensesQuery()
 const { targetDateLabel, smartResult, chartSeries } = useProjectionResults()
-const { logs } = useLogger()
+
+// Fetch recent activity logs
+const { data: recentLogs } = useQuery({
+  queryKey: ['activity-logs-recent'],
+  queryFn: () => $fetch<ActivityLog[]>('/api/logs', {
+    params: { limit: 5 }
+  }),
+  refetchInterval: 60000 // Refresh every minute
+})
 
 // Attention Items
 const attentionItems = computed(() => {
@@ -38,8 +47,6 @@ const attentionItems = computed(() => {
 
   return items
 })
-
-const recentLogs = computed(() => logs.value.slice(0, 5))
 </script>
 
 <template>
@@ -71,11 +78,11 @@ const recentLogs = computed(() => logs.value.slice(0, 5))
         <template #header>
           <div class="flex items-center gap-2 text-warning-500">
             <UIcon name="i-heroicons-exclamation-triangle" class="w-5 h-5" />
-            <h3 class="font-semibold text-gray-900 dark:text-white">Attention Needed</h3>
+            <h3 class="font-semibold text-neutral-900 dark:text-white">Attention Needed</h3>
           </div>
         </template>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div v-for="item in attentionItems" :key="item.label" class="flex items-center gap-3 p-3 rounded-xl bg-gray-50 dark:bg-gray-800 border border-gray-100 dark:border-gray-700">
+          <div v-for="item in attentionItems" :key="item.label" class="flex items-center gap-3 p-3 rounded-xl bg-neutral-50 dark:bg-neutral-800 border border-neutral-100 dark:border-neutral-700">
             <UIcon :name="item.icon" :class="`text-${item.color}-500`" class="w-5 h-5" />
             <span class="text-sm font-medium">{{ item.label }}</span>
           </div>
@@ -98,7 +105,7 @@ const recentLogs = computed(() => logs.value.slice(0, 5))
         <template #header>
           <div class="flex items-center justify-between">
             <h3 class="font-semibold">Net Worth Projection</h3>
-            <span class="text-xs text-gray-500">Target: {{ targetDateLabel }}</span>
+            <span class="text-xs text-neutral-500">Target: {{ targetDateLabel }}</span>
           </div>
         </template>
         <div class="h-64">
@@ -111,7 +118,7 @@ const recentLogs = computed(() => logs.value.slice(0, 5))
         <template #header>
           <div class="flex items-center justify-between">
             <h3 class="font-semibold">Cash Flow Projection</h3>
-            <span class="text-xs text-gray-500">Monthly Surplus vs Expenses</span>
+            <span class="text-xs text-neutral-500">Monthly Surplus vs Expenses</span>
           </div>
         </template>
         <div class="h-64">
@@ -124,11 +131,11 @@ const recentLogs = computed(() => logs.value.slice(0, 5))
         <template #header>
           <div class="flex items-center justify-between">
             <h3 class="font-semibold">Recent Activity</h3>
-            <NuxtLink to="/menu/system" class="text-xs text-gray-500 hover:underline">View All</NuxtLink>
+            <NuxtLink to="/menu/logs" class="text-xs text-neutral-500 hover:underline">View All</NuxtLink>
           </div>
         </template>
-        <div class="space-y-4">
-          <div v-if="recentLogs.length === 0" class="text-sm text-gray-500 italic py-4 text-center">
+        <div class="space-y-0 -mx-4">
+          <div v-if="!recentLogs?.length" class="text-sm text-neutral-500 italic py-8 text-center px-4">
             No recent activity logs.
           </div>
           <ActivityLogEntry v-for="log in recentLogs" :key="log.id" :entry="log" />

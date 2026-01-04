@@ -39,11 +39,12 @@ const hasCompleted = computed(() => queueStore.completedItems.length > 0)
          size="xs"
          class="transition-all duration-300"
        >
-         <UIcon
-           :name="!isOnline ? 'i-heroicons-signal-slash' : (isSyncing ? 'i-heroicons-arrow-path' : 'i-heroicons-cloud')"
-           class="mr-1.5 w-3.5 h-3.5"
-           :class="{ 'animate-spin': isSyncing }"
-         />
+          <UIcon
+            :key="!isOnline ? 'offline' : (isSyncing ? 'syncing' : 'synced')"
+            :name="!isOnline ? 'i-heroicons-signal-slash' : (isSyncing ? 'i-heroicons-arrow-path' : 'i-heroicons-cloud')"
+            class="mr-1.5 w-3.5 h-3.5"
+            :class="{ 'animate-spin': isSyncing }"
+          />
          {{ !isOnline ? 'Offline' : (isSyncing ? 'Syncing...' : 'Synced') }}
        </UBadge>
     </div>

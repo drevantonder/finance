@@ -25,6 +25,7 @@ export const useUploadQueue = defineStore('uploadQueue', () => {
   const isOnline = useOnline()
     const toast = useToast()
     const queryClient = useQueryClient()
+    const { logPipeline, logError } = useActivityLogger()
 
     // Load from IndexedDB on init
   const init = async () => {
@@ -95,8 +96,19 @@ export const useUploadQueue = defineStore('uploadQueue', () => {
 
     try {
       // Check for duplicate image BEFORE uploading
+      const startDedupe = performance.now()
       const { exists } = await $fetch<{ exists: boolean }>(`/api/expenses/check-hash?hash=${nextItem.file.hash}`)
+      const dedupeDuration = Math.round(performance.now() - startDedupe)
+
       if (exists) {
+        logPipeline({
+          message: 'Upload cancelled: Duplicate detected',
+          correlationId: nextItem.file.correlationId,
+          level: 'warn',
+          stage: 'client_dedupe',
+          durationMs: dedupeDuration,
+          metadata: { hash: nextItem.file.hash }
+        })
         nextItem.status = 'error'
         nextItem.errorType = 'duplicate'
         nextItem.error = 'This image has already been uploaded'
@@ -111,16 +123,35 @@ export const useUploadQueue = defineStore('uploadQueue', () => {
       }
 
       // Upload the file
+      const startUpload = performance.now()
       const response = await $fetch('/api/expenses', {
         method: 'POST',
         body: {
           image: nextItem.file.data,
           capturedAt: nextItem.capturedAt,
-          imageHash: nextItem.file.hash
+          imageHash: nextItem.file.hash,
+          correlationId: nextItem.file.correlationId,
+          timing: nextItem.file.timing
         }
       })
+      const uploadDuration = Math.round(performance.now() - startUpload)
 
       const expenseId = (response as any).id
+      
+      logPipeline({
+        message: 'File uploaded and server processing started',
+        correlationId: nextItem.file.correlationId,
+        level: 'success',
+        stage: 'upload',
+        durationMs: uploadDuration,
+        expenseId,
+        metadata: {
+          fileSize: nextItem.file.size,
+          fileName: nextItem.file.originalName,
+          cropApplied: nextItem.file.cropApplied,
+          clientTiming: nextItem.file.timing
+        }
+      })
       
       // Update status to processing (AI is running in background)
       nextItem.status = 'processing'
@@ -136,6 +167,11 @@ export const useUploadQueue = defineStore('uploadQueue', () => {
         removeItem(nextItem.id)
       }, 5000)
     } catch (e: any) {
+      logError(`Upload failed: ${nextItem.file.originalName}`, e, {
+        correlationId: nextItem.file.correlationId,
+        id: nextItem.id,
+        retryCount: nextItem.retryCount
+      })
       nextItem.status = 'error'
       nextItem.error = e.statusMessage || e.message || 'Unknown error'
       nextItem.retryCount++

@@ -86,6 +86,7 @@ const impactLabel = computed(() => {
             
             <div class="flex items-center gap-2">
               <UIcon 
+                :key="tmnBoost > 0 ? 'boosting' : 'idle'"
                 :name="tmnBoost > 0 ? 'i-heroicons-bolt' : 'i-heroicons-light-bulb'" 
                 :class="tmnBoost > 0 ? 'text-primary-500' : 'text-gray-400'"
                 class="w-5 h-5 flex-shrink-0" 

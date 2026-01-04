@@ -1,15 +1,19 @@
 import { db } from 'hub:db'
 import { blob } from 'hub:blob'
-import { inboxItems, inboxAttachments, expenses, logs } from '~~/server/db/schema'
+import { inboxItems, inboxAttachments } from '~~/server/db/schema'
 import { eq } from 'drizzle-orm'
 import { extractReceiptData } from '~~/server/utils/gemini'
 import { createExpenseIfNotDuplicate } from '~~/server/utils/expenses'
 import { extractText, getDocumentProxy } from 'unpdf'
+import { logActivity } from '~~/server/utils/logger'
 
 /**
  * Shared utility to process an inbox item into an expense
  */
 export async function processInboxItem(id: string) {
+  const correlationId = `inbox-${id}`
+  const startTime = performance.now()
+  
   try {
     // 1. Fetch Inbox Item
     const item = await db.select().from(inboxItems).where(eq(inboxItems.id, id)).get()
@@ -74,15 +78,16 @@ export async function processInboxItem(id: string) {
       .where(eq(inboxItems.id, id))
 
     // 8. Log Success
-    await db.insert(logs).values({
-      id: crypto.randomUUID(),
+    await logActivity({
+      type: 'pipeline',
       level: result.isDuplicate ? 'info' : 'success',
       message: result.isDuplicate 
         ? `Duplicate email receipt from ${item.fromAddress} - linked to existing expense`
         : `Processed email receipt from ${item.fromAddress}`,
-      source: 'system',
-      details: JSON.stringify({ inboxId: id, expenseId: result.id, merchant: extraction.merchant, isDuplicate: result.isDuplicate }),
-      createdAt: new Date()
+      correlationId,
+      expenseId: result.id,
+      durationMs: Math.round(performance.now() - startTime),
+      metadata: { inboxId: id, merchant: extraction.merchant, isDuplicate: result.isDuplicate }
     })
 
     return { success: true, expenseId: result.id, isDuplicate: result.isDuplicate }
@@ -93,6 +98,14 @@ export async function processInboxItem(id: string) {
     await db.update(inboxItems)
       .set({ status: 'error', errorMessage: err.message })
       .where(eq(inboxItems.id, id))
+
+    await logActivity({
+      type: 'error',
+      level: 'error',
+      message: `Failed to process email receipt from ${id}`,
+      correlationId,
+      metadata: { error: err.message, inboxId: id }
+    })
 
     throw err
   }

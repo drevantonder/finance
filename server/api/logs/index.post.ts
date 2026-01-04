@@ -1,20 +1,38 @@
 import { db } from 'hub:db'
-import { logs } from '~~/server/db/schema'
+import { activityLog } from '~~/server/db/schema'
+import { lt } from 'drizzle-orm'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
-  const ip = getRequestIP(event)
-
-  const entry = {
+  
+  // Support single entry or array of entries
+  const entries = Array.isArray(body) ? body : [body]
+  
+  const toInsert = entries.map(entry => ({
     id: crypto.randomUUID(),
-    level: body.level,
-    message: body.message,
-    source: body.source,
-    details: body.details,
-    ip: ip || null,
-    createdAt: new Date()
+    correlationId: entry.correlationId || null,
+    type: entry.type || 'system',
+    stage: entry.stage || null,
+    level: entry.level || 'info',
+    message: entry.message,
+    durationMs: entry.durationMs || null,
+    metadata: entry.metadata ? (typeof entry.metadata === 'string' ? entry.metadata : JSON.stringify(entry.metadata)) : null,
+    expenseId: entry.expenseId || null,
+    source: entry.source || 'client',
+  }))
+
+  if (toInsert.length > 0) {
+    await db.insert(activityLog).values(toInsert)
   }
 
-  await db.insert(logs).values(entry)
-  return entry
+  // 90-day cleanup
+  const ninetyDaysAgo = new Date()
+  ninetyDaysAgo.setDate(ninetyDaysAgo.getDate() - 90)
+  
+  // Run cleanup asynchronously
+  db.delete(activityLog).where(lt(activityLog.createdAt, ninetyDaysAgo)).execute().catch(err => {
+    console.error('Cleanup failed:', err)
+  })
+
+  return { success: true, count: toInsert.length }
 })

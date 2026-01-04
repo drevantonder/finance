@@ -1,18 +1,18 @@
 <script setup lang="ts">
-import type { LogEntry, LogLevel } from '~/types'
+import type { ActivityLog, ActivityLogLevel } from '~/types'
 
-defineProps<{
-  entry: LogEntry
+const props = defineProps<{
+  entry: ActivityLog
 }>()
 
-const statusColors: Record<LogLevel, string> = {
-  info: 'border-blue-500',
-  success: 'border-green-500',
-  warn: 'border-amber-500',
-  error: 'border-red-500'
+const statusColors: Record<ActivityLogLevel, string> = {
+  info: 'border-info-500',
+  success: 'border-success-500',
+  warn: 'border-warning-500',
+  error: 'border-error-500'
 }
 
-const statusIcons: Record<LogLevel, string> = {
+const statusIcons: Record<ActivityLogLevel, string> = {
   info: 'i-heroicons-information-circle',
   success: 'i-heroicons-check-circle',
   warn: 'i-heroicons-exclamation-triangle',
@@ -26,16 +26,30 @@ const formatTime = (date: Date | string) => {
 const formatDate = (date: Date | string) => {
   return new Date(date).toLocaleDateString()
 }
+
+const parsedMetadata = computed(() => {
+  if (!props.entry.metadata) return null
+  if (typeof props.entry.metadata === 'string') {
+    try {
+      return JSON.parse(props.entry.metadata)
+    } catch {
+      return props.entry.metadata
+    }
+  }
+  return props.entry.metadata
+})
+
+const stages = computed(() => parsedMetadata.value?.stages || null)
 </script>
 
 <template>
   <div class="flex gap-4 group">
     <!-- Timestamp Column -->
     <div class="flex flex-col items-end w-20 pt-1 shrink-0">
-      <span class="text-xs font-mono text-gray-500">
+      <span class="text-xs font-mono text-neutral-500">
         {{ formatTime(entry.createdAt) }}
       </span>
-      <span class="text-[10px] text-gray-400">
+      <span class="text-[10px] text-neutral-400">
         {{ formatDate(entry.createdAt) }}
       </span>
     </div>
@@ -46,25 +60,42 @@ const formatDate = (date: Date | string) => {
         class="w-2.5 h-2.5 rounded-full border-2 bg-white z-10 transition-colors"
         :class="statusColors[entry.level]"
       ></div>
-      <div class="w-px h-full bg-gray-100 group-last:hidden -mt-1"></div>
+      <div class="w-px h-full bg-neutral-100 group-last:hidden -mt-1"></div>
     </div>
 
     <!-- Content Card -->
     <div class="flex-1 pb-8">
-      <div class="bg-white rounded-xl border border-gray-100 p-4 shadow-sm hover:border-gray-200 transition-all group-hover:shadow-md">
+      <div class="bg-white rounded-xl border border-neutral-100 p-4 shadow-sm hover:border-neutral-200 transition-all group-hover:shadow-md">
         <div class="flex justify-between items-start gap-4">
           <div class="flex-1 min-w-0">
             <div class="flex items-center gap-2 mb-1">
               <UIcon :name="statusIcons[entry.level]" class="w-4 h-4" :class="statusColors[entry.level].replace('border-', 'text-')" />
-              <p class="text-sm font-semibold text-gray-900 leading-none">{{ entry.message }}</p>
+              <p class="text-sm font-semibold text-neutral-900 leading-none">{{ entry.message }}</p>
             </div>
-            <div class="flex items-center gap-2 text-[10px] text-gray-500 uppercase tracking-wider font-medium">
+            
+            <div class="flex items-center gap-2 text-[10px] text-neutral-500 uppercase tracking-wider font-medium">
               <span>{{ entry.source }}</span>
-              <span v-if="entry.ip">• {{ entry.ip }}</span>
+              <span v-if="entry.type !== 'system'">• {{ entry.type }}</span>
+              <span v-if="entry.stage">• {{ entry.stage }}</span>
+              <span v-if="entry.durationMs">• {{ (entry.durationMs / 1000).toFixed(2) }}s</span>
+            </div>
+
+            <!-- Pipeline Timing Bars -->
+            <div v-if="stages" class="mt-3 space-y-1">
+              <div v-for="(duration, name) in stages" :key="name" class="flex items-center gap-2">
+                <div class="text-[9px] font-mono text-neutral-400 w-16 truncate uppercase">{{ name }}</div>
+                <div class="flex-1 h-1 bg-neutral-50 rounded-full overflow-hidden">
+                  <div 
+                    class="h-full bg-info-400 opacity-60" 
+                    :style="{ width: `${Math.min(100, (duration / (entry.durationMs || 10000)) * 100)}%` }"
+                  ></div>
+                </div>
+                <div class="text-[9px] font-mono text-neutral-500 w-10 text-right">{{ duration }}ms</div>
+              </div>
             </div>
           </div>
           
-          <UPopover v-if="entry.details">
+          <UPopover v-if="parsedMetadata">
             <UButton 
               color="neutral" 
               variant="ghost" 
@@ -73,8 +104,8 @@ const formatDate = (date: Date | string) => {
               icon="i-heroicons-code-bracket"
             />
             <template #content>
-              <div class="p-3 max-w-sm">
-                <pre class="text-[10px] font-mono text-gray-700 whitespace-pre-wrap bg-gray-50 p-2 rounded border border-gray-100">{{ JSON.stringify(JSON.parse(entry.details), null, 2) }}</pre>
+              <div class="p-3 max-w-sm max-h-96 overflow-auto">
+                <pre class="text-[10px] font-mono text-neutral-700 whitespace-pre-wrap bg-neutral-50 p-2 rounded border border-neutral-100">{{ JSON.stringify(parsedMetadata, null, 2) }}</pre>
               </div>
             </template>
           </UPopover>

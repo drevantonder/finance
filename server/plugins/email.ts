@@ -2,8 +2,9 @@ import PostalMime from 'postal-mime'
 import { eq } from 'drizzle-orm'
 import { db } from 'hub:db'
 import { blob } from 'hub:blob'
-import { inboxItems, inboxAttachments, authorizedUsers, logs } from '../db/schema'
+import { inboxItems, inboxAttachments, authorizedUsers } from '../db/schema'
 import { processInboxItem } from '../utils/inbox'
+import { logActivity } from '../utils/logger'
 
 interface CloudflareEmailMessage {
   from: string
@@ -21,6 +22,7 @@ export default defineNitroPlugin((nitroApp) => {
   // @ts-ignore - Nitro hook for Cloudflare Email Routing
   nitroApp.hooks.hook('cloudflare:email', async ({ message, env, context }: { message: CloudflareEmailMessage, env: any, context: CloudflareEmailContext }) => {
     const id = crypto.randomUUID()
+    const correlationId = `email-${id}`
     const receivedAt = new Date().toISOString()
     
     try {
@@ -110,13 +112,12 @@ export default defineNitroPlugin((nitroApp) => {
           : `Sender ${headerFrom} not authorized`
         
         console.warn(`[EmailInbox] Unauthorized: ${reason} (Auth: ${hasPassedAuth})`)
-        await db.insert(logs).values({
-          id: crypto.randomUUID(),
+        logActivity({
+          type: 'error',
           level: 'warn',
           message: `Unauthorized email: ${reason}`,
-          source: 'email',
-          details: JSON.stringify({ envelopeFrom, headerFrom, gmailForwarder, dkimPass, spfPass, authDetails }),
-          createdAt: new Date()
+          correlationId,
+          metadata: { envelopeFrom, headerFrom, gmailForwarder, dkimPass, spfPass, authDetails }
         }).catch(() => {})
       }
 
@@ -174,23 +175,20 @@ export default defineNitroPlugin((nitroApp) => {
     } catch (err: any) {
       console.error(`[EmailInbox] Failed to process incoming email:`, err)
       // Log failure to database for visibility in UI
-      try {
-        await db.insert(logs).values({
-          id: crypto.randomUUID(),
-          level: 'error',
-          message: `Failed to process incoming email: ${err.message}`,
-          source: 'email',
-          details: JSON.stringify({ 
-            error: err.stack,
-            from: message.from,
-            to: message.to,
-            headers: Object.fromEntries(message.headers.entries())
-          }),
-          createdAt: new Date()
-        })
-      } catch (logErr) {
+      logActivity({
+        type: 'error',
+        level: 'error',
+        message: `Failed to process incoming email: ${err.message}`,
+        correlationId,
+        metadata: { 
+          error: err.stack,
+          from: message.from,
+          to: message.to,
+          headers: Object.fromEntries(message.headers.entries())
+        }
+      }).catch(logErr => {
         console.error('Failed to log email error:', logErr)
-      }
+      })
     }
   })
 })

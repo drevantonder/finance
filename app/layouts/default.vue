@@ -159,7 +159,7 @@ const currentPageTitle = computed(() => {
             class="w-full py-2 flex items-center text-sm text-gray-500 hover:text-primary-600 transition-colors rounded-lg hover:bg-gray-50 px-3"
             :class="isCollapsed ? 'justify-center' : 'justify-start gap-2'"
           >
-            <UIcon :name="isCollapsed ? 'i-heroicons-chevron-double-right' : 'i-heroicons-chevron-double-left'" class="h-4 w-4" />
+             <UIcon :key="isCollapsed ? 'collapsed' : 'expanded'" :name="isCollapsed ? 'i-heroicons-chevron-double-right' : 'i-heroicons-chevron-double-left'" class="h-4 w-4" />
             <span v-if="!isCollapsed">Collapse Sidebar</span>
           </button>
        </div>

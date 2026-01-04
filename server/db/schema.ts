@@ -61,14 +61,18 @@ export const expenseClaims = sqliteTable('expense_claims', {
   claimedAt: integer('claimed_at', { mode: 'timestamp' }),
 })
 
-export const logs = sqliteTable('logs', {
+export const activityLog = sqliteTable('activity_log', {
   id: text('id').primaryKey(),
-  level: text('level').notNull(), // 'info', 'success', 'warn', 'error'
+  correlationId: text('correlation_id'),
+  type: text('type').notNull(), // 'pipeline' | 'error' | 'system'
+  stage: text('stage'), // e.g. 'crop', 'gemini', 'upload'
+  level: text('level').notNull(), // 'info' | 'success' | 'warn' | 'error'
   message: text('message').notNull(),
-  details: text('details'), // JSON string for extra context
-  source: text('source').notNull(), // 'expenses', 'sync', 'auth', 'system'
-  ip: text('ip'),
-  createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
+  durationMs: integer('duration_ms'),
+  metadata: text('metadata'), // JSON string
+  expenseId: text('expense_id').references(() => expenses.id),
+  source: text('source').notNull(), // 'client' | 'server'
+  createdAt: integer('created_at', { mode: 'timestamp' }).notNull().default(sql`(strftime('%s', 'now') * 1000)`),
 })
 
 export const authorizedUsers = sqliteTable('authorized_users', {

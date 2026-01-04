@@ -52,11 +52,12 @@ const formatDate = (dateStr: string) => {
         v-if="item.status === 'uploading' || item.status === 'processing'" 
         class="absolute inset-0 bg-black/30 flex items-center justify-center"
       >
-        <UIcon 
-          :name="item.status === 'processing' ? 'i-heroicons-sparkles' : 'i-heroicons-arrow-up-tray'" 
-          class="w-5 h-5 text-white" 
-          :class="item.status === 'processing' ? 'animate-pulse' : 'animate-bounce'"
-        />
+         <UIcon 
+           :key="item.status"
+           :name="item.status === 'processing' ? 'i-heroicons-sparkles' : 'i-heroicons-arrow-up-tray'" 
+           class="w-5 h-5 text-white" 
+           :class="item.status === 'processing' ? 'animate-pulse' : 'animate-bounce'"
+         />
       </div>
     </div>
 

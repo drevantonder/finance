@@ -34,7 +34,8 @@ export function useNavigation() {
   ]
 
   const systemItems: SubMenuItem[] = [
-    { label: 'System Health', to: '/menu/system', icon: 'i-heroicons-heart', description: 'Inbox debug, Logs', color: 'bg-rose-500' }
+    { label: 'Email Inbox', to: '/menu/inbox', icon: 'i-heroicons-inbox', description: 'Receipts from email', color: 'bg-rose-500' },
+    { label: 'Activity Log', to: '/menu/logs', icon: 'i-heroicons-list-bullet', description: 'Pipeline debug, timing', color: 'bg-neutral-600' }
   ]
 
   const navGroups: NavGroup[] = [

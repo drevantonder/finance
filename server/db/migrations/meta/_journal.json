@@ -22,6 +22,20 @@
       "when": 1767324752813,
       "tag": "0002_tiny_valeria_richards",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1767514659895,
+      "tag": "0003_damp_typhoid_mary",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1767514671293,
+      "tag": "0004_light_klaw",
+      "breakpoints": true
     }
   ]
 }

@@ -1,6 +1,7 @@
 import { ref } from 'vue'
 
 export interface ProcessedFile {
+  correlationId: string
   data: string           // Base64
   type: 'image' | 'pdf'
   hash: string           // SHA-256
@@ -10,6 +11,7 @@ export interface ProcessedFile {
   capturedAt: string
   cropApplied: boolean
   cropReason?: string
+  timing: Record<string, number>
 }
 
 export function useFileProcessor() {
@@ -117,13 +119,20 @@ export function useFileProcessor() {
   }
 
   async function processFile(file: File): Promise<ProcessedFile> {
+    const correlationId = crypto.randomUUID()
+    const timing: Record<string, number> = {}
+    const startOverall = performance.now()
+
     return new Promise((resolve, reject) => {
       const capturedAt = file.lastModified 
         ? new Date(file.lastModified).toISOString() 
         : new Date().toISOString()
 
       const reader = new FileReader()
+      const startRead = performance.now()
+      
       reader.onload = async (e) => {
+        timing.file_read = Math.round(performance.now() - startRead)
         const dataUrl = e.target?.result as string
         if (!dataUrl) {
           reject(new Error('Failed to read file'))
@@ -132,7 +141,10 @@ export function useFileProcessor() {
 
         try {
           const type = file.type === 'application/pdf' ? 'pdf' : 'image'
+          
+          const startHash = performance.now()
           const hash = await generateHash(dataUrl)
+          timing.hash = Math.round(performance.now() - startHash)
           
           let finalData = dataUrl
           let thumbnail = ''
@@ -140,18 +152,29 @@ export function useFileProcessor() {
           let cropReason: string | undefined
 
           if (type === 'image') {
+            const startCrop = performance.now()
             const cropResult = await cropImage(dataUrl)
+            timing.crop = Math.round(performance.now() - startCrop)
+            
             finalData = cropResult.dataUrl
             cropApplied = cropResult.applied
             cropReason = cropResult.reason
             
+            const startResize = performance.now()
             finalData = await resizeImage(finalData, MAX_SIZE)
+            timing.resize = Math.round(performance.now() - startResize)
+
+            const startThumb = performance.now()
             thumbnail = await resizeImage(finalData, THUMBNAIL_SIZE, 0.6)
+            timing.thumbnail = Math.round(performance.now() - startThumb)
           } else {
             thumbnail = '' 
           }
 
+          timing.total_client = Math.round(performance.now() - startOverall)
+
           resolve({
+            correlationId,
             data: finalData,
             type,
             hash,
@@ -160,7 +183,8 @@ export function useFileProcessor() {
             size: file.size,
             capturedAt,
             cropApplied,
-            cropReason
+            cropReason,
+            timing
           })
         } catch (err) {
           reject(err)

@@ -367,14 +367,19 @@ export interface Claim {
   createdAt: string | Date
 }
 
-export type LogLevel = 'info' | 'success' | 'warn' | 'error'
+export type ActivityLogType = 'pipeline' | 'error' | 'system'
+export type ActivityLogLevel = 'info' | 'success' | 'warn' | 'error'
 
-export interface LogEntry {
+export interface ActivityLog {
   id: string
-  level: LogLevel
+  correlationId: string | null
+  type: ActivityLogType
+  stage: string | null
+  level: ActivityLogLevel
   message: string
-  details: string | null
-  source: string
-  ip: string | null
-  createdAt: Date
+  durationMs: number | null
+  metadata: any | null
+  expenseId: string | null
+  source: 'client' | 'server'
+  createdAt: string | Date
 }
