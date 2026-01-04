@@ -35,9 +35,7 @@ export default defineNuxtConfig({
       ]
     },
     workbox: {
-      globPatterns: ['**/*.{js,css,html,png,svg,ico,woff,woff2}'],
-      // Disable navigateFallback - let Nuxt handle SPA routing
-      // This avoids the "non-precached-url" error when index.html isn't in manifest
+      globPatterns: ['**/*.{js,css,html,png,svg,ico,woff,woff2,wasm}'],
       navigateFallback: null,
       runtimeCaching: [
         {
@@ -48,6 +46,17 @@ export default defineNuxtConfig({
             expiration: {
               maxEntries: 100,
               maxAgeSeconds: 60 * 60 * 24 * 30
+            }
+          }
+        },
+        {
+          urlPattern: /\/opencv\/.*\.(js)$/,
+          handler: 'CacheFirst',
+          options: {
+            cacheName: 'opencv',
+            expiration: {
+              maxEntries: 5,
+              maxAgeSeconds: 60 * 60 * 24 * 365
             }
           }
         }

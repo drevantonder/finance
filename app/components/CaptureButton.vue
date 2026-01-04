@@ -1,8 +1,10 @@
 <script setup lang="ts">
 import { onLongPress, useLocalStorage } from '@vueuse/core'
+import type { ProcessedFile } from '~/composables/useFileProcessor'
 
 const { addToQueue } = useUploadQueue()
 const { vibrate } = useNotifications()
+const toast = useToast()
 
 // Inputs
 const fileInput = ref<HTMLInputElement | null>(null)
@@ -18,7 +20,7 @@ const fileSelected = ref(false)
 
 const handleFiles = async (files: FileList | null) => {
   if (!files || files.length === 0) return
-  
+
   fileSelected.value = true
   vibrate('tap')
 
@@ -26,6 +28,15 @@ const handleFiles = async (files: FileList | null) => {
     try {
       const { processFile } = useFileProcessor()
       const processed = await processFile(file)
+      
+      if (!processed.cropApplied && processed.cropReason && processed.cropReason !== 'no_contour' && processed.cropReason !== 'success') {
+        toast.add({
+          title: 'Full image uploaded',
+          description: 'Could not detect receipt edges',
+          color: 'warning'
+        })
+      }
+      
       addToQueue(processed)
     } catch (e) {
       console.error('Failed to process file:', e)

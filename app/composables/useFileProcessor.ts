@@ -8,6 +8,8 @@ export interface ProcessedFile {
   originalName: string
   size: number
   capturedAt: string
+  cropApplied: boolean
+  cropReason?: string
 }
 
 export function useFileProcessor() {
@@ -69,6 +71,51 @@ export function useFileProcessor() {
     })
   }
 
+  async function cropImage(dataUrl: string): Promise<{ dataUrl: string; applied: boolean; reason?: string }> {
+    try {
+      const { crop } = useCropWorker()
+
+      const img = new Image()
+      await new Promise<void>((resolve, reject) => {
+        img.onload = () => resolve()
+        img.onerror = () => reject(new Error('Failed to load image for cropping'))
+        img.src = dataUrl
+      })
+
+      const canvas = document.createElement('canvas')
+      canvas.width = img.width
+      canvas.height = img.height
+      const ctx = canvas.getContext('2d')
+      if (!ctx) throw new Error('Failed to create canvas context')
+      ctx.drawImage(img, 0, 0)
+
+      const imageData = ctx.getImageData(0, 0, img.width, img.height)
+      const result = await crop(imageData, img.width, img.height)
+
+      if (result.success && result.bounds) {
+        const croppedCanvas = document.createElement('canvas')
+        croppedCanvas.width = result.bounds.width
+        croppedCanvas.height = result.bounds.height
+        const croppedCtx = croppedCanvas.getContext('2d')
+        if (!croppedCtx) throw new Error('Failed to create cropped canvas context')
+        croppedCtx.drawImage(canvas, result.bounds.x, result.bounds.y, result.bounds.width, result.bounds.height, 0, 0, result.bounds.width, result.bounds.height)
+
+        let finalDataUrl = croppedCanvas.toDataURL('image/webp', 0.8)
+        if (!finalDataUrl.startsWith('data:image/webp')) {
+          finalDataUrl = croppedCanvas.toDataURL('image/jpeg', 0.8)
+        }
+
+        return { dataUrl: finalDataUrl, applied: true, reason: result.reason }
+      } else {
+        console.warn('[FileProcessor] Crop failed:', result.reason, `processingTime: ${result.processingTime}ms`)
+        return { dataUrl, applied: false, reason: result.reason }
+      }
+    } catch (err) {
+      console.error('[FileProcessor] Crop error:', err)
+      return { dataUrl, applied: false, reason: 'crop_error' }
+    }
+  }
+
   async function processFile(file: File): Promise<ProcessedFile> {
     return new Promise((resolve, reject) => {
       const capturedAt = file.lastModified 
@@ -89,12 +136,18 @@ export function useFileProcessor() {
           
           let finalData = dataUrl
           let thumbnail = ''
+          let cropApplied = false
+          let cropReason: string | undefined
 
           if (type === 'image') {
-            finalData = await resizeImage(dataUrl, MAX_SIZE)
-            thumbnail = await resizeImage(dataUrl, THUMBNAIL_SIZE, 0.6)
+            const cropResult = await cropImage(dataUrl)
+            finalData = cropResult.dataUrl
+            cropApplied = cropResult.applied
+            cropReason = cropResult.reason
+            
+            finalData = await resizeImage(finalData, MAX_SIZE)
+            thumbnail = await resizeImage(finalData, THUMBNAIL_SIZE, 0.6)
           } else {
-            // For PDFs, we don't have a thumbnail yet, maybe use a generic icon later
             thumbnail = '' 
           }
 
@@ -105,7 +158,9 @@ export function useFileProcessor() {
             thumbnail,
             originalName: file.name,
             size: file.size,
-            capturedAt
+            capturedAt,
+            cropApplied,
+            cropReason
           })
         } catch (err) {
           reject(err)
