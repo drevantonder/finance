@@ -91,13 +91,15 @@ const onPointerUp = (e: PointerEvent) => {
 
   if (duration >= 600) {
     vibrate('tap')
-    fileInput.value?.click()
+    // Use a small timeout to ensure the browser doesn't block the click
+    // after the pointerup event processing
+    setTimeout(() => {
+      fileInput.value?.click()
+    }, 0)
   } else {
     vibrate('tap')
     cameraInput.value?.click()
   }
-  
-  e.preventDefault()
 }
 
 const onPointerCancel = () => {
@@ -157,7 +159,7 @@ const onPointerCancel = () => {
       @pointercancel="onPointerCancel"
       @pointerleave="onPointerCancel"
       @contextmenu.prevent
-      class="h-14 w-14 -mt-6 flex items-center justify-center rounded-full bg-primary-600 text-white shadow-lg transition-all active:scale-95 select-none"
+      class="h-14 w-14 -mt-6 flex items-center justify-center rounded-full bg-primary-600 text-white shadow-lg transition-all active:scale-95 select-none touch-none"
       aria-label="Capture receipt"
     >
       <UIcon name="i-heroicons-camera" class="h-7 w-7" />
