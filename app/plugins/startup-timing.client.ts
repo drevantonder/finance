@@ -31,6 +31,14 @@ export default defineNuxtPlugin((nuxtApp) => {
     sseConnectMs = e.detail.durationMs
   })
 
+  // Device detection
+  const isMobile = /Mobile|Android|iPhone|iPad/i.test(navigator.userAgent)
+  const screenWidth = window.screen.width
+  const deviceType = isMobile ? 'mobile' : screenWidth < 1024 ? 'tablet' : 'desktop'
+
+  // Git commit from runtime config
+  const { gitCommit } = useRuntimeConfig().public
+
   nuxtApp.hook('app:mounted', () => {
     // Wait a bit to ensure LCP and other vitals are captured 
     // and session/sse have a chance to finish
@@ -46,38 +54,72 @@ export default defineNuxtPlugin((nuxtApp) => {
         const resources = performance.getEntriesByType('resource') as PerformanceResourceTiming[]
         
         const isCached = nav.transferSize === 0
-        
+
+        // Network timing breakdown (diagnose TTFB issues)
+        const networkTiming = {
+          dns: Math.round(nav.domainLookupEnd - nav.domainLookupStart),
+          tcp: Math.round(nav.connectEnd - nav.connectStart),
+          tls: nav.secureConnectionStart > 0 ? Math.round(nav.connectEnd - nav.secureConnectionStart) : 0,
+          request: Math.round(nav.responseStart - nav.requestStart),
+          response: Math.round(nav.responseEnd - nav.responseStart),
+        }
+
+        // Top 5 slowest resources (>300ms)
+        const slowResources = resources
+          .filter(r => r.duration > 300)
+          .sort((a, b) => b.duration - a.duration)
+          .slice(0, 5)
+          .map(r => ({
+            name: r.name.split('/').pop()?.slice(0, 50),
+            duration: Math.round(r.duration),
+            size: r.transferSize
+          }))
+
         const metadata = {
           // Navigation Timing
           ttfb: Math.round(nav.responseStart - nav.requestStart),
           domInteractive: Math.round(nav.domInteractive),
           domComplete: Math.round(nav.domComplete),
           loadEventEnd: Math.round(nav.loadEventEnd),
-          
+
           // Cache detection
           transferSize: nav.transferSize,
           encodedBodySize: nav.encodedBodySize,
           decodedBodySize: nav.decodedBodySize,
           isCached,
           resourceCount: resources.length,
-          
+
           // Resource breakdown
           jsBundleSize: Math.round(resources.filter(r => r.name.includes('.js')).reduce((a, r) => a + r.transferSize, 0)),
           cssBundleSize: Math.round(resources.filter(r => r.name.includes('.css')).reduce((a, r) => a + r.transferSize, 0)),
-          
+
           // Web Vitals
           ...vitals,
-          
+
           // App-specific
           nuxtMountMs: Math.round(performance.now() - startTime),
           sessionLoadMs: sessionLoadMs ? Math.round(sessionLoadMs) : null,
           sseConnectMs: sseConnectMs ? Math.round(sseConnectMs) : null,
-          
+
           // Context
           pathname: window.location.pathname,
           connection: (navigator as any).connection?.effectiveType || 'unknown',
           deviceMemory: (navigator as any).deviceMemory || 'unknown',
-          hardwareConcurrency: navigator.hardwareConcurrency || 'unknown'
+          hardwareConcurrency: navigator.hardwareConcurrency || 'unknown',
+
+          // Device info
+          deviceType,
+          screenWidth,
+          screenHeight: window.screen.height,
+
+          // Version
+          gitCommit,
+
+          // Network breakdown
+          networkTiming,
+
+          // Slow resources
+          slowResources
         }
 
         await log({

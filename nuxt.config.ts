@@ -85,7 +85,9 @@ export default defineNuxtConfig({
     },
     geminiApiKey: '', // NUXT_GEMINI_API_KEY
     aiGatewayUrl: '', // NUXT_AI_GATEWAY_URL (optional, format: https://gateway.ai.cloudflare.com/v1/{account_id}/{gateway_id})
-    public: {}
+    public: {
+      gitCommit: process.env.WORKERS_CI_COMMIT_SHA?.slice(0, 7) || 'dev'
+    }
   },
   css: ['~/assets/css/main.css'],
   typescript: {

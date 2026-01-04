@@ -5,19 +5,40 @@ import type { ActivityLog, ActivityLogType, ActivityLogLevel } from '~/types'
 const filters = ref({
   type: 'all' as ActivityLogType | 'all',
   level: 'all' as ActivityLogLevel | 'all',
+  device: 'all' as 'all' | 'mobile' | 'tablet' | 'desktop',
   limit: 100
 })
 
 const { data: logs, isLoading, refetch } = useQuery({
-  queryKey: ['activity-logs', filters],
-  queryFn: () => $fetch<ActivityLog[]>('/api/logs', {
-    params: {
-      type: filters.value.type === 'all' ? undefined : filters.value.type,
-      level: filters.value.level === 'all' ? undefined : filters.value.level,
-      limit: filters.value.limit
+    queryKey: ['activity-logs', filters],
+    queryFn: () => $fetch<ActivityLog[]>('/api/logs', {
+      params: {
+        type: filters.value.type === 'all' ? undefined : filters.value.type,
+        level: filters.value.level === 'all' ? undefined : filters.value.level,
+        limit: filters.value.limit
+      }
+    }),
+    refetchInterval: 10000 // Refresh every 10s
+  })
+
+const parseMetadata = (log: ActivityLog) => {
+  if (!log.metadata) return null
+  if (typeof log.metadata === 'string') {
+    try {
+      return JSON.parse(log.metadata)
+    } catch {
+      return null
     }
-  }),
-  refetchInterval: 10000 // Refresh every 10s
+  }
+  return log.metadata
+}
+
+const filteredLogs = computed(() => {
+  if (!logs.value || filters.value.device === 'all') return logs.value
+  return logs.value.filter(log => {
+    const metadata = parseMetadata(log)
+    return metadata?.deviceType === filters.value.device
+  })
 })
 
 const typeOptions = [
@@ -33,6 +54,13 @@ const levelOptions = [
   { label: 'Success', value: 'success' },
   { label: 'Warning', value: 'warn' },
   { label: 'Error', value: 'error' }
+]
+
+const deviceOptions = [
+  { label: 'All Devices', value: 'all' },
+  { label: '📱 Mobile', value: 'mobile' },
+  { label: '💻 Tablet', value: 'tablet' },
+  { label: '🖥️ Desktop', value: 'desktop' }
 ]
 </script>
 
@@ -61,31 +89,34 @@ const levelOptions = [
     </div>
 
     <!-- Filters -->
-    <div class="grid grid-cols-2 gap-4 bg-white p-4 rounded-xl border border-neutral-100 shadow-sm">
+    <div class="grid grid-cols-3 gap-4 bg-white p-4 rounded-xl border border-neutral-100 shadow-sm">
       <UFormField label="Type">
         <USelect v-model="filters.type" :items="typeOptions" class="w-full" />
       </UFormField>
       <UFormField label="Level">
         <USelect v-model="filters.level" :items="levelOptions" class="w-full" />
       </UFormField>
+      <UFormField label="Device">
+        <USelect v-model="filters.device" :items="deviceOptions" class="w-full" />
+      </UFormField>
     </div>
 
     <!-- Log List -->
     <div class="relative">
-      <div v-if="isLoading && !logs" class="flex justify-center py-12">
+      <div v-if="isLoading && !filteredLogs" class="flex justify-center py-12">
         <UIcon name="i-heroicons-arrow-path" class="w-8 h-8 animate-spin text-neutral-300" />
       </div>
 
-      <div v-else-if="logs?.length === 0" class="text-center py-12 bg-neutral-50 rounded-xl border-2 border-dashed border-neutral-200">
+      <div v-else-if="filteredLogs?.length === 0" class="text-center py-12 bg-neutral-50 rounded-xl border-2 border-dashed border-neutral-200">
         <UIcon name="i-heroicons-document-text" class="w-12 h-12 mx-auto text-neutral-300 mb-2" />
         <p class="text-neutral-500">No activity logs found</p>
       </div>
 
       <div v-else class="space-y-0">
-        <ActivityLogEntry 
-          v-for="entry in logs" 
-          :key="entry.id" 
-          :entry="entry" 
+        <ActivityLogEntry
+          v-for="entry in filteredLogs"
+          :key="entry.id"
+          :entry="entry"
         />
       </div>
     </div>

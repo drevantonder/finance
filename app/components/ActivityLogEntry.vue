@@ -60,6 +60,16 @@ const stages = computed(() => {
   }
   return parsedMetadata.value?.stages || null
 })
+
+const deviceIcon = computed(() => {
+  const dt = parsedMetadata.value?.deviceType
+  if (dt === 'mobile') return '📱'
+  if (dt === 'tablet') return '💻'
+  if (dt === 'desktop') return '🖥️'
+  return null
+})
+
+const gitCommit = computed(() => parsedMetadata.value?.gitCommit)
 </script>
 
 <template>
@@ -92,12 +102,19 @@ const stages = computed(() => {
               <UIcon :name="entryIcon" class="w-4 h-4" :class="statusColors[entry.level].replace('border-', 'text-')" />
               <p class="text-sm font-semibold text-neutral-900 leading-none">{{ entry.message }}</p>
             </div>
-            
+
             <div class="flex items-center gap-2 text-[10px] text-neutral-500 uppercase tracking-wider font-medium">
               <span>{{ entry.source }}</span>
               <span v-if="entry.type !== 'system'">• {{ entry.type }}</span>
               <span v-if="entry.stage">• {{ entry.stage }}</span>
               <span v-if="entry.durationMs">• {{ (entry.durationMs / 1000).toFixed(2) }}s</span>
+              <span v-if="deviceIcon" class="text-[11px]">{{ deviceIcon }}</span>
+              <span 
+                v-if="gitCommit" 
+                class="font-mono px-1.5 py-0.5 rounded bg-neutral-100 text-neutral-500"
+              >
+                {{ gitCommit }}
+              </span>
             </div>
 
             <!-- Pipeline Timing Bars -->
