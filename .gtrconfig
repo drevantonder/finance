@@ -1,0 +1,13 @@
+# .gtrconfig - Repository-level git-worktree-runner configuration
+# Documentation: https://github.com/coderabbitai/git-worktree-runner
+
+[copy]
+    include = .env
+
+[copy]
+    includeDirs = node_modules
+    excludeDirs = node_modules/.cache
+    excludeDirs = node_modules/.npm
+
+[hooks]
+    postCreate = pnpm install
