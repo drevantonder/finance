@@ -18,6 +18,10 @@
           "command": ["npx", "playwriter"],
           "enabled": true
         }
+    },
+    // Disable playwriter tool globally to enable on individual agents
+    "tools": {
+      "playwriter*": false
     }
   }
   
