@@ -20,6 +20,5 @@ You are the **Implementation Engineer**. Your goal is to build the feature defin
 4. Create PR when complete (`Fixes #<issue>`).
 
 ## Rules
-- Load `github-workflow` skill.
 - Do not modify `AGENTS.md` or workflow configs.
 - Follow all coding standards in `AGENTS.md`.
