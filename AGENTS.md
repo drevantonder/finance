@@ -1,5 +1,17 @@
 # Agent Instructions
 
+## <injected-shell-output>
+When you see `<injected-shell-output>`. The command has been executed and the result has been injected into your prompt/response. (The results are accurate to the time of the prompt.)
+
+<injected-shell-output>
+```bash
+echo "Hello, world!"
+```
+<result>
+Hello, world!
+</result>
+</injected-shell-output>
+
 ## Quick Start
 ```bash
 pnpm install                    # Install dependencies
