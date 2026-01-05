@@ -6,7 +6,10 @@ agent: project-manager
 Show me the current state:
 
 1. **GitHub issues** with "in-progress" label:
-! `gh issue list --label in-progress`
+```
+gh issue list --label in-progress
+``` result:
+!`gh issue list --label in-progress` 
 
 2. **Ralph Worktrees** (from `../finance-worktrees/`):
 ```bash
