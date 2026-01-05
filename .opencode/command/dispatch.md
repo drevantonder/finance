@@ -21,14 +21,16 @@ You are running the `/dispatch` command.
    - Write `RUNNING` to `"$WORKTREE_PATH/.ralph/status"`.
 
 4. **Launch Loop**:
-```bash
-SOCKET=$(ls /tmp/kitty-socket-* | head -1)
-kitten @ --to unix:$SOCKET launch \
-  --type=tab \
-  --tab-title "Ralph-<Name>" \
-  --cwd "$WORKTREE_PATH" \
-  --copy-env \
-  zsh -ic "bash .opencode/bin/ralph-harness.sh"
-```
+   Use the `kitten @` command to spawn a new Kitty tab with the harness.
+   ```bash
+   SOCKET=$(ls /tmp/kitty-socket-* | head -1)
+   kitten @ --to unix:$SOCKET launch \
+     --type=tab \
+     --tab-title "Ralph-<Name>" \
+     --cwd "$WORKTREE_PATH" \
+     --copy-env \
+     zsh -ic "bash .opencode/bin/ralph-harness.sh"
+   ```
+   ! `bash -c 'SOCKET=$(ls /tmp/kitty-socket-* | head -1); WORKTREE_PATH=$(git gtr go ralph/<name>-<descriptor>); kitten @ --to unix:$SOCKET launch --type=tab --tab-title "Ralph-<Name>" --cwd "$WORKTREE_PATH" --copy-env zsh -ic "bash .opencode/bin/ralph-harness.sh"'`
 
 Inform the user that the Ralph loop has been dispatched.

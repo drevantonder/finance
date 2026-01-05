@@ -196,6 +196,12 @@ See **docs/DOMAIN.md** for:
 - Australian tax rates and HECS thresholds
 - Common calculation bugs to avoid
 
+## Ralph Workflow
+This project uses an autonomous batch execution model. See:
+- **@docs/ralph-workflow.md** - Complete Ralph-GitHub protocol
+- **@.opencode/skill/git-worktree-runner/SKILL.md** - Git worktree commands
+- **@.opencode/skill/kitty-terminal/SKILL.md** - Kitty terminal integration
+
 Key rules:
 - Tax/HECS functions expect ANNUAL income (multiply monthly × 12)
 - Percentages stored as decimals (0.05), displayed as %

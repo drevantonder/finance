@@ -1,3 +1,10 @@
+---
+name: git-worktree-runner
+description: Manage isolated Git worktrees with git-worktree-runner (gtr)
+license: MIT
+compatibility: opencode
+---
+
 # Git Worktree Runner (GTR) Skill
 
 `git-worktree-runner` (`git gtr`) is the primary tool for managing isolated work environments.

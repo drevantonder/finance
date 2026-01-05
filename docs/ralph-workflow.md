@@ -234,22 +234,26 @@ If Ralph gets blocked or you need to adjust:
 - Smarter task dependency detection
 - Auto-retry on transient failures
 
-## Troubleshooting
+## Appendix: Design Rationale & Lessons Learned
 
-### Ralph doesn't start
-- Check that `.ralph/tasks.json` exists in the worktree
-- Verify the harness script is executable: `ls -l .opencode/bin/ralph-harness.sh`
+### 1. Signal-over-Exit Pattern
+The harness script (`ralph-harness.sh`) is designed to be "exit-code agnostic." It uses `|| true` when running the agent and relies strictly on the presence of `<promise>` tags in stdout.
+- **Rationale**: This prevents the loop from crashing due to transient CLI errors (like network timeouts) while ensuring that a task is only marked "done" if the agent explicitly signals success.
 
-### Ralph keeps failing tests
-- Check if the test command is correct: `pnpm run test:run`
-- Verify test environment is set up (see project README)
-- Consider if the task needs better acceptance criteria
+### 2. State-on-Disk vs. State-in-Context
+The core of this architecture is **Context Shedding**. By killing the agent after every task, we reset the context window to zero.
+- **Insight**: Ralph's "memory" is the filesystem. If you need to "teach" Ralph something during a run, update the issue body or the `tasks.json` in the worktree. He will "learn" it upon his next wake-up.
 
-### Harness times out
-- Check the iteration count (default: 100)
-- Review Ralph's progress.txt to see where he's stuck
-- Consider breaking the task into smaller pieces
+### 3. Resumability & Healing
+The PM is designed to be "idempotent." If a Ralph run fails or is manually interrupted:
+- The worktree and branch remain.
+- The `.ralph/tasks.json` tracks what was finished.
+- Running `/dispatch` again will simply re-attach to the existing environment and resume from the first `pending` task.
 
-### Ralph marks task as done but tests are red
-- This shouldn't happen (tests are the gatekeeper)
-- If it does, it's a bug in the Ralph agent prompt - report it
+### 4. Terminal Automation (`zsh -ic`)
+Spawning Kitty tabs requires the `zsh -ic` (or equivalent) wrapper.
+- **Reason**: Standard non-interactive shells often do not source profile files, leading to "command not found" errors for `pnpm`, `node`, or `opencode`. The interactive flag ensures the environment is identical to your main terminal.
+
+### 5. Intelligent Selection
+Ralph is instructed to pick the "highest priority" task, not just the next one in the list.
+- **Benefit**: This allows the agent to recognize if a later task is actually a prerequisite for an earlier one, or if a "refactor" task should happen before a "feature" task to ensure a cleaner implementation.
