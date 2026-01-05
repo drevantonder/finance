@@ -17,8 +17,8 @@ export default defineNuxtPlugin((nuxt) => {
     },
   })
 
-  // Client-side: Setup IndexedDB persistence
-  if (import.meta.client) {
+  // Client-side: Setup IndexedDB persistence (only if IndexedDB is available)
+  if (import.meta.client && typeof indexedDB !== 'undefined') {
     const persister = {
       persistClient: async (client: unknown) => {
         await set('vue-query-cache', client)
