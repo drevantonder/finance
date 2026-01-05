@@ -14,5 +14,5 @@ git gtr list --porcelain | grep "ralph/" | while read -r branch path; do
     echo "Recent Progress:"
     tail -n 10 "$path/.ralph/progress.txt" 2>/dev/null || echo "No logs yet."
 done
-```
-! `bash -c 'git gtr list --porcelain | grep "ralph/" | while read -r branch path; do echo "--- $branch ---"; echo "Status: $(cat "$path/.ralph/status" 2>/dev/null || echo "Unknown")"; echo "Recent Progress:"; tail -n 10 "$path/.ralph/progress.txt" 2>/dev/null || echo "No logs yet."; done'`
+``` result:
+!`bash -c 'git gtr list --porcelain | grep "ralph/" | while read -r branch path; do echo "--- $branch ---"; echo "Status: $(cat "$path/.ralph/status" 2>/dev/null || echo "Unknown")"; echo "Recent Progress:"; tail -n 10 "$path/.ralph/progress.txt" 2>/dev/null || echo "No logs yet."; done'`

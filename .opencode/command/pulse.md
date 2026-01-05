@@ -11,8 +11,8 @@ Show me the current state:
 2. **Ralph Worktrees** (from `../finance-worktrees/`):
 ```bash
 git gtr list --porcelain | grep "ralph/" || echo "No active Ralph runs."
-```
-! `bash -c 'git gtr list --porcelain | grep "ralph/" || echo "No active Ralph runs."'`
+``` result:
+!`bash -c 'git gtr list --porcelain | grep "ralph/" || echo "No active Ralph runs."'`
 
 3. **Detailed Ralph Status**:
 ```bash
@@ -22,7 +22,7 @@ git gtr list --porcelain | grep "ralph/" | while read -r branch path; do
         echo "[$branch]: $status"
     fi
 done
-```
-! `bash -c 'git gtr list --porcelain | grep "ralph/" | while read -r branch path; do if [[ -f "$path/.ralph/status" ]]; then status=$(cat "$path/.ralph/status"); echo "[$branch]: $status"; fi; done'`
+``` result:
+!`bash -c 'git gtr list --porcelain | grep "ralph/" | while read -r branch path; do if [[ -f "$path/.ralph/status" ]]; then status=$(cat "$path/.ralph/status"); echo "[$branch]: $status"; fi; done'`
 
 Display as a clean dashboard.
