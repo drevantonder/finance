@@ -15,10 +15,11 @@ Work on branch associated with $ARGUMENTS (e.g., "ralph/alpha-login").
 ```bash
 git gtr run $ARGUMENTS git push -u origin $ARGUMENTS
 ```
-!`bash -c 'git gtr run $ARGUMENTS git push -u origin $ARGUMENTS'`
 
 4. **Create PR**:
    Draft a PR title and body. The body MUST link all issues using "Fixes #ID".
-!`bash -c 'git gtr run $ARGUMENTS gh pr create --fill --body "Batch implementation by Ralph. Fixes <Issues>"'`
+```bash
+git gtr run $ARGUMENTS gh pr create --fill --body "Batch implementation by Ralph. Fixes <Issues>"
+```
 
 Confirm PR URL to the user.

@@ -4,9 +4,17 @@ agent: project-manager
 ---
 
 1. **Active Ralphs**:
-! `bash -c 'git gtr list --porcelain | grep "ralph/"'`
+<injected-shell-output>
+```bash
+git gtr list --porcelain | grep "ralph/"
+```
+<result>
+!`bash -c 'git gtr list --porcelain | grep "ralph/"'`
+</result>
+</injected-shell-output>
 
-2. **Progress Logs**:
+2. **Progress Logs**:   
+<injected-shell-output>
 ```bash
 git gtr list --porcelain | grep "ralph/" | while read -r branch path; do
     echo "--- $branch ---"
@@ -14,5 +22,8 @@ git gtr list --porcelain | grep "ralph/" | while read -r branch path; do
     echo "Recent Progress:"
     tail -n 10 "$path/.ralph/progress.txt" 2>/dev/null || echo "No logs yet."
 done
-``` result:
+```
+<result>
 !`bash -c 'git gtr list --porcelain | grep "ralph/" | while read -r branch path; do echo "--- $branch ---"; echo "Status: $(cat "$path/.ralph/status" 2>/dev/null || echo "Unknown")"; echo "Recent Progress:"; tail -n 10 "$path/.ralph/progress.txt" 2>/dev/null || echo "No logs yet."; done'`
+</result>
+</injected-shell-output>

@@ -29,7 +29,6 @@ kitten @ --to unix:$SOCKET launch \
   --cwd "$WORKTREE_PATH" \
   --copy-env \
   zsh -ic "bash .opencode/bin/ralph-harness.sh"
-``` result:
-! `bash -c 'SOCKET=$(ls /tmp/kitty-socket-* | head -1); WORKTREE_PATH=$(git gtr go ralph/<name>-<descriptor>); kitten @ --to unix:$SOCKET launch --type=tab --tab-title "Ralph-<Name>" --cwd "$WORKTREE_PATH" --copy-env zsh -ic "bash .opencode/bin/ralph-harness.sh"'`
+```
 
 Inform the user that the Ralph loop has been dispatched.
