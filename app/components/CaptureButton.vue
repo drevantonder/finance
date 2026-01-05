@@ -13,8 +13,8 @@ const fileInput = ref<HTMLInputElement | null>(null)
 const showTooltip = ref(false)
 const hasSeenTooltip = useSessionStorage('finance-capture-tooltip-seen', false)
 const fileSelected = ref(false)
-const longPressTimer = ref<any>(null)
-const isLongPress = ref(false)
+const longPressTimer = ref<ReturnType<typeof setTimeout> | null>(null)
+const touchHandled = ref(false)
 
 const handleFiles = async (files: FileList | null) => {
   if (!files || files.length === 0) return
@@ -59,42 +59,36 @@ const watchForCancel = () => {
   window.addEventListener('focus', onFocus)
 }
 
-const openCamera = () => {
-  // Don't open if we just did a long press
-  if (isLongPress.value) return
+const triggerInput = (mode: 'camera' | 'picker') => {
+  if (!fileInput.value) return
   
-  if (fileInput.value) {
+  if (mode === 'camera') {
     fileInput.value.setAttribute('capture', 'environment')
     fileInput.value.removeAttribute('multiple')
     fileInput.value.setAttribute('accept', 'image/*')
-  }
-  vibrate('tap')
-  watchForCancel()
-  fileInput.value?.click()
-}
-
-const openFilePicker = () => {
-  if (fileInput.value) {
+  } else {
     fileInput.value.removeAttribute('capture')
     fileInput.value.setAttribute('multiple', '')
     fileInput.value.setAttribute('accept', 'image/*,application/pdf')
   }
+  
   vibrate('tap')
   watchForCancel()
-  fileInput.value?.click()
+  fileInput.value.click()
 }
 
-// Touch-based long press detection for iOS
-const onTouchStart = (e: TouchEvent) => {
-  isLongPress.value = false
+// Touch handlers - handle ALL touch interactions here, block click event
+const onTouchStart = () => {
+  touchHandled.value = false
   
   if (longPressTimer.value) {
     clearTimeout(longPressTimer.value)
   }
   
   longPressTimer.value = setTimeout(() => {
-    isLongPress.value = true
+    touchHandled.value = true
     vibrate('success')
+    triggerInput('picker')
   }, 600)
 }
 
@@ -104,18 +98,19 @@ const onTouchEnd = (e: TouchEvent) => {
     longPressTimer.value = null
   }
   
-  // If long press detected, open file picker and prevent click
-  if (isLongPress.value) {
-    openFilePicker()
-    if (e.cancelable) {
-      e.preventDefault()
-    }
-    // Reset for next interaction
-    setTimeout(() => { isLongPress.value = false }, 0)
+  // Always prevent the click event on touch devices
+  if (e.cancelable) {
+    e.preventDefault()
+  }
+  
+  // If long press already handled, we're done
+  if (touchHandled.value) {
+    touchHandled.value = false
     return
   }
   
-  // Short press - don't prevent default, let click event handle it
+  // Short tap - open camera
+  triggerInput('camera')
 }
 
 const onTouchCancel = () => {
@@ -123,7 +118,12 @@ const onTouchCancel = () => {
     clearTimeout(longPressTimer.value)
     longPressTimer.value = null
   }
-  isLongPress.value = false
+  touchHandled.value = false
+}
+
+// Click handler - only for desktop mouse clicks
+const onClick = () => {
+  triggerInput('camera')
 }
 </script>
 
@@ -161,9 +161,9 @@ const onTouchCancel = () => {
 
     <!-- Main Button -->
     <button
-      @click="openCamera"
+      @click="onClick"
       @contextmenu.prevent
-      @touchstart="onTouchStart"
+      @touchstart.prevent="onTouchStart"
       @touchend="onTouchEnd"
       @touchcancel="onTouchCancel"
       class="h-14 w-14 -mt-6 flex items-center justify-center rounded-full bg-primary-600 text-white shadow-lg transition-all active:scale-95 select-none"
