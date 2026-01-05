@@ -27,3 +27,6 @@ backups/
 
 # Power to Change docs
 docs/Power to Change/
+
+# .ralph folder for ralph loops
+.ralph/

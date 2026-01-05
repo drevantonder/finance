@@ -137,7 +137,7 @@ try {
 Tests are in `test/unit/`. Focus areas: tax calculations, HECS thresholds, loan math.
 
 ## Domain Context
-See `docs/DOMAIN.md` for:
+See **@docs/DOMAIN.md** for:
 - Business rules (TMN, MFB, DTI calculations)
 - Australian lending context
 - Tax rates and HECS thresholds
