@@ -6,6 +6,7 @@ set -euo pipefail
 
 RALPH_LEVEL="${1:-junior}"  # junior or senior
 MAX_ITERATIONS=${2:-100}
+RALPH_LEVEL_TITLE=$(echo "$RALPH_LEVEL" | sed 's/./\U&/')
 RALPH_ID=$(basename "$PWD" | sed 's/ralph-//' | sed 's/-.*$//' | awk '{print toupper(substr($0,1,1)) substr($0,2)}')
 
 # Validate environment
@@ -18,7 +19,7 @@ fi
 echo $$ > .ralph/pid
 trap 'rm -f .ralph/pid' EXIT
 
-echo "🚀 Starting ${RALPH_LEVEL^}-Ralph-${RALPH_ID} (Max $MAX_ITERATIONS iterations)"
+echo "🚀 Starting $RALPH_LEVEL_TITLE-Ralph-${RALPH_ID} (Max $MAX_ITERATIONS iterations)"
 echo "RUNNING" > .ralph/status
 echo "$RALPH_LEVEL" > .ralph/level  # Track which Ralph is running
 
@@ -63,14 +64,14 @@ for ((i=1; i<=MAX_ITERATIONS; i++)); do
     # Check for completion signal
     if echo "$output" | grep -q "<promise>COMPLETE</promise>"; then
         echo "COMPLETE" > .ralph/status
-        echo "✅ ${RALPH_LEVEL^}-Ralph completed all tasks!"
+        echo "✅ $RALPH_LEVEL_TITLE-Ralph completed all tasks!"
         exit 0
     fi
     
     # Check for approved signal (reviews)
     if echo "$output" | grep -q "<promise>APPROVED</promise>"; then
         echo "APPROVED" > .ralph/status
-        echo "✅ ${RALPH_LEVEL^}-Ralph approved the work!"
+        echo "✅ $RALPH_LEVEL_TITLE-Ralph approved the work!"
         exit 0
     fi
     
@@ -78,7 +79,7 @@ for ((i=1; i<=MAX_ITERATIONS; i++)); do
     if echo "$output" | grep -q "<promise>NEEDS_WORK:"; then
         reason=$(echo "$output" | grep -o "NEEDS_WORK:.*</promise>" | sed 's/NEEDS_WORK: //' | sed 's/<\/promise>//')
         echo "NEEDS_WORK: $reason" > .ralph/status
-        echo "⚠️  ${RALPH_LEVEL^}-Ralph says needs work: $reason"
+        echo "⚠️  $RALPH_LEVEL_TITLE-Ralph says needs work: $reason"
         exit 1
     fi
     
@@ -86,7 +87,7 @@ for ((i=1; i<=MAX_ITERATIONS; i++)); do
     if echo "$output" | grep -q "<promise>BLOCKED:"; then
         reason=$(echo "$output" | grep -o "BLOCKED:.*</promise>" | sed 's/BLOCKED: //' | sed 's/<\/promise>//')
         echo "BLOCKED: $reason" > .ralph/status
-        echo "❌ ${RALPH_LEVEL^}-Ralph blocked: $reason"
+        echo "❌ $RALPH_LEVEL_TITLE-Ralph blocked: $reason"
         exit 1
     fi
     

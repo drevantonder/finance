@@ -26,7 +26,7 @@ if [[ -z "$SOCKET" ]]; then
     exit 1
 fi
 
-echo "🚀 Dispatching ${RALPH_LEVEL^}-Ralph-${RALPH_NAME} in new Kitty tab..."
+echo "🚀 Dispatching ${RALPH_LEVEL}-Ralph-${RALPH_NAME} in new Kitty tab..."
 echo "   Worktree: $WORKTREE_PATH"
 echo "   Level: ${RALPH_LEVEL}"
 
@@ -39,4 +39,4 @@ kitten @ --to "unix:${SOCKET}" launch \
     --copy-env \
     zsh -ic "bash '$WORKTREE_PATH/.opencode/bin/ralph-harness.sh' '$RALPH_LEVEL'"
 
-echo "✅ ${RALPH_LEVEL^}-Ralph-${RALPH_NAME} dispatched in new Kitty tab"
+echo "✅ ${RALPH_LEVEL}-Ralph-${RALPH_NAME} dispatched in new Kitty tab"
