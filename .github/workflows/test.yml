@@ -11,6 +11,9 @@ concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
+env:
+  TURBO_CACHE: ${{ secrets.TURBO_TOKEN && 'true' || 'false' }}
+
 jobs:
   build:
     name: Build
@@ -20,6 +23,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Required for turbo to detect changes
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -32,24 +37,14 @@ jobs:
           node-version: '20'
           cache: 'pnpm'
 
-      - name: Cache Nuxt build
-        uses: actions/cache@v4
-        with:
-          path: |
-            .nuxt
-            .output
-            node_modules/.vite
-            node_modules/.cache
-          key: nuxt-build-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('app/**', 'server/**', 'nuxt.config.ts') }}
-          restore-keys: |
-            nuxt-build-${{ hashFiles('pnpm-lock.yaml') }}-
-            nuxt-build-
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Build for production
-        run: pnpm build
+      - name: Build
+        run: pnpm turbo run build
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
   typecheck:
     name: Type check
@@ -59,6 +54,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -71,23 +68,14 @@ jobs:
           node-version: '20'
           cache: 'pnpm'
 
-      - name: Cache Nuxt
-        uses: actions/cache@v4
-        with:
-          path: |
-            .nuxt
-            node_modules/.vite
-            node_modules/.cache
-          key: nuxt-typecheck-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('**/*.ts', '**/*.vue') }}
-          restore-keys: |
-            nuxt-typecheck-${{ hashFiles('pnpm-lock.yaml') }}-
-            nuxt-typecheck-
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Type check
-        run: pnpm nuxt typecheck
+        run: pnpm turbo run typecheck
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
   unit-tests:
     name: Unit tests
@@ -97,6 +85,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -109,22 +99,14 @@ jobs:
           node-version: '20'
           cache: 'pnpm'
 
-      - name: Cache Vitest
-        uses: actions/cache@v4
-        with:
-          path: |
-            node_modules/.vite
-            node_modules/.cache
-          key: vitest-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('test/**', 'vitest.config.ts') }}
-          restore-keys: |
-            vitest-${{ hashFiles('pnpm-lock.yaml') }}-
-            vitest-
-
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Run unit tests
-        run: pnpm vitest run test/unit/
+        run: pnpm turbo run test
+        env:
+          TURBO_TOKEN: ${{ secrets.TURBO_TOKEN }}
+          TURBO_TEAM: ${{ secrets.TURBO_TEAM }}
 
       - name: Upload coverage report
         if: always()
@@ -144,6 +126,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
 
       - name: Setup pnpm
         uses: pnpm/action-setup@v4
@@ -162,18 +146,6 @@ jobs:
           path: ~/.cache/ms-playwright
           key: playwright-${{ hashFiles('pnpm-lock.yaml') }}
           restore-keys: playwright-
-
-      - name: Cache Nuxt
-        uses: actions/cache@v4
-        with:
-          path: |
-            .nuxt
-            node_modules/.vite
-            node_modules/.cache
-          key: nuxt-e2e-${{ hashFiles('pnpm-lock.yaml') }}-${{ hashFiles('app/**', 'server/**') }}
-          restore-keys: |
-            nuxt-e2e-${{ hashFiles('pnpm-lock.yaml') }}-
-            nuxt-e2e-
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
