@@ -29,7 +29,7 @@ Human ↔ PM (MiniMax M2.1) → Harness (Bash Loop) → Junior/Senior Ralph
 
 ## The `.ralph/` Folder (In Worktree Only!)
 
-**CRITICAL:** The `.ralph/` folder exists **ONLY in worktrees**. It does **NOT** exist in the main repository.
+**CRITICAL:** The `.ralph/` folder exists **ONLY in worktrees**. It does **NOT** exist in the prod repository.
 
 **Main Repo:** `/Users/drevan/projects/finance/` → No `.ralph/` folder
 **Worktree:** `/Users/drevan/projects/finance-worktrees/ralph/alpha-.../.ralph/` → Contains all state
@@ -54,7 +54,7 @@ Human ↔ PM (MiniMax M2.1) → Harness (Bash Loop) → Junior/Senior Ralph
     └── status               # RUNNING | COMPLETE | APPROVED | NEEDS_WORK | BLOCKED
 ```
 
-**Why?** Worktrees are disposable. The `.ralph/` folder contains generated artifacts and state that should never pollute the main branch.
+**Why?** Worktrees are disposable. The `.ralph/` folder contains generated artifacts and state that should never pollute the prod branch.
 
 ### What The PM Does Before Dispatch
 1. Plan tasks in their head (or in a separate file)
@@ -85,14 +85,14 @@ Human ↔ PM (MiniMax M2.1) → Harness (Bash Loop) → Junior/Senior Ralph
       "id": 1,
       "issue": 42,
       "title": "Create POST /api/login endpoint",
-      "body": "## Summary\nImplement login endpoint that accepts email/password and returns JWT token.\n\n## Acceptance Criteria\n- [ ] POST /api/login with valid creds returns 200 with JWT\n- [ ] POST /api/login with invalid creds returns 401\n- [ ] POST /api/login with missing body returns 400\n- [ ] Run pnpm test:run and verify tests pass\n- [ ] Run pnpm nuxt typecheck and verify no errors\n\n## Implementation Notes\nUse `jose` library to generate JWT tokens:\n```typescript\nimport { SignJWT } from 'jose'\nconst secret = new TextEncoder().encode(process.env.JWT_SECRET)\nconst token = await new SignJWT({ userId: user.id })\n  .setProtectedHeader({ alg: 'HS256' })\n  .setExpirationTime('24h')\n  .sign(secret)\n```\n\n## Files to modify\n- `server/api/login.post.ts` (create new)\n- `test/integration/login.test.ts` (create new)",
+      "body": "## Summary\nImplement login endpoint that accepts email/password and returns JWT token.\n\n## Acceptance Criteria\n- [ ] POST /api/login with valid creds returns 200 with JWT\n- [ ] POST /api/login with invalid creds returns 401\n- [ ] POST /api/login with missing body returns 400\n- [ ] Run pnpm test:run and verify tests pass\n- [ ] Run pnpm nuxt typecheck and verify no errors",
       "status": "pending"
     },
     {
       "id": 2,
       "issue": 43,
       "title": "Add JWT validation middleware",
-      "body": "## Summary\nCreate middleware to validate JWT tokens on protected routes.\n\n## Acceptance Criteria\n- [ ] Protected routes return 401 without valid token\n- [ ] Valid tokens allow access to protected routes\n- [ ] Expired tokens return 401\n- [ ] All tests pass\n\n## Implementation Notes\nUse `jose` for validation:\n```typescript\nimport { jwtVerify } from 'jose'\nconst { payload } = await jwtVerify(token, secret)\n```\n\n## Files to modify\n- `server/middleware/auth.ts` (create new)\n- `test/integration/auth-middleware.test.ts` (create new)",
+      "body": "## Summary\nCreate middleware to validate JWT tokens on protected routes.\n\n## Acceptance Criteria\n- [ ] Protected routes return 401 without valid token\n- [ ] Valid tokens allow access to protected routes\n- [ ] Expired tokens return 401\n- [ ] All tests pass",
       "status": "pending"
     }
   ]
@@ -103,15 +103,12 @@ Human ↔ PM (MiniMax M2.1) → Harness (Bash Loop) → Junior/Senior Ralph
 - `id`: Unique integer per task
 - `issue`: GitHub issue number
 - `title`: Clear task description
-- `body`: **Full GitHub issue body in markdown** (contains summary, acceptance criteria, implementation notes, code examples, etc.)
+- `body`: **Full GitHub issue body in markdown** (contains summary, acceptance criteria, etc.)
 - `status`: `pending` | `done` | `blocked`
 
 **Why `body` contains everything:** Ralph is stateless and needs complete context. The issue body should contain:
 - Summary/story (the "why")
 - Acceptance criteria (the "what")
-- Implementation notes (the "how" - approaches, APIs, code examples)
-- Files to modify
-- References/links
 
 **Example:**
 ```json
@@ -120,7 +117,7 @@ Human ↔ PM (MiniMax M2.1) → Harness (Bash Loop) → Junior/Senior Ralph
   "issue": 42,
   "title": "Login Endpoint",
   "status": "pending",
-  "body": "## Summary\nAs a frontend app, I need to authenticate users via email/pass so I can get a JWT for secured requests.\n\n## Acceptance Criteria\n- [ ] POST /api/login with valid creds returns 200 + JWT\n- [ ] POST /api/login with invalid creds returns 401\n- [ ] POST /api/login with missing body returns 400\n\n## Implementation Notes\nUse `jose` library for JWT generation:\n```typescript\nimport { SignJWT } from 'jose'\nconst token = await new SignJWT({ userId: user.id }).sign(secret)\n```\n\n## Files to modify\n- `server/api/login.post.ts`"
+  "body": "## Summary\nAs a frontend app, I need to authenticate users via email/pass so I can get a JWT for secured requests.\n\n## Acceptance Criteria\n- [ ] POST /api/login with valid creds returns 200 + JWT\n- [ ] POST /api/login with invalid creds returns 401\n- [ ] POST /api/login with missing body returns 400\n\n`"
 }
 ```
 
@@ -430,9 +427,9 @@ export function formatDateLabel(date: string, format: 'short' | 'full'): string 
 ```
 
 ### PM Responsibilities (Before Dispatch)
-1. **Sync main**: `git checkout main && git pull`
+1. **Sync prod**: `git checkout prod && git pull`
 2. **Verify .gitignore**: Ensure generated artifacts are covered (playwright-report, .nuxt, etc.)
-3. **Clean state**: No untracked files in main repo
+3. **Clean state**: No untracked files in prod repo
 
 ### For Managing Ralph
 1. **Monitor regularly**: Use `/ralph-status` to check progress
@@ -442,8 +439,8 @@ export function formatDateLabel(date: string, format: 'short' | 'full'): string 
 
 ### After PR Merge
 ```bash
-# Sync main
-git checkout main && git pull
+# Sync prod
+git checkout prod && git pull
 
 # Clean up worktree (force due to generated files)
 git gtr rm ralph/alpha-testing --delete-branch --force --yes
@@ -457,7 +454,7 @@ If Ralph gets blocked or you need to adjust:
 
 ## Troubleshooting
 
-### Divergent main after pull
+### Divergent prod after pull
 ```bash
 git stash && git pull --rebase && git stash pop
 ```
@@ -470,25 +467,18 @@ The harness script may have local customizations. Resolve by:
 ### Untracked files in worktree after cleanup
 If `git gtr rm` fails due to untracked files:
 1. Check what's untracked: `cd <worktree> && git status`
-2. Add to main `.gitignore` if it's a generated artifact
+2. Add to prod `.gitignore` if it's a generated artifact
 3. Use `--force` flag: `git gtr rm <branch> --delete-branch --force --yes`
-
-## Limitations & Future Enhancements
-
-### Current Limitations
-- One Ralph at a time (no parallel runs yet)
-- No automatic type checking (only vitest tests)
-- Manual PR creation (not auto-merged)
-
-### Planned Enhancements
-- Parallel Ralph runs (multiple worktrees simultaneously)
-- Integration with CI/CD for auto-merge
-- Smarter task dependency detection
-- Auto-retry on transient failures
 
 ## Appendix: Design Rationale & Lessons Learned
 
-### 1. Signal-over-Exit Pattern
+### 7. Portable Bash (macOS Compatibility)
+Scripts in `.opencode/bin/` must reprod compatible with **Bash 3.2** (macOS default).
+- **Rule**: Avoid Bash 4+ features like `${VAR^}`, `${VAR,,}`, or associative arrays.
+- **Rule**: Use `sed`, `awk`, or `tr` for string transformations (e.g., `echo "$VAR" | sed 's/./\U&/'` instead of `${VAR^}`).
+- **Rule**: Use standard `while read` loops instead of Bash 4 `mapfile`.
+
+### 8. Signal-over-Exit Pattern
 The harness script (`ralph-harness.sh`) is designed to be "exit-code agnostic." It uses `|| true` when running the agent and relies strictly on the presence of `<promise>` tags in stdout.
 - **Rationale**: This prevents the loop from crashing due to transient CLI errors (like network timeouts) while ensuring that a task is only marked "done" if the agent explicitly signals success.
 
@@ -498,13 +488,13 @@ The core of this architecture is **Context Shedding**. By killing the agent afte
 
 ### 3. Resumability & Healing
 The PM is designed to be "idempotent." If a Ralph run fails or is manually interrupted:
-- The worktree and branch remain.
+- The worktree and branch reprod.
 - The `.ralph/tasks.json` tracks what was finished.
 - Running `/dispatch` again will simply re-attach to the existing environment and resume from the first `pending` task.
 
 ### 4. Terminal Automation (`zsh -ic`)
 Spawning Kitty tabs requires the `zsh -ic` (or equivalent) wrapper.
-- **Reason**: Standard non-interactive shells often do not source profile files, leading to "command not found" errors for `pnpm`, `node`, or `opencode`. The interactive flag ensures the environment is identical to your main terminal.
+- **Reason**: Standard non-interactive shells often do not source profile files, leading to "command not found" errors for `pnpm`, `node`, or `opencode`. The interactive flag ensures the environment is identical to your prod terminal.
 
 ### 5. Intelligent Selection
 Ralph is instructed to pick the "highest priority" task, not just the next one in the list.
@@ -513,4 +503,4 @@ Ralph is instructed to pick the "highest priority" task, not just the next one i
 ### 6. Generated Artifacts and .gitignore
 Test outputs (playwright-report, coverage, etc.) must be in `.gitignore`.
 - **PM responsibility**: Verify `.gitignore` covers generated artifacts before dispatch
-- If untracked files appear after a Ralph run, add them to the main `.gitignore`
+- If untracked files appear after a Ralph run, add them to the prod `.gitignore`

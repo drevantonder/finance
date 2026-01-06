@@ -75,10 +75,10 @@ pnpm blob:push:prod             # Push local blobs to R2
   - `.github/workflows/test.yml` - Typecheck, unit tests, e2e tests, coverage
   - `.github/workflows/lighthouse.yml` - Performance metrics (PRs only)
 - **Branch Protection**: Enforced via GitHub Rulesets ("Production Standards").
-  - 🛑 **Direct pushes to `main` are BLOCKED.**
+  - 🛑 **Direct pushes to `prod` are BLOCKED.**
   - All changes MUST go through a Pull Request.
   - Required checks: `Type check`, `Unit tests`, `E2E tests`, `Cloudflare Pages`.
-  - PRs must be up-to-date with `main`.
+  - PRs must be up-to-date with `prod`.
 
 ## Architecture
 
@@ -220,7 +220,7 @@ describe('calculateIncomeTax', () => {
 - Avoid long-running processes; Workers have strict time limits
 - Use `event.waitUntil()` for background tasks
 
-## Domain Context
+## Doprod Context
 See **docs/DOMAIN.md** for:
 - Business rules (TMN, MFB, DTI calculations)
 - Australian tax rates and HECS thresholds

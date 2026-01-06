@@ -1,7 +1,7 @@
 ---
 description: Senior developer - Autonomous task execution with specialist access
 mode: primary
-model: anthropic/claude-opus-4-5
+model: zai-coding-plan/glm-4.7
 tools:
   bash: true
   read: true
