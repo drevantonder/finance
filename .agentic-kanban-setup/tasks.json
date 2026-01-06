@@ -28,7 +28,7 @@
         "Function `findTaskAcrossBuckets(epicId)` searches all buckets for an epic's task file",
         "User can run tests that verify all file operations work correctly"
       ],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": 3,
