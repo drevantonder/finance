@@ -56,6 +56,8 @@ pnpm blob:push:prod             # Push local blobs to R2
   - `.github/workflows/test.yml` - Typecheck, unit tests, e2e tests, coverage
   - `.github/workflows/lighthouse.yml` - Performance metrics (PRs only)
 - **Branch Protection**: Enforced via GitHub Rulesets ("Production Standards").
+  - 🛑 **Direct pushes to `main` are BLOCKED.**
+  - All changes MUST go through a Pull Request.
   - Required checks: `Type check`, `Unit tests`, `E2E tests`, `Cloudflare Pages`.
   - PRs must be up-to-date with `main`.
 
