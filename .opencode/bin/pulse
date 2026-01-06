@@ -1,0 +1,180 @@
+#!/bin/bash
+# Pulse - Project status dashboard
+# Usage: ./pulse
+
+set -euo pipefail
+
+WORKTREES_DIR="${WORKTREES_DIR:-/Users/drevan/projects/finance-worktrees}"
+
+echo "PROJECT PULSE"
+echo "============================================"
+echo ""
+
+# Collect active ralph names from worktrees (one per line)
+active_ralphs=""
+for worktree in "$WORKTREES_DIR"/ralph-*/; do
+    if [[ -d "$worktree" ]]; then
+        branch=$(basename "$worktree")
+        ralph_name=$(echo "$branch" | sed 's/ralph-\([a-z]*\).*/\1/')
+        active_ralphs="$active_ralphs $ralph_name "
+    fi
+done
+
+# Collect ralph labels from issues (one per line)
+issue_labels=$(gh issue list --json labels --jq '.[].labels[].name' 2>/dev/null | grep '^ralph-' | sed 's/ralph-//' | sort -u || echo "")
+
+# 1. OPEN ISSUES
+echo "📋 Open Issues"
+echo "--------------------------------------------"
+
+issues=$(gh issue list --json number,title,labels 2>/dev/null || echo "[]")
+issue_count=$(echo "$issues" | jq '. | length')
+
+if [[ "$issue_count" -eq 0 ]]; then
+    echo "   No open issues"
+else
+    echo "$issues" | jq -r '.[] | 
+        .number as $num |
+        .title as $title |
+        ([.labels[].name] | map(select(startswith("ralph-"))) | first // "") as $ralph_label |
+        (if (.labels | length) > 0 then ([.labels[].name] | join(",")) else "" end) as $all_labels |
+        "#\($num)|\($all_labels)|\($title)|\($ralph_label)"
+    ' | while IFS='|' read -r num labels title ralph_label; do
+        if [[ -n "$ralph_label" ]]; then
+            ralph_name="${ralph_label#ralph-}"
+            if [[ ! "$active_ralphs" =~ " $ralph_name " ]]; then
+                echo "   $num [$labels] $title ⚠️  ORPHANED LABEL"
+            else
+                echo "   $num [$labels] $title"
+            fi
+        else
+            echo "   $num [$labels] $title"
+        fi
+    done
+fi
+echo ""
+
+# 2. ACTIVE WORKTREES
+echo "🔧 Active Worktrees"
+echo "--------------------------------------------"
+
+worktree_count=0
+orphaned_worktrees=""
+
+for worktree in "$WORKTREES_DIR"/ralph-*/; do
+    if [[ ! -d "$worktree" ]]; then
+        continue
+    fi
+    
+    worktree_count=$((worktree_count + 1))
+    branch=$(basename "$worktree")
+    ralph_name=$(echo "$branch" | sed 's/ralph-\([a-z]*\).*/\1/')
+    
+    # Check for orphan (worktree without issue label)
+    if ! echo "$issue_labels" | grep -q "^${ralph_name}$"; then
+        orphaned_worktrees="$orphaned_worktrees $branch"
+    fi
+    
+    if [[ -f "$worktree/.ralph/status" ]]; then
+        status=$(cat "$worktree/.ralph/status")
+        level="junior"
+        if [[ -f "$worktree/.ralph/level" ]]; then
+            level=$(cat "$worktree/.ralph/level")
+        fi
+        
+        echo "   $branch ($level) → $status"
+        
+        # Task progress
+        if [[ -f "$worktree/.ralph/tasks.json" ]]; then
+            jq -r '.tasks[] | if .status == "completed" or .status == "done" then "     ✓ " else "     · " end + .title' "$worktree/.ralph/tasks.json" 2>/dev/null || true
+            
+            # Last commit
+            if [[ -d "$worktree/.git" ]] || [[ -f "$worktree/.git" ]]; then
+                last_commit=$(cd "$worktree" && git log -1 --format="%s (%ar)" 2>/dev/null || echo "")
+                if [[ -n "$last_commit" ]]; then
+                    echo "     Last: $last_commit"
+                fi
+            fi
+            
+            # Status indicators
+            if [[ "$status" == "COMPLETE" || "$status" == "APPROVED" ]]; then
+                echo "     → READY FOR PR"
+            elif [[ "$status" =~ ^NEEDS_WORK ]]; then
+                reason="${status#NEEDS_WORK: }"
+                echo "     → Fix: $reason"
+            elif [[ "$status" =~ ^BLOCKED ]]; then
+                reason="${status#BLOCKED: }"
+                echo "     → Blocker: $reason"
+            fi
+        fi
+        echo ""
+    else
+        echo "   $branch (no status)"
+        echo ""
+    fi
+done
+
+if [[ "$worktree_count" -eq 0 ]]; then
+    echo "   No active worktrees - ready for new work!"
+    echo ""
+fi
+
+# 3. ORPHAN WARNINGS
+if [[ -n "$orphaned_worktrees" ]]; then
+    echo "⚠️  Orphaned Worktrees (no issue label)"
+    echo "--------------------------------------------"
+    for branch in $orphaned_worktrees; do
+        echo "   $branch"
+    done
+    echo "   → Assign an issue or clean up"
+    echo ""
+fi
+
+# 4. GIT STATUS
+echo "🔄 Git Status"
+echo "--------------------------------------------"
+
+current_branch=$(git branch --show-current 2>/dev/null || echo "unknown")
+git_status=$(git status --short 2>/dev/null || echo "")
+
+echo "   Branch: $current_branch"
+
+if [[ -z "$git_status" ]]; then
+    echo "   Status: Clean"
+else
+    echo "   Status: Dirty"
+    echo "$git_status" | head -5 | while read -r line; do
+        echo "     $line"
+    done
+fi
+
+last_commit=$(git log -1 --format="%s (%ar)" 2>/dev/null || echo "No commits")
+echo "   Last: $last_commit"
+echo ""
+
+# 5. CI STATUS
+echo "⏱️  CI Status"
+echo "--------------------------------------------"
+
+latest_run=$(gh run list --limit 1 --json status,conclusion,displayTitle 2>/dev/null || echo "[]")
+
+if [[ "$latest_run" == "[]" ]] || [[ $(echo "$latest_run" | jq '. | length') -eq 0 ]]; then
+    echo "   No CI runs found"
+else
+    run_status=$(echo "$latest_run" | jq -r '.[0].status // "unknown"')
+    run_conclusion=$(echo "$latest_run" | jq -r '.[0].conclusion // "pending"')
+    run_title=$(echo "$latest_run" | jq -r '.[0].displayTitle // "Unknown"')
+    
+    if [[ "$run_status" == "completed" ]]; then
+        if [[ "$run_conclusion" == "success" ]]; then
+            echo "   ✓ Success - $run_title"
+        else
+            echo "   ✗ ${run_conclusion^} - $run_title"
+        fi
+    else
+        echo "   ⏳ ${run_status^} - $run_title"
+    fi
+fi
+
+echo ""
+echo "============================================"

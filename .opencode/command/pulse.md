@@ -1,18 +1,17 @@
 ---
-description: Show status of Issues, Ralph Worktrees, and Task Progress
+description: Show comprehensive project status dashboard
 agent: project-manager
 ---
 
-Here's the current state:
+Here's the current project pulse:
 
-1. **Pulses**:
 <injected-shell-output>
 ```bash
-.opencode/bin/ralph-pulse
+.opencode/bin/pulse
 ```
 <result>
-!`.opencode/bin/ralph-pulse`
+!`.opencode/bin/pulse`
 </result>
 </injected-shell-output>
 
-Suggest what to do next. (Wait for user to approve any direction before proceeding.)
+Suggest what to do next based on the current state. (Wait for user to approve any direction before proceeding.)

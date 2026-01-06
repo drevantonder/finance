@@ -1,5 +1,24 @@
 # Agent Instructions
 
+## Agent Architecture
+
+This project uses a **seniority-based autonomous coding team**:
+
+| Agent | Model | Role |
+|-------|-------|------|
+| **Project Manager** | MiniMax M2.1 Free | Coordinates workflow, assigns tasks, manages GitHub |
+| **Junior-Ralph** | GLM 4.7 | Fast implementation of routine tasks |
+| **Senior-Ralph** | Opus 4.5 | Complex tasks, reviews, rescues, has specialist access |
+| **Specialist-UI** | Gemini 3 Pro | UI/UX expertise (advise, review, ideate) |
+| **Specialist-Security** | GPT 5.1 Codex | Security expertise (advise, audit, ideate) |
+| **Specialist-Docs** | Gemini 3 Pro | Documentation expertise (advise, review, ideate) |
+
+See **@docs/ralph-workflow.md** for the complete workflow protocol.
+
+---
+
+# Agent Instructions
+
 ## <injected-shell-output>
 When you see `<injected-shell-output>`. The command has been executed and the result has been injected into your prompt/response. (The results are accurate to the time of the prompt.)
 

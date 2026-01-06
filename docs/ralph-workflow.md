@@ -4,24 +4,28 @@ This document defines the autonomous batch execution model used in this project.
 
 ## Overview
 
-Ralph is a stateless autonomous agent that executes curated tasks in isolated Git worktrees. Work is planned by the Project Manager (PM) in collaboration with the user, then dispatched to Ralph who works independently until completion or blockage.
+Ralph is a seniority-based autonomous coding team that executes curated tasks in isolated Git worktrees. Work is planned by the Project Manager (PM) in collaboration with the user, then dispatched to Junior or Senior Ralph based on complexity.
 
 ## Architecture
 
 ```
-Human ↔ PM (Interactive) → Harness (Bash Loop) → Ralph (Stateless Agent)
-                                ↓
-                          .ralph/ folder
-                    (tasks.json, progress.txt, status)
+Human ↔ PM (MiniMax M2.1) → Harness (Bash Loop) → Junior/Senior Ralph
+        ↓                                                    ↓
+   Specialists                                         .ralph/ folder
+   (UI, Security, Docs)                          (tasks.json, progress.txt, status)
 ```
 
 ### Roles
 
-| Role | Type | Responsibility |
-|------|------|----------------|
-| **Project Manager (PM)** | Interactive Agent | Curates tasks, dispatches Ralph, reviews work, manages GitHub |
-| **Harness** | Bash Script | Runs Ralph in a loop, manages iterations, captures exit signals |
-| **Ralph** | Stateless Agent | Implements tasks, runs tests, commits code, updates progress |
+| Role | Type | Model | Responsibility |
+|------|------|-------|----------------|
+| **Project Manager (PM)** | Interactive Agent | MiniMax M2.1 Free | Curates tasks, assigns Junior/Senior, dispatches, manages GitHub |
+| **Junior-Ralph** | Stateless Agent | GLM 4.7 | Fast implementation, routine tasks. Commits locally only. |
+| **Senior-Ralph** | Stateless Agent | Claude Opus 4.5 | Complex tasks, reviews, rescues. Can push + create PRs when confident. |
+| **Specialist-UI** | Subagent | Gemini 3 Pro | UI/UX advice, review, ideation |
+| **Specialist-Security** | Subagent | GPT 5.1 Codex | Security advice, audits, ideation |
+| **Specialist-Docs** | Subagent | Gemini 3 Pro | Documentation advice, review, ideation |
+| **Harness** | Bash Script | - | Runs Ralph in a loop, manages iterations, captures exit signals |
 
 ## The `.ralph/` Folder (In Worktree Only!)
 
@@ -46,7 +50,8 @@ Human ↔ PM (Interactive) → Harness (Bash Loop) → Ralph (Stateless Agent)
 └── .ralph/                  # ← Created by PM during dispatch
     ├── tasks.json           # Curated task list
     ├── progress.txt         # Execution log
-    └── status               # RUNNING | COMPLETE | BLOCKED:<reason>
+    ├── level                # junior | senior
+    └── status               # RUNNING | COMPLETE | APPROVED | NEEDS_WORK | BLOCKED
 ```
 
 **Why?** Worktrees are disposable. The `.ralph/` folder contains generated artifacts and state that should never pollute the main branch.
@@ -63,7 +68,8 @@ Human ↔ PM (Interactive) → Harness (Bash Loop) → Ralph (Stateless Agent)
 <worktree>/.ralph/
   ├── tasks.json      # The curated task list (source of truth)
   ├── progress.txt    # Append-only execution log
-  └── status          # Current state: RUNNING | COMPLETE | BLOCKED:<reason>
+  ├── level           # junior | senior (which Ralph is running)
+  └── status          # RUNNING | COMPLETE | APPROVED | NEEDS_WORK | BLOCKED
 ```
 
 ### `tasks.json` Schema
@@ -153,7 +159,17 @@ The PM discusses features with the user and breaks them into **atomic, testable 
 
 **Key principle**: Each task should be completable in one iteration and independently verifiable.
 
-### 2. Dispatch (PM)
+### 2. Assignment & Dispatch (PM)
+
+**Choosing Junior vs Senior:**
+
+| Criteria | Junior-Ralph | Senior-Ralph |
+|----------|--------------|--------------|
+| **Use for** | Routine implementations | Complex tasks, reviews, rescues |
+| **Model** | GLM 4.7 (fast, cheap) | Opus 4.5 (expert, expensive) |
+| **Attempts** | 8 per task | Unlimited |
+| **Specialists** | No access | Can call UI/Security/Docs |
+| **GitHub** | Commits locally only | Can push + create PRs when confident |
 
 When the user approves (`/dispatch`):
 
@@ -174,7 +190,14 @@ When the user approves (`/dispatch`):
    - **Recommended**: `bash .opencode/bin/gh-issues-to-tasks <name> <issue1> ... > "$WORKTREE_PATH/.ralph/tasks.json"`
    - Or write manually (see schema above)
    
-5. **Launch**: `bash .opencode/bin/ralph-dispatch.sh "$WORKTREE_PATH" "<name>"`
+5. **Launch**:
+   ```bash
+   # Junior-Ralph (default for implementation)
+   bash .opencode/bin/ralph-dispatch.sh "$WORKTREE_PATH" "<name>" junior
+   
+   # Senior-Ralph (complex tasks or reviews)
+   bash .opencode/bin/ralph-dispatch.sh "$WORKTREE_PATH" "<name>" senior
+   ```
 
 ### 3. Execution (Ralph Loop)
 
@@ -211,16 +234,42 @@ Ralph operates in a loop managed by the harness. **Every iteration starts fresh 
 ```
 
 **Exit Signals**:
-- All tasks done: `<promise>COMPLETE</promise>`
-- Blocked: `<promise>BLOCKED: <detailed reason></promise>`
+- Junior: `<promise>COMPLETE</promise>` | `<promise>BLOCKED: <reason></promise>`
+- Senior: `<promise>APPROVED</promise>` | `<promise>NEEDS_WORK: <reason></promise>` | `<promise>BLOCKED: <reason></promise>`
 
-### 4. Review (PM + Human)
+**Note**: Senior always self-reviews before exiting, so outputs APPROVED/NEEDS_WORK instead of COMPLETE.
 
-After Ralph exits:
+### 4. Review & Quality Gate (PM + Senior-Ralph)
 
-- **If COMPLETE**: PM reads `progress.txt`, user reviews branch, PM manually creates PR
-- **If BLOCKED**: PM reads status reason, user fixes blocker, PM re-triggers harness
-- **If timeout**: PM investigates logs, user decides next action
+**After Implementation:**
+
+**Junior reports `COMPLETE`:**
+1. PM dispatches Senior to same worktree
+2. Senior auto-detects review mode (all tasks "done")
+3. Senior runs tests, calls specialists as needed
+4. Senior outputs `APPROVED` or `NEEDS_WORK`
+5. **If APPROVED + confident**: Senior pushes + creates PR
+
+**Senior reports `APPROVED`:**
+1. Senior already self-reviewed
+2. Senior may have already pushed + created PR if confident
+3. If no PR: PM or human can create manually
+
+**After PR Created:**
+- GitHub Actions run (tests, typecheck, build)
+- Human reviews if needed
+- Merge after checks pass
+
+3. **If NEEDS_WORK**:
+   - Address issues
+   - Re-dispatch Junior or Senior
+   - Re-review
+
+**After Junior Blocks:**
+
+- PM reads `.ralph/status` for blocker reason
+- **Simple fix**: Update issue/tests, re-dispatch Junior
+- **Complex fix**: Escalate to Senior (takeover mode)
 
 ## Operational Rules
 
@@ -251,13 +300,45 @@ PM checks existing worktrees and picks the next available name:
 - PM creates consolidated PR linking all completed issues
 - PR body format: "Fixes #42, Fixes #43, Fixes #44"
 
+## Specialist Subagents
+
+Specialists are expert advisors available to PM and Senior-Ralph (but NOT Junior-Ralph).
+
+**When to call specialists:**
+- **During Planning** (PM) - Get expert advice on design/security/docs approaches
+- **During Implementation** (Senior-Ralph) - Consult when encountering complex decisions
+- **During Review** (Senior-Ralph) - Get expert review of specific aspects
+
+**Important:** Call specialists **only when their expertise is relevant** to the task at hand. Not every task needs every specialist.
+
+### UI/UX Specialist (Gemini 3 Pro)
+```
+Task(subagent_type="specialist-ui", prompt="How should we design the expense filtering interface?")
+```
+Use for: Visual design, user experience, accessibility, responsive layouts
+
+### Security Specialist (GPT 5.1 Codex)
+```
+Task(subagent_type="specialist-security", prompt="What's the secure approach for session management?")
+```
+Use for: Security architecture, vulnerability audits, threat modeling, secure coding
+
+### Documentation Specialist (Gemini 3 Pro)
+```
+Task(subagent_type="specialist-docs", prompt="How should we document this complex API?")
+```
+Use for: Documentation strategy, code clarity, technical writing
+
+---
+
 ## Commands Reference
 
 | Command | Purpose | Used By |
 |---------|---------|---------|
-| `/pulse` | Dashboard of issues and Ralph worktrees | PM |
-| `/dispatch` | Start Ralph on curated tasks | PM |
-| `/ralph-status` | Check progress of active runs | PM |
+| `/pulse` | Comprehensive project dashboard (issues, worktrees, CI, git) | PM |
+| `/dispatch` | Start Junior/Senior Ralph on curated tasks | PM |
+| `bash .opencode/bin/pulse` | Same as /pulse (direct script) | Anyone |
+| `bash .opencode/bin/ralph-status` | Quick worktree status check | Anyone |
 
 ## Ralph Agent Behavior
 
@@ -270,7 +351,8 @@ Ralph does NOT simply take the first pending task. He analyzes all pending tasks
 
 ### Constraints
 - **No branch creation**: Ralph is already on the correct branch
-- **No pushing**: Ralph only commits locally
+- **GitHub access**: Junior commits locally. Senior can push + create PRs when confident.
+- **No merging**: Neither Junior nor Senior can merge PRs (wait for CI + human approval)
 - **No metadata changes**: Ralph does not modify `.opencode/` files
 - **Focus**: One task at a time, complete it fully before moving to the next
 
@@ -288,14 +370,14 @@ If Ralph encounters a blocker (tests fail after 8 attempts, unclear requirements
 
 | Script | Purpose |
 |--------|---------|
+| `pulse` | Enhanced project dashboard (issues, worktrees, CI, git) |
 | `ralph-check-name [name]` | Check Ralph name availability (no args = show all) |
 | `ralph-label-issues <name> <issue1> ...` | Bulk label issues for Ralph batch |
 | `gh-issues-to-tasks <name> <issue1> ...` | Convert GitHub issues to tasks.json (outputs to stdout) |
-| `ralph-pulse` | Show project dashboard |
-| `ralph-status` | Check progress of active Ralph runs |
+| `ralph-status` | Quick worktree status check |
 | `ralph-details <worktree>` | Show detailed status of a specific worktree |
-| `ralph-dispatch.sh <path> <name>` | Launch Ralph in new Kitty tab |
-| `ralph-harness.sh` | Run Ralph in a loop (max 100 iterations) |
+| `ralph-dispatch.sh <path> <name> <junior\|senior>` | Launch Junior/Senior Ralph in new Kitty tab |
+| `ralph-harness.sh <junior\|senior>` | Run Junior/Senior Ralph in a loop (max 100 iterations) |
 
 ### Git Worktree Runner (GTR)
 See **@.opencode/skill/git-worktree-runner.md** for command reference.
