@@ -169,10 +169,10 @@ else
         if [[ "$run_conclusion" == "success" ]]; then
             echo "   ✓ Success - $run_title"
         else
-            echo "   ✗ ${run_conclusion^} - $run_title"
+            echo "   ✗ $run_conclusion - $run_title"
         fi
     else
-        echo "   ⏳ ${run_status^} - $run_title"
+        echo "   ⏳ $run_status - $run_title"
     fi
 fi
 
