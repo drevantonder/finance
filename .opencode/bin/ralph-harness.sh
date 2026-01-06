@@ -5,13 +5,17 @@
 set -euo pipefail
 
 MAX_ITERATIONS=${1:-100}
-RALPH_ID=$(basename "$PWD" | sed 's/ralph-//' | sed 's/-.*$//' | sed 's/^./\U&/')
+RALPH_ID=$(basename "$PWD" | sed 's/ralph-//' | sed 's/-.*$//' | awk '{print toupper(substr($0,1,1)) substr($0,2)}')
 
 # Validate environment
 if [[ ! -f ".ralph/tasks.json" ]]; then
     echo "Error: .ralph/tasks.json not found. This script must run inside a Ralph worktree."
     exit 1
 fi
+
+# Write PID file for process tracking
+echo $$ > .ralph/pid
+trap 'rm -f .ralph/pid' EXIT
 
 echo "🚀 Starting Ralph-${RALPH_ID} (Max $MAX_ITERATIONS iterations)"
 echo "RUNNING" > .ralph/status
@@ -26,8 +30,12 @@ for ((i=1; i<=MAX_ITERATIONS; i++)); do
     echo "--- Iteration $i ---"
     
     # Run Ralph agent (capture all output)
-    # We use --auto-approve because Ralph is autonomous
-    output=$(opencode run --agent ralph --auto-approve 2>&1 || true)
+    # Ralph reads .ralph/tasks.json, executes task, tests, commits, and exits with signal
+    # Set session title for visibility in Kitty tabs
+    output=$(opencode run \
+      --agent ralph \
+      --title "ralph-${RALPH_ID}" \
+      "Read .ralph/tasks.json. Execute the highest-priority pending task. Run tests with 'pnpm run test:run'. If all tasks complete, output <promise>COMPLETE</promise>. If blocked, output <promise>BLOCKED:reason</promise>. If successful, commit and output <promise>COMPLETE</promise>." 2>&1 || true)
     
     # Check for completion signal
     if echo "$output" | grep -q "<promise>COMPLETE</promise>"; then

@@ -10,6 +10,7 @@
     "postinstall": "nuxt prepare",
     "test": "vitest",
     "test:run": "vitest run",
+    "test:e2e": "playwright test",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit migrate",
     "db:migrate:prod": "wrangler d1 migrations apply finance-db --remote",
@@ -48,6 +49,7 @@
   "devDependencies": {
     "@iconify-json/heroicons": "^1.2.3",
     "@nuxt/test-utils": "^3.21.0",
+    "@playwright/test": "^1.57.0",
     "@vite-pwa/assets-generator": "^1.0.2",
     "@vite-pwa/nuxt": "^1.1.0",
     "drizzle-kit": "^0.31.8",
