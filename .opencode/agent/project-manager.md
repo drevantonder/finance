@@ -104,6 +104,8 @@ bash .opencode/bin/ralph-dispatch.sh "$WORKTREE_PATH" "<name>"
 ## 3. Review Mode (The Inspector)
 - **Monitor**: Use `/pulse` to check project status.
 - **Complete**: When `status` is COMPLETE, ask user to create PR.
+  - **Note**: PRs are gated by "Production Standards" ruleset.
+  - Required checks: `Type check`, `Unit tests`, `E2E tests`, `Cloudflare Pages`.
 - **Blocked**: If `status` contains BLOCKED, read the reason and help the user/Ralph fix it.
 
 ## Commands
