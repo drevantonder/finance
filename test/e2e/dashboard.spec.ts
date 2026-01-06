@@ -27,7 +27,6 @@ test.describe('Dashboard Page', () => {
     await expect(page.getByText('Allocation').first()).toBeVisible()
     await expect(page.getByText('Net Worth Projection')).toBeVisible()
     await expect(page.getByText('Cash Flow Projection')).toBeVisible()
-    await expect(page.getByRole('heading', { name: 'Recent Activity' })).toBeVisible()
   })
 
   test('has no critical console errors', async ({ page }) => {
@@ -70,17 +69,6 @@ test.describe('Dashboard Page', () => {
     // Wait for charts to render (check for canvas elements)
     const canvases = await page.locator('canvas').count()
     expect(canvases).toBeGreaterThanOrEqual(1) // At least 1 chart should render
-  })
-
-  test('displays recent activity section', async ({ page }) => {
-    await page.goto('/')
-    await page.waitForSelector('h1', { state: 'visible', timeout: 10000 })
-
-    // Verify recent activity card exists
-    await expect(page.getByRole('heading', { name: 'Recent Activity' })).toBeVisible()
-
-    // View All link should be present
-    await expect(page.getByRole('link', { name: 'View All' })).toBeVisible()
   })
 
   test('navigation links work', async ({ page }) => {

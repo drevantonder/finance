@@ -47,18 +47,6 @@ test.describe('Income Management Flow', () => {
     expect(pageContent).toBeTruthy()
   })
 
-  test('surplus power-up slider exists', async ({ page }) => {
-    await page.goto('/menu/income')
-    await page.waitForTimeout(2000)
-
-    // Check for Surplus Power-Up section
-    await expect(page.getByText('SURPLUS POWER-UP').first()).toBeVisible()
-
-    // Look for slider control
-    const pageContent = await page.content()
-    expect(pageContent.toLowerCase()).toContain('slider')
-  })
-
   test('timeline impact section displays', async ({ page }) => {
     await page.goto('/menu/income')
     await page.waitForTimeout(2000)
@@ -100,17 +88,16 @@ test.describe('Income Management Flow', () => {
     expect(pageContent).toMatch(/\$/)
   })
 
-  test('can adjust tmn boost slider', async ({ page }) => {
+  test('displays tmn strategy guidance', async ({ page }) => {
     await page.goto('/menu/income')
     await page.waitForTimeout(2000)
 
-    // Look for slider input
-    const pageContent = await page.content()
+    // Check for TMN Strategy guidance card
+    await expect(page.getByText('TMN Strategy')).toBeVisible()
 
-    // Slider should be present in the page
-    if (pageContent.includes('slider') || pageContent.includes('range')) {
-      expect(pageContent).toBeTruthy()
-    }
+    // Verify guidance text is present
+    const pageContent = await page.content()
+    expect(pageContent).toContain('TMN (Total Monthly Needs)')
   })
 
   test('displays proper layout for income sources', async ({ page }) => {
@@ -120,7 +107,7 @@ test.describe('Income Management Flow', () => {
     // Verify sections are properly laid out using first() for ambiguous selectors
     const householdSection = page.getByText('Household Members')
     const incomeSection = page.getByText('Income Sources')
-    const strategySection = page.getByText('Income Strategy')
+    const strategySection = page.getByText('TMN Strategy')
 
     await expect(householdSection.first()).toBeVisible()
     await expect(incomeSection.first()).toBeVisible()
