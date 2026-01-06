@@ -4,12 +4,22 @@ export default defineNuxtConfig({
   // SPA mode - enables full offline support with PWA
   ssr: false,
 
+  app: {
+    head: {
+      link: [
+        { rel: 'icon', href: '/favicon.ico', sizes: 'any' },
+        { rel: 'icon', href: '/icon.svg', type: 'image/svg+xml' },
+        { rel: 'apple-touch-icon', href: '/apple-touch-icon-180x180.png' }
+      ]
+    }
+  },
+
   pwa: {
     registerType: 'autoUpdate',
     manifest: {
       name: 'Finance',
       short_name: 'Finance',
-      theme_color: '#000000',
+      theme_color: '#10b981',
       icons: [
         {
           src: 'pwa-64x64.png',
