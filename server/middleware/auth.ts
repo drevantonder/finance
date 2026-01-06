@@ -1,8 +1,14 @@
 export default defineEventHandler(async (event) => {
   const { pathname } = getRequestURL(event)
-  
-  // Only protect /api/ routes (excluding internal auth)
-  if (!pathname.startsWith('/api/') || pathname.startsWith('/api/_auth/')) {
+
+  // Only protect /api/ routes
+  if (!pathname.startsWith('/api/')) {
+    return
+  }
+
+  // Exclude internal auth routes and test login endpoint
+  const publicRoutes = ['/api/_auth/', '/api/auth/test-login']
+  if (publicRoutes.some(route => pathname.startsWith(route))) {
     return
   }
 
