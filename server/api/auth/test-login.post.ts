@@ -3,8 +3,10 @@
  * This is only available in development/test mode
  */
 export default defineEventHandler(async (event) => {
-  // Simple security check: this endpoint should only be used for testing
-  // In production, this would be blocked by firewall/API gateway rules
+  // Security: Block in production to prevent unauthorized session creation
+  if (!import.meta.dev) {
+    throw createError({ statusCode: 404, statusMessage: 'Not found' })
+  }
 
   // Create mock user session
   await setUserSession(event, {
