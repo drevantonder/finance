@@ -224,10 +224,15 @@ if (import.meta.main) {
   if (mode === "loop") {
     const SLEEP_MS = 30000; // 30 seconds
     let running = true;
+    let sleepTimeout: Timer | null = null;
 
     process.on("SIGINT", () => {
       console.log("\nShutting down developer loop...");
       running = false;
+      if (sleepTimeout) {
+        clearTimeout(sleepTimeout);
+        sleepTimeout = null;
+      }
     });
 
     (async () => {
@@ -252,7 +257,15 @@ if (import.meta.main) {
         } catch (err) {
           console.error("Error in developer loop:", err);
         }
-        if (running) await new Promise(resolve => setTimeout(resolve, SLEEP_MS));
+        
+        if (running) {
+          await new Promise(resolve => {
+            sleepTimeout = setTimeout(() => {
+              sleepTimeout = null;
+              resolve(undefined);
+            }, SLEEP_MS);
+          });
+        }
       }
     })().then(() => {
       console.log("Developer loop shut down cleanly.");

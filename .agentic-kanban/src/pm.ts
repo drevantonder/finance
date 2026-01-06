@@ -183,10 +183,15 @@ function parseTasks(body: string): string[] {
 if (import.meta.main) {
   const SLEEP_MS = 60000; // 1 minute
   let running = true;
+  let sleepTimeout: Timer | null = null;
 
   process.on("SIGINT", () => {
     console.log("\nShutting down PM...");
     running = false;
+    if (sleepTimeout) {
+      clearTimeout(sleepTimeout);
+      sleepTimeout = null;
+    }
   });
 
   (async () => {
@@ -195,11 +200,19 @@ if (import.meta.main) {
         await syncEpics();
         await createPRs();
         await monitorPRs();
-        console.log(`Sleeping for ${SLEEP_MS / 1000}s...`);
+        
+        if (running) {
+          console.log(`Sleeping for ${SLEEP_MS / 1000}s...`);
+          await new Promise(resolve => {
+            sleepTimeout = setTimeout(() => {
+              sleepTimeout = null;
+              resolve(undefined);
+            }, SLEEP_MS);
+          });
+        }
       } catch (err) {
         console.error("Error in PM cycle:", err);
       }
-      if (running) await new Promise(resolve => setTimeout(resolve, SLEEP_MS));
     }
   })().then(() => {
     console.log("PM shut down cleanly.");

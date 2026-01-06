@@ -1,18 +1,18 @@
 {
   "developers": [
     {
-      "name": "Junior Ralph",
-      "model": "glm-4-7",
+      "name": "glm-4.7",
+      "model": "zai-coding-plan/glm-4.7",
       "enabled": true
     },
     {
-      "name": "Senior Ralph",
-      "model": "opus-4-5",
+      "name": "gemini-3-flash",
+      "model": "google/gemini-3-flash-preview",
       "enabled": true
     },
     {
-      "name": "PM Ralph",
-      "model": "minimax-m2.1",
+      "name": "minimax-m2.1",
+      "model": "opencode/minimax-m2.1-free",
       "enabled": true
     }
   ]
