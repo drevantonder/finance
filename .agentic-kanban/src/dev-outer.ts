@@ -218,10 +218,47 @@ export async function finishReview(epicId: string | number, status: "approved" |
 }
 
 if (import.meta.main) {
-  const mode = process.argv[2]; // claim, finish, claim-review, finish-review
+  const mode = process.argv[2]; // claim, finish, claim-review, finish-review, or loop
   const modelName = process.argv[3] || "unknown-model";
   
-  if (mode === "claim-review") {
+  if (mode === "loop") {
+    const SLEEP_MS = 30000; // 30 seconds
+    let running = true;
+
+    process.on("SIGINT", () => {
+      console.log("\nShutting down developer loop...");
+      running = false;
+    });
+
+    (async () => {
+      while (running) {
+        try {
+          // 1. Check for reviews first
+          const review = await claimReview(modelName);
+          if (review) {
+            console.log(`Assigned review for Task #${review.id}. Please perform review and run finish-review.`);
+            // In a real loop, we'd spawn the review process here.
+            // For now, we just claim it.
+          } else {
+            // 2. Check for new work
+            const task = await claimTask(modelName);
+            if (task) {
+              console.log(`Claimed Task #${task.id}. Worktree: ${task.worktree_path}`);
+              // In a real loop, we'd spawn the inner loop here.
+            } else {
+              console.log(`No work found for ${modelName}. Sleeping for ${SLEEP_MS / 1000}s...`);
+            }
+          }
+        } catch (err) {
+          console.error("Error in developer loop:", err);
+        }
+        if (running) await new Promise(resolve => setTimeout(resolve, SLEEP_MS));
+      }
+    })().then(() => {
+      console.log("Developer loop shut down cleanly.");
+      process.exit(0);
+    });
+  } else if (mode === "claim-review") {
     claimReview(modelName).then((task) => {
       if (task) {
         console.log("<promise>COMPLETE</promise>");

@@ -197,7 +197,7 @@
         "User can Ctrl+C to stop any loop cleanly (graceful shutdown)",
         "Console output shows clear status: what's being worked on, sleep duration, errors"
       ],
-      "status": "pending"
+      "status": "done"
     }
   ]
 }

@@ -103,3 +103,12 @@ Ralph will append entries here as tasks are completed.
 - Verified PM check cycle runs successfully.
 - Tests: passing
 - Commit: 909873a
+
+## Ralph Bootstrap | 2026-01-06T23:18:14Z
+### Task 13: Fleet configuration controls Ralph availability
+- Created config/fleet.json with developer model configurations.
+- Implemented validateModel in src/config.ts.
+- Integrated validation into dev-outer.ts to check model existence and enabled status.
+- Verified that invalid or disabled models cause a graceful failure with error message.
+- Tests: passing
+- Commit: 530011d

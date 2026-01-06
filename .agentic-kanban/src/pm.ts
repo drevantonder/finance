@@ -181,14 +181,28 @@ function parseTasks(body: string): string[] {
 }
 
 if (import.meta.main) {
+  const SLEEP_MS = 60000; // 1 minute
+  let running = true;
+
+  process.on("SIGINT", () => {
+    console.log("\nShutting down PM...");
+    running = false;
+  });
+
   (async () => {
-    await syncEpics();
-    await createPRs();
-    await monitorPRs();
+    while (running) {
+      try {
+        await syncEpics();
+        await createPRs();
+        await monitorPRs();
+        console.log(`Sleeping for ${SLEEP_MS / 1000}s...`);
+      } catch (err) {
+        console.error("Error in PM cycle:", err);
+      }
+      if (running) await new Promise(resolve => setTimeout(resolve, SLEEP_MS));
+    }
   })().then(() => {
-    console.log("<promise>COMPLETE</promise>");
-  }).catch(err => {
-    console.log(`<promise>BLOCKED: ${err.message}</promise>`);
-    process.exit(1);
+    console.log("PM shut down cleanly.");
+    process.exit(0);
   });
 }

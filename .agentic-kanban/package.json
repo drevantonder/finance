@@ -6,7 +6,7 @@
   "scripts": {
     "test": "bun test",
     "ralph-pm": "bun src/pm.ts",
-    "ralph-dev": "bun src/dev-outer.ts"
+    "ralph-dev": "bun src/dev-outer.ts loop"
   },
   "dependencies": {
     "zod": "^4.3.5"
