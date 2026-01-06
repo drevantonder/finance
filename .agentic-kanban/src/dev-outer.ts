@@ -1,6 +1,7 @@
 import { $ } from "bun";
 import { join, resolve } from "node:path";
-import { writeFile, mkdir } from "node:fs/promises";
+import { writeFile, mkdir, readFile } from "node:fs/promises";
+import { existsSync } from "node:fs";
 import { listTasks, readTask, moveTask, Bucket } from "./kanban";
 import { TaskSchema, type Task } from "./schema";
 
@@ -78,17 +79,75 @@ export async function claimTask(modelName: string) {
   }
 }
 
+export async function finishTask(epicId: string | number, modelName: string) {
+  const filename = `epic-${epicId}.json`;
+  const assignedPath = join(process.cwd(), "kanban", "assigned", filename);
+  
+  if (!existsSync(assignedPath)) {
+    throw new Error(`Task #${epicId} not found in assigned/`);
+  }
+
+  const task = await readTask("assigned", filename);
+  const worktreePath = task.worktree_path;
+  
+  if (!worktreePath) {
+    throw new Error(`Task #${epicId} has no worktree_path`);
+  }
+
+  const innerJsonPath = join(worktreePath, ".agentic-task", "current.json");
+
+  if (!existsSync(innerJsonPath)) {
+    throw new Error(`Inner task JSON not found at ${innerJsonPath}`);
+  }
+
+  // Read updated JSON from worktree
+  const innerContent = await readFile(innerJsonPath, "utf-8");
+  const innerData = JSON.parse(innerContent);
+
+  // Sync back and update metadata
+  const finalTask: Task = {
+    ...innerData,
+    implemented_by: `ralph-dev-${modelName}`,
+    updated_at: new Date().toISOString()
+  };
+
+  // Write back to assigned/ first
+  await writeFile(assignedPath, JSON.stringify(finalTask, null, 2));
+
+  // Move to needs-review/
+  await moveTask("assigned", "needs-review", filename);
+
+  console.log(`Task #${epicId} moved to needs-review/.`);
+}
+
 if (import.meta.main) {
-  const modelName = process.argv[2] || "unknown-model";
-  claimTask(modelName).then((task) => {
-    if (task) {
-      console.log("<promise>COMPLETE</promise>");
-    } else {
-      console.log("No work found. Sleeping...");
-      console.log("<promise>COMPLETE</promise>");
+  const mode = process.argv[2]; // claim or finish
+  const modelName = process.argv[3] || "unknown-model";
+  
+  if (mode === "finish") {
+    const epicId = process.argv[4];
+    if (!epicId) {
+      console.error("Epic ID required for finish mode");
+      process.exit(1);
     }
-  }).catch(err => {
-    console.log(`<promise>BLOCKED: ${err.message}</promise>`);
-    process.exit(1);
-  });
+    finishTask(epicId, modelName).then(() => {
+      console.log("<promise>COMPLETE</promise>");
+    }).catch(err => {
+      console.log(`<promise>BLOCKED: ${err.message}</promise>`);
+      process.exit(1);
+    });
+  } else {
+    // default to claim
+    claimTask(modelName).then((task) => {
+      if (task) {
+        console.log("<promise>COMPLETE</promise>");
+      } else {
+        console.log("No work found.");
+        console.log("<promise>COMPLETE</promise>");
+      }
+    }).catch(err => {
+      console.log(`<promise>BLOCKED: ${err.message}</promise>`);
+      process.exit(1);
+    });
+  }
 }

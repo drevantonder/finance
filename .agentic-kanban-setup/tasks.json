@@ -114,7 +114,7 @@
         "Outer loop keeps the worktree intact for the reviewer to use",
         "Outer loop then checks for more work in `unassigned/` or `needs-review/` (review mode)"
       ],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": 9,
