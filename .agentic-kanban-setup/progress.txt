@@ -37,3 +37,12 @@ Ralph will append entries here as tasks are completed.
 - Verified all files contain required output signals and path references.
 - Tests: passing (files verified to exist)
 - Commit: dd33da2
+
+## Ralph Bootstrap | 2026-01-06T23:08:23Z
+### Task 5: Project Manager syncs GitHub epics to kanban
+- Implemented syncEpics in src/pm.ts using gh CLI.
+- Added regex-based checkbox task parsing from issue bodies.
+- Implemented skip logic using findTaskAcrossBuckets to avoid duplicate tasks.
+- Verified sync by creating epic-69.json from real GitHub issue #69.
+- Tests: passing (verified file creation and skip logic)
+- Commit: 5862ddd

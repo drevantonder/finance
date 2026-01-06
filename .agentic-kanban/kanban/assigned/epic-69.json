@@ -27,5 +27,9 @@
     "issues": []
   },
   "created_at": "2026-01-06T23:07:52.243Z",
-  "updated_at": "2026-01-06T23:07:52.243Z"
+  "updated_at": "2026-01-06T23:09:17.972Z",
+  "assigned_to": "ralph-dev-glm-4-7",
+  "assigned_at": "2026-01-06T23:09:17.971Z",
+  "branch": "feat/epic-69",
+  "worktree_path": "/Users/drevan/projects/finance-worktrees/move-to-kanban-workflow/finance-worktrees/feat-epic-69"
 }

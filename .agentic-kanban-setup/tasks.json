@@ -85,7 +85,7 @@
         "Outer loop adds metadata to task JSON: `assigned_to`, `assigned_at`, `branch`, `worktree_path`",
         "User can verify worktree exists with `git worktree list`"
       ],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": 7,

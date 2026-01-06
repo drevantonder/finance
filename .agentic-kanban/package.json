@@ -5,7 +5,8 @@
   "main": "src/index.ts",
   "scripts": {
     "test": "bun test",
-    "ralph-pm": "bun src/pm.ts"
+    "ralph-pm": "bun src/pm.ts",
+    "ralph-dev": "bun src/dev-outer.ts"
   },
   "dependencies": {
     "zod": "^4.3.5"
