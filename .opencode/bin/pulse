@@ -1,49 +1,66 @@
 #!/bin/bash
-# Enhanced pulse - Comprehensive project dashboard
+# Pulse - Project status dashboard
 # Usage: ./pulse
 
 set -euo pipefail
 
 WORKTREES_DIR="${WORKTREES_DIR:-/Users/drevan/projects/finance-worktrees}"
 
-# Colors and formatting
-BOLD="\033[1m"
-DIM="\033[2m"
-RESET="\033[0m"
-GREEN="\033[32m"
-YELLOW="\033[33m"
-RED="\033[31m"
-BLUE="\033[34m"
-CYAN="\033[36m"
+echo "PROJECT PULSE"
+echo "============================================"
+echo ""
 
-# Box drawing
-TOP_LINE="╭────────────────────────────────────────────────────────╮"
-BOTTOM_LINE="╰────────────────────────────────────────────────────────╯"
-SEPARATOR="━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+# Collect active ralph names from worktrees (one per line)
+active_ralphs=""
+for worktree in "$WORKTREES_DIR"/ralph-*/; do
+    if [[ -d "$worktree" ]]; then
+        branch=$(basename "$worktree")
+        ralph_name=$(echo "$branch" | sed 's/ralph-\([a-z]*\).*/\1/')
+        active_ralphs="$active_ralphs $ralph_name "
+    fi
+done
 
-echo -e "${BOLD}${CYAN}${TOP_LINE}${RESET}"
-echo -e "${BOLD}${CYAN}│                    PROJECT PULSE                       │${RESET}"
-echo -e "${BOLD}${CYAN}${BOTTOM_LINE}${RESET}\n"
+# Collect ralph labels from issues (one per line)
+issue_labels=$(gh issue list --json labels --jq '.[].labels[].name' 2>/dev/null | grep '^ralph-' | sed 's/ralph-//' | sort -u || echo "")
 
 # 1. OPEN ISSUES
-echo -e "${BOLD}📋 OPEN ISSUES${RESET}"
-echo -e "${DIM}${SEPARATOR}${RESET}"
+echo "📋 Open Issues"
+echo "--------------------------------------------"
 
-issue_count=$(gh issue list --json number 2>/dev/null | jq '. | length' || echo "0")
+issues=$(gh issue list --json number,title,labels 2>/dev/null || echo "[]")
+issue_count=$(echo "$issues" | jq '. | length')
+
 if [[ "$issue_count" -eq 0 ]]; then
-    echo -e "${DIM}   No open issues${RESET}\n"
+    echo "   No open issues"
 else
-    gh issue list --json number,title,labels --jq '.[] | "#\(.number) [\(.labels | map(.name) | join(", "))] \(.title)"' 2>/dev/null | while read -r line; do
-        echo "   $line"
+    echo "$issues" | jq -r '.[] | 
+        .number as $num |
+        .title as $title |
+        ([.labels[].name] | map(select(startswith("ralph-"))) | first // "") as $ralph_label |
+        (if (.labels | length) > 0 then ([.labels[].name] | join(",")) else "" end) as $all_labels |
+        "#\($num)|\($all_labels)|\($title)|\($ralph_label)"
+    ' | while IFS='|' read -r num labels title ralph_label; do
+        if [[ -n "$ralph_label" ]]; then
+            ralph_name="${ralph_label#ralph-}"
+            if [[ ! "$active_ralphs" =~ " $ralph_name " ]]; then
+                echo "   $num [$labels] $title ⚠️  ORPHANED LABEL"
+            else
+                echo "   $num [$labels] $title"
+            fi
+        else
+            echo "   $num [$labels] $title"
+        fi
     done
-    echo ""
 fi
+echo ""
 
 # 2. ACTIVE WORKTREES
-echo -e "${BOLD}🔧 ACTIVE WORKTREES${RESET}"
-echo -e "${DIM}${SEPARATOR}${RESET}"
+echo "🔧 Active Worktrees"
+echo "--------------------------------------------"
 
 worktree_count=0
+orphaned_worktrees=""
+
 for worktree in "$WORKTREES_DIR"/ralph-*/; do
     if [[ ! -d "$worktree" ]]; then
         continue
@@ -51,6 +68,12 @@ for worktree in "$WORKTREES_DIR"/ralph-*/; do
     
     worktree_count=$((worktree_count + 1))
     branch=$(basename "$worktree")
+    ralph_name=$(echo "$branch" | sed 's/ralph-\([a-z]*\).*/\1/')
+    
+    # Check for orphan (worktree without issue label)
+    if ! echo "$issue_labels" | grep -q "^${ralph_name}$"; then
+        orphaned_worktrees="$orphaned_worktrees $branch"
+    fi
     
     if [[ -f "$worktree/.ralph/status" ]]; then
         status=$(cat "$worktree/.ralph/status")
@@ -59,61 +82,57 @@ for worktree in "$WORKTREES_DIR"/ralph-*/; do
             level=$(cat "$worktree/.ralph/level")
         fi
         
-        # Color-code status
-        if [[ "$status" == "RUNNING" ]]; then
-            status_display="${YELLOW}⏳ RUNNING${RESET}"
-        elif [[ "$status" == "COMPLETE" ]]; then
-            status_display="${GREEN}✅ COMPLETE${RESET}"
-        elif [[ "$status" == "APPROVED" ]]; then
-            status_display="${GREEN}🎉 APPROVED${RESET}"
-        elif [[ "$status" =~ ^BLOCKED ]]; then
-            status_display="${RED}❌ BLOCKED${RESET}"
-        elif [[ "$status" =~ ^NEEDS_WORK ]]; then
-            status_display="${YELLOW}⚠️  NEEDS WORK${RESET}"
-        else
-            status_display="$status"
-        fi
-        
-        echo -e "${BOLD}$branch${RESET} (${level}) → $status_display"
+        echo "   $branch ($level) → $status"
         
         # Task progress
         if [[ -f "$worktree/.ralph/tasks.json" ]]; then
-            total=$(jq -r '.tasks | length' "$worktree/.ralph/tasks.json" 2>/dev/null || echo "0")
-            done=$(jq -r '[.tasks[] | select(.status == "completed" or .status == "done")] | length' "$worktree/.ralph/tasks.json" 2>/dev/null || echo "0")
-            
-            # Show task list
-            jq -r '.tasks[] | if .status == "completed" or .status == "done" then "  ✅ " else "  ⏳ " end + .title' "$worktree/.ralph/tasks.json" 2>/dev/null || true
+            jq -r '.tasks[] | if .status == "completed" or .status == "done" then "     ✓ " else "     · " end + .title' "$worktree/.ralph/tasks.json" 2>/dev/null || true
             
             # Last commit
-            if [[ -d "$worktree/.git" ]]; then
+            if [[ -d "$worktree/.git" ]] || [[ -f "$worktree/.git" ]]; then
                 last_commit=$(cd "$worktree" && git log -1 --format="%s (%ar)" 2>/dev/null || echo "")
                 if [[ -n "$last_commit" ]]; then
-                    echo -e "  ${DIM}📝 Last: $last_commit${RESET}"
+                    echo "     Last: $last_commit"
                 fi
             fi
             
-            # Ready indicator
+            # Status indicators
             if [[ "$status" == "COMPLETE" || "$status" == "APPROVED" ]]; then
-                echo -e "  ${GREEN}${BOLD}🎉 READY FOR PR${RESET}"
+                echo "     → READY FOR PR"
             elif [[ "$status" =~ ^NEEDS_WORK ]]; then
-                reason=$(echo "$status" | sed 's/NEEDS_WORK: //')
-                echo -e "  ${YELLOW}💡 Fix: $reason${RESET}"
+                reason="${status#NEEDS_WORK: }"
+                echo "     → Fix: $reason"
             elif [[ "$status" =~ ^BLOCKED ]]; then
-                reason=$(echo "$status" | sed 's/BLOCKED: //')
-                echo -e "  ${RED}🚫 Blocker: $reason${RESET}"
+                reason="${status#BLOCKED: }"
+                echo "     → Blocker: $reason"
             fi
         fi
+        echo ""
+    else
+        echo "   $branch (no status)"
         echo ""
     fi
 done
 
 if [[ "$worktree_count" -eq 0 ]]; then
-    echo -e "${DIM}   No active worktrees${RESET}\n"
+    echo "   No active worktrees - ready for new work!"
+    echo ""
 fi
 
-# 3. GIT STATUS
-echo -e "${BOLD}🔄 GIT STATUS${RESET}"
-echo -e "${DIM}${SEPARATOR}${RESET}"
+# 3. ORPHAN WARNINGS
+if [[ -n "$orphaned_worktrees" ]]; then
+    echo "⚠️  Orphaned Worktrees (no issue label)"
+    echo "--------------------------------------------"
+    for branch in $orphaned_worktrees; do
+        echo "   $branch"
+    done
+    echo "   → Assign an issue or clean up"
+    echo ""
+fi
+
+# 4. GIT STATUS
+echo "🔄 Git Status"
+echo "--------------------------------------------"
 
 current_branch=$(git branch --show-current 2>/dev/null || echo "unknown")
 git_status=$(git status --short 2>/dev/null || echo "")
@@ -121,59 +140,41 @@ git_status=$(git status --short 2>/dev/null || echo "")
 echo "   Branch: $current_branch"
 
 if [[ -z "$git_status" ]]; then
-    echo -e "   Status: ${GREEN}Clean${RESET}"
+    echo "   Status: Clean"
 else
-    echo -e "   Status: ${YELLOW}Dirty${RESET}"
+    echo "   Status: Dirty"
     echo "$git_status" | head -5 | while read -r line; do
         echo "     $line"
     done
 fi
 
-last_main_commit=$(git log -1 --format="%s (%ar)" 2>/dev/null || echo "No commits")
-echo -e "   Last commit: ${DIM}$last_main_commit${RESET}"
+last_commit=$(git log -1 --format="%s (%ar)" 2>/dev/null || echo "No commits")
+echo "   Last: $last_commit"
 echo ""
 
-# 4. CI STATUS
-echo -e "${BOLD}⏱️  CI STATUS${RESET}"
-echo -e "${DIM}${SEPARATOR}${RESET}"
+# 5. CI STATUS
+echo "⏱️  CI Status"
+echo "--------------------------------------------"
 
-# Get latest workflow run
-latest_run=$(gh run list --limit 1 --json status,conclusion,displayTitle,createdAt --jq '.[0]' 2>/dev/null || echo "{}")
+latest_run=$(gh run list --limit 1 --json status,conclusion,displayTitle 2>/dev/null || echo "[]")
 
-if [[ "$latest_run" == "{}" ]]; then
-    echo -e "${DIM}   No CI runs found${RESET}\n"
+if [[ "$latest_run" == "[]" ]] || [[ $(echo "$latest_run" | jq '. | length') -eq 0 ]]; then
+    echo "   No CI runs found"
 else
-    run_status=$(echo "$latest_run" | jq -r '.status' 2>/dev/null || echo "unknown")
-    run_conclusion=$(echo "$latest_run" | jq -r '.conclusion' 2>/dev/null || echo "unknown")
-    run_title=$(echo "$latest_run" | jq -r '.displayTitle' 2>/dev/null || echo "Unknown")
-    run_age=$(echo "$latest_run" | jq -r '.createdAt' 2>/dev/null | xargs -I {} date -j -f "%Y-%m-%dT%H:%M:%SZ" {} "+%s" 2>/dev/null || echo "0")
-    now=$(date +%s)
-    age_seconds=$((now - run_age))
+    run_status=$(echo "$latest_run" | jq -r '.[0].status // "unknown"')
+    run_conclusion=$(echo "$latest_run" | jq -r '.[0].conclusion // "pending"')
+    run_title=$(echo "$latest_run" | jq -r '.[0].displayTitle // "Unknown"')
     
-    # Human-readable age
-    if [[ $age_seconds -lt 60 ]]; then
-        age="${age_seconds}s ago"
-    elif [[ $age_seconds -lt 3600 ]]; then
-        age="$((age_seconds / 60))m ago"
-    else
-        age="$((age_seconds / 3600))h ago"
-    fi
-    
-    # Status indicator
     if [[ "$run_status" == "completed" ]]; then
         if [[ "$run_conclusion" == "success" ]]; then
-            status_icon="${GREEN}✅${RESET}"
+            echo "   ✓ Success - $run_title"
         else
-            status_icon="${RED}❌${RESET}"
+            echo "   ✗ ${run_conclusion^} - $run_title"
         fi
     else
-        status_icon="${YELLOW}⏳${RESET}"
+        echo "   ⏳ ${run_status^} - $run_title"
     fi
-    
-    echo -e "   Last run: $status_icon ${BOLD}${run_conclusion^}${RESET} ($age)"
-    echo -e "   ${DIM}$run_title${RESET}"
-    echo ""
 fi
 
-echo -e "${DIM}${SEPARATOR}${RESET}"
-echo -e "${DIM}Run ${BOLD}/pulse${RESET}${DIM} anytime to check status${RESET}\n"
+echo ""
+echo "============================================"
