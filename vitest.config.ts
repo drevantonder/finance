@@ -45,7 +45,10 @@ export default defineConfig({
         '**/.nuxt/**',
         '**/.data/**',
         '**/dist/**',
+        'app/**/*.vue',
       ],
     },
   },
 })
+// @ts-ignore
+const x: number = 'string'
