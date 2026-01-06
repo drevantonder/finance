@@ -33,5 +33,19 @@ export default defineConfig({
         },
       },
     ],
+    coverage: {
+      provider: 'v8',
+      reporter: ['text', 'json-summary', 'html'],
+      include: ['app/**/*.{ts,vue}', 'server/**/*.ts'],
+      exclude: [
+        'test/**',
+        '**/*.test.ts',
+        '**/*.spec.ts',
+        '**/node_modules/**',
+        '**/.nuxt/**',
+        '**/.data/**',
+        '**/dist/**',
+      ],
+    },
   },
 })

@@ -47,8 +47,15 @@ pnpm blob:push:prod             # Push local blobs to R2
 ## Infrastructure
 - **Database**: Dev=SQLite (`.data/db/sqlite.db`), Prod=Cloudflare D1
 - **Storage**: Cloudflare R2 (`hub:blob`)
-- **Auth**: Google OAuth via `nuxt-auth-utils`
+- **Auth**: GitHub OAuth via `nuxt-auth-utils`
 - **AI**: Google Gemini for receipt OCR
+
+### CI/CD
+- **GitHub Actions**: Automated testing on push/PR
+- **Workflows**:
+  - `.github/workflows/test.yml` - Typecheck, unit tests, e2e tests, coverage
+  - `.github/workflows/lighthouse.yml` - Performance metrics (PRs only)
+- **Branch Protection**: See `docs/BRANCH_PROTECTION.md` for configuration guide
 
 ## Architecture
 
