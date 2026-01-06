@@ -3,7 +3,7 @@ name: Test
 on:
   push:
     branches:
-      - main
+      - prod
       - 'ralph/**'
   pull_request:
 
