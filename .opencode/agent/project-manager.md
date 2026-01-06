@@ -68,11 +68,13 @@ Write to `$WORKTREE_PATH/.ralph/tasks.json`.
 
 **Step 4: Launch**
 ```bash
-cd "$WORKTREE_PATH"
-echo "RUNNING" > .ralph/status
-touch .ralph/progress.txt
+# The dispatch script handles all setup and launches Ralph in a new Kitty tab
+bash .opencode/bin/ralph-dispatch.sh "$WORKTREE_PATH" "<name>"
+```
 
-# Launch Ralph in new Kitty tab
+**Re-dispatch (existing worktree):**
+For a worktree that's already set up, just run the dispatch script - no other setup needed.
+```bash
 bash .opencode/bin/ralph-dispatch.sh "$WORKTREE_PATH" "<name>"
 ```
 
