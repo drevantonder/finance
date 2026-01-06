@@ -4,10 +4,10 @@ import { writeFile, mkdir, readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { listTasks, readTask, moveTask, Bucket } from "./kanban";
 import { TaskSchema, type Task } from "./schema";
-import { validateModel } from "./config";
+import { validateModel, getBaseBranch, getConfig } from "./config";
 
 export async function claimTask(modelName: string) {
-  await validateModel(modelName);
+  const dev = await validateModel(modelName);
   const unassigned = await listTasks("unassigned");
   if (unassigned.length === 0) {
     console.log("No unassigned tasks found.");
@@ -42,6 +42,8 @@ export async function claimTask(modelName: string) {
   console.log(`Creating worktree at ${worktreePath} on branch ${branchName}...`);
   
   try {
+    const baseBranch = getBaseBranch();
+    
     // Check if branch exists
     const branchCheck = await $`git rev-parse --verify ${branchName}`.quiet().nothrow();
     const branchExists = branchCheck.exitCode === 0;
@@ -49,7 +51,8 @@ export async function claimTask(modelName: string) {
     if (branchExists) {
       await $`git worktree add ${worktreePath} ${branchName}`;
     } else {
-      await $`git worktree add -b ${branchName} ${worktreePath} main`;
+      console.log(`Branching from ${baseBranch}...`);
+      await $`git worktree add -b ${branchName} ${worktreePath} ${baseBranch}`;
     }
 
     // Update task JSON with metadata
@@ -222,7 +225,7 @@ if (import.meta.main) {
   const modelName = process.argv[3] || "unknown-model";
   
   if (mode === "loop") {
-    const SLEEP_MS = 30000; // 30 seconds
+    const SLEEP_MS = getConfig().sleep.developer;
     let running = true;
     let sleepTimeout: Timer | null = null;
 

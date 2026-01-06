@@ -3,6 +3,7 @@ import { join } from "node:path";
 import { writeFile } from "node:fs/promises";
 import { createTask, findTaskAcrossBuckets, listTasks, readTask, moveTask } from "./kanban";
 import type { Task } from "./schema";
+import { getConfig } from "./config";
 
 export async function syncEpics() {
   console.log("Syncing epics from GitHub...");
@@ -181,7 +182,7 @@ function parseTasks(body: string): string[] {
 }
 
 if (import.meta.main) {
-  const SLEEP_MS = 60000; // 1 minute
+  const SLEEP_MS = getConfig().sleep.pm;
   let running = true;
   let sleepTimeout: Timer | null = null;
 
