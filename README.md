@@ -24,3 +24,4 @@ See [NuxtHub docs: Deploy Nuxt](https://hub.nuxt.com/docs/getting-started/deploy
 
 ### Accessing the app
 Go to your deployed Url / `localhost:3000`. Enter your secret token.
+# Cache Test
