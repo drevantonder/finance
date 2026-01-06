@@ -1,0 +1,56 @@
+{
+  "$schema": "https://turbo.build/schema.json",
+  "remoteCache": {
+    "enabled": true
+  },
+  "tasks": {
+    "build": {
+      "inputs": [
+        "app/**",
+        "server/**",
+        "nuxt.config.ts",
+        "package.json"
+      ],
+      "outputs": [
+        ".output/**",
+        ".nuxt/**",
+        "!.nuxt/.git"
+      ]
+    },
+    "typecheck": {
+      "inputs": [
+        "**/*.ts",
+        "**/*.vue",
+        "nuxt.config.ts"
+      ],
+      "outputs": []
+    },
+    "test": {
+      "inputs": [
+        "test/**",
+        "app/**",
+        "server/**",
+        "vitest.config.ts"
+      ],
+      "outputs": [
+        "coverage/**",
+        "coverage-summary.json"
+      ]
+    },
+    "test:e2e": {
+      "inputs": [
+        "e2e/**",
+        "app/**",
+        "server/**",
+        "playwright.config.ts"
+      ],
+      "outputs": [
+        "playwright-report/**"
+      ]
+    }
+  },
+  "globalDependencies": [
+    "package.json",
+    "pnpm-lock.yaml"
+  ]
+}
