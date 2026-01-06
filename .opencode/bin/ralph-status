@@ -1,0 +1,22 @@
+#!/bin/bash
+# Ralph status dashboard script
+# Usage: ./ralph-status
+
+WORKTREES_DIR="${WORKTREES_DIR:-/Users/drevan/projects/finance-worktrees}"
+
+for worktree in "$WORKTREES_DIR"/ralph-*/; do
+  branch=$(basename "$worktree" | tr '-' ' ' | sed 's/ $//')
+  
+  if [[ -f "$worktree/.ralph/status" ]]; then
+    status=$(cat "$worktree/.ralph/status")
+    tasks_json="$worktree/.ralph/tasks.json"
+    
+    if [[ -f "$tasks_json" ]]; then
+      total=$(jq -r '.tasks | length' "$tasks_json")
+      done=$(jq -r '[.tasks[] | select(.status == "completed" or .status == "done")] | length' "$tasks_json")
+      echo "$branch: $status ($done/$total tasks)"
+    else
+      echo "$branch: $status"
+    fi
+  fi
+done

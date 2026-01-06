@@ -1,0 +1,17 @@
+#!/bin/bash
+# Ralph task details script
+# Usage: ./ralph-details
+
+WORKTREES_DIR="${WORKTREES_DIR:-/Users/drevan/projects/finance-worktrees}"
+
+for tasks_json in "$WORKTREES_DIR"/ralph-*/.ralph/tasks.json; do
+  if [[ -f "$tasks_json" ]]; then
+    worktree_dir=$(dirname "$tasks_json")  # This is the .ralph folder
+    branch=$(basename "$(dirname "$worktree_dir")" | tr '-' ' ' | sed 's/ $//')
+    status=$(cat "$worktree_dir/status")
+    
+    echo ""
+    echo "=== $branch ($status) ==="
+    jq -r '.tasks[] | if .status == "completed" or .status == "done" then "  ✅ " else "  ✋ " end + .title' "$tasks_json"
+  fi
+done

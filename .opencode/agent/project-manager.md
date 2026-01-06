@@ -69,14 +69,8 @@ cd "$WORKTREE_PATH"
 echo "RUNNING" > .ralph/status
 touch .ralph/progress.txt
 
-# Spawn Ralph in a new Kitty tab (see kitty-terminal skill)
-SOCKET=$(ls /tmp/kitty-socket-* | head -1)
-kitten @ --to unix:$SOCKET launch \
-  --type=tab \
-  --tab-title "Ralph-<Name>" \
-  --cwd "$WORKTREE_PATH" \
-  --copy-env \
-  zsh -ic "bash .opencode/bin/ralph-harness.sh"
+# Launch Ralph in new Kitty tab using dispatch script
+bash .opencode/bin/ralph-dispatch.sh "$WORKTREE_PATH" "<name>"
 ```
 
 ## 3. Review Mode (The Inspector)
@@ -123,13 +117,7 @@ git gtr rm ralph/<name>                      # Remove worktree
 ```
 
 ## Kitty Terminal (for Ralph Launch)
-Use the `kitty-terminal` skill to spawn Ralph in a new tab:
+Use `ralph-dispatch.sh` to spawn Ralph in a new tab:
 ```bash
-SOCKET=$(ls /tmp/kitty-socket-* | head -1)
-kitten @ --to unix:$SOCKET launch \
-  --type=tab \
-  --tab-title "Ralph-<Name>" \
-  --cwd "$WORKTREE_PATH" \
-  --copy-env \
-  zsh -ic "bash .opencode/bin/ralph-harness.sh"
+bash .opencode/bin/ralph-dispatch.sh "$WORKTREE_PATH" "<name>"
 ```
