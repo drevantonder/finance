@@ -89,14 +89,24 @@ Tasks defined as **User Stories** with **Verification Steps**.
 | `tasks[].verification_steps` | Self-verifiable pass/fail criteria |
 
 ### Status Handling
-- **COMPLETE**: All tasks done. Ask user: "Create PR with `/ralph-pr`?"
+- **COMPLETE**: All tasks done. Manually create PR.
 - **BLOCKED**: Check `.ralph/status` for reason. Help fix blocker.
 
 ## Commands
 - `/pulse` - Dashboard of GitHub issues and Ralph worktrees (status + task progress)
 
+## Tooling Scripts (`.opencode/bin/`)
+
+| Script | Purpose |
+|--------|---------|
+| `ralph-pulse` | Show project dashboard (same as `/pulse`) |
+| `ralph-status` | Check progress of active Ralph runs |
+| `ralph-details <worktree>` | Show detailed status of a specific worktree |
+| `ralph-dispatch.sh <path> <name>` | Launch Ralph in new Kitty tab |
+| `ralph-harness.sh` | Run Ralph in a loop (used by dispatch) |
+
 ## Documentation Lookup
-When implementing features, use Context7 for current library docs:
+When implementing features, use **Context7** for current library docs:
 
 1. Find library ID: `context7_resolve-library-id` with package name
 2. Query docs: `context7_query-docs` with specific question

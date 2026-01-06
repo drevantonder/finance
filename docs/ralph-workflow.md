@@ -230,7 +230,7 @@ Ralph operates in a loop managed by the harness. **Every iteration starts fresh 
 
 After Ralph exits:
 
-- **If COMPLETE**: PM reads `progress.txt`, user reviews branch, PM creates PR (`/ralph-pr`)
+- **If COMPLETE**: PM reads `progress.txt`, user reviews branch, PM manually creates PR
 - **If BLOCKED**: PM reads status reason, user fixes blocker, PM re-triggers harness
 - **If timeout**: PM investigates logs, user decides next action
 
@@ -263,7 +263,6 @@ PM checks existing worktrees and picks the next available name.
 | `/pulse` | Dashboard of issues and Ralph worktrees | PM |
 | `/dispatch` | Start Ralph on curated tasks | PM |
 | `/ralph-status` | Check progress of active runs | PM |
-| `/ralph-pr` | Create PR for completed batch | PM |
 
 ## Ralph Agent Behavior
 
@@ -289,6 +288,16 @@ If Ralph encounters a blocker (tests fail after 8 attempts, unclear requirements
 5. PM re-runs harness in the same worktree (Ralph resumes from where he left off)
 
 ## Tooling
+
+### Bash Scripts (`.opencode/bin/`)
+
+| Script | Purpose |
+|--------|---------|
+| `ralph-pulse` | Show project dashboard |
+| `ralph-status` | Check progress of active Ralph runs |
+| `ralph-details <worktree>` | Show detailed status of a specific worktree |
+| `ralph-dispatch.sh <path> <name>` | Launch Ralph in new Kitty tab |
+| `ralph-harness.sh` | Run Ralph in a loop (max 100 iterations) |
 
 ### Git Worktree Runner (GTR)
 See **@.opencode/skill/git-worktree-runner.md** for command reference.
