@@ -185,7 +185,9 @@ The PM discusses features with the user and breaks them into **atomic, testable 
 When the user approves (`/dispatch`):
 
 1. **Assign Identity**: Pick next available NATO name (Alpha → Juliet) by checking existing worktrees
-2. **Label Issues**: Add `ralph-<name>` label to all issues in the batch (e.g., `ralph-alpha`)
+2. **Label Issues** (REQUIRED):
+   - Create label if missing: `gh label create "ralph-<name>" --color "0052CC" --description "..."`
+   - Apply to ALL issues: `gh issue edit <num> --add-label "ralph-<name>"`
 3. **Create Environment**:
    - `git gtr new ralph/<name>-<descriptor>`
    - Initialize `.ralph/` folder in the worktree
@@ -252,7 +254,9 @@ PM checks existing worktrees and picks the next available name.
 - Tasks are only marked "done" if tests pass
 
 ### GitHub Integration
-- Issues are labeled with Ralph ID (e.g., `ralph-alpha`)
+- **Labels are REQUIRED** - PM must label issues before dispatch
+- Create label if missing: `gh label create "ralph-<name>" --color "0052CC" ...`
+- Apply label to ALL issues in batch: `gh issue edit <num> --add-label "ralph-<name>"`
 - PM creates consolidated PR linking all completed issues
 - PR body format: "Fixes #42, Fixes #43, Fixes #44"
 

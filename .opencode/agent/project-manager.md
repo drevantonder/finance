@@ -32,7 +32,17 @@ When the user says "Go" or uses `/dispatch`:
 Pick next available: Alpha, Bravo, Charlie, Delta, Echo, Foxtrot, Golf, Hotel, India, Juliet.
 Check availability: `git gtr list --porcelain | grep "ralph/"`
 
-**Step 2: Create Environment**
+**Step 2: Label Issues**
+```bash
+# Create label if it doesn't exist
+gh label create "ralph-<name>" --color "0052CC" --description "Assigned to Ralph-<Name> batch" 2>/dev/null || true
+
+# Add label to all issues in the batch
+gh issue edit <issue1> --add-label "ralph-<name>"
+gh issue edit <issue2> --add-label "ralph-<name>"
+```
+
+**Step 3: Create Environment**
 ```bash
 # 1. Create worktree
 git gtr new ralph/<name>-<descriptor>
@@ -42,7 +52,7 @@ WORKTREE_PATH=$(git gtr go ralph/<name>-<descriptor>)
 mkdir -p "$WORKTREE_PATH/.ralph"
 ```
 
-**Step 3: Create `tasks.json`**
+**Step 4: Create `tasks.json`**
 Write to `$WORKTREE_PATH/.ralph/tasks.json`.
 **Critical:** Follow the schema in `@docs/ralph-workflow.md`. Ensure strict JSON syntax.
 
@@ -66,7 +76,7 @@ Write to `$WORKTREE_PATH/.ralph/tasks.json`.
 }
 </example_tasks_json>
 
-**Step 4: Launch**
+**Step 5: Launch**
 ```bash
 # The dispatch script handles all setup and launches Ralph in a new Kitty tab
 bash .opencode/bin/ralph-dispatch.sh "$WORKTREE_PATH" "<name>"
