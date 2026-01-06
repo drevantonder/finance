@@ -7,9 +7,6 @@ import { formatCurrency } from '~/composables/useFormatter'
 const store = useSessionStore()
 const { borrowingResult, targetDateLabel, smartResult } = useProjectionResults()
 
-// Simulation logic
-const tmnBoost = ref(0)
-
 const currentMonthlySurplus = computed(() => {
   return smartResult.value?.series[0]?.surplus || 0
 })
@@ -21,28 +18,6 @@ const borrowingCapacity = computed(() => {
 const totalMonthlyIncome = computed(() => {
   return smartResult.value?.series[0]?.netIncome || 0
 })
-
-const impactMonths = computed(() => {
-  if (!borrowingResult.value || !smartResult.value) return 0
-  
-  const targetCosts = borrowingResult.value.costs.totalCosts
-  const currentDeposit = store.projectedDeposit
-  const remaining = Math.max(0, targetCosts - currentDeposit)
-  
-  const currentSurplus = Math.max(1, currentMonthlySurplus.value)
-  const boostedSurplus = currentSurplus + tmnBoost.value
-  
-  const monthsCurrent = remaining / currentSurplus
-  const monthsBoosted = remaining / boostedSurplus
-  
-  return Math.round(monthsCurrent - monthsBoosted)
-})
-
-const impactLabel = computed(() => {
-  if (impactMonths.value <= 0) return 'No timeline impact'
-  if (impactMonths.value === 1) return '1 month earlier'
-  return `${impactMonths.value} months earlier`
-})
 </script>
 
 <template>
@@ -53,48 +28,23 @@ const impactLabel = computed(() => {
 
     <!-- Impact Widget (Sticky) -->
     <div class="sticky top-0 lg:top-4 z-20">
-      <UCard 
+      <UCard
         class="bg-gradient-to-br from-primary-50 to-white dark:from-primary-950 dark:to-gray-900 border-primary-200 dark:border-primary-800 shadow-xl"
       >
-        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-6">
-          <div class="space-y-1">
-            <div class="text-xs font-bold text-primary-600 dark:text-primary-400 uppercase tracking-wider">Projected Timeline</div>
-            <div class="text-3xl font-black text-gray-900 dark:text-white leading-tight">
-              Ready by {{ targetDateLabel }}
-            </div>
-            <div class="flex items-center gap-4 text-sm text-gray-500">
-              <span class="flex items-center gap-1">
-                <UIcon name="i-heroicons-banknotes" class="w-4 h-4" />
-                Capacity: {{ formatCurrency(borrowingCapacity) }}
-              </span>
-              <span class="flex items-center gap-1">
-                <UIcon name="i-heroicons-arrow-trending-up" class="w-4 h-4" />
-                Surplus: {{ formatCurrency(currentMonthlySurplus) }}/mo
-              </span>
-            </div>
+        <div class="space-y-1">
+          <div class="text-xs font-bold text-primary-600 dark:text-primary-400 uppercase tracking-wider">Projected Timeline</div>
+          <div class="text-3xl font-black text-gray-900 dark:text-white leading-tight">
+            Ready by {{ targetDateLabel }}
           </div>
-
-          <div class="lg:w-72 space-y-3 bg-white/50 dark:bg-black/20 p-4 rounded-xl border border-primary-100 dark:border-primary-900">
-            <div class="flex justify-between items-center">
-              <span class="text-xs font-bold text-gray-500">SURPLUS POWER-UP</span>
-              <span v-if="tmnBoost > 0" class="text-xs font-bold text-primary-600 bg-primary-50 px-2 py-0.5 rounded-full">
-                +{{ formatCurrency(tmnBoost) }}
-              </span>
-            </div>
-            
-            <USlider v-model="tmnBoost" :min="0" :max="2000" :step="100" color="primary" />
-            
-            <div class="flex items-center gap-2">
-              <UIcon 
-                :key="tmnBoost > 0 ? 'boosting' : 'idle'"
-                :name="tmnBoost > 0 ? 'i-heroicons-bolt' : 'i-heroicons-light-bulb'" 
-                :class="tmnBoost > 0 ? 'text-primary-500' : 'text-gray-400'"
-                class="w-5 h-5 flex-shrink-0" 
-              />
-              <span class="text-sm font-semibold" :class="tmnBoost > 0 ? 'text-primary-700 dark:text-primary-300' : 'text-gray-500'">
-                {{ tmnBoost > 0 ? impactLabel : 'Adjust slider to see impact' }}
-              </span>
-            </div>
+          <div class="flex items-center gap-4 text-sm text-gray-500">
+            <span class="flex items-center gap-1">
+              <UIcon name="i-heroicons-banknotes" class="w-4 h-4" />
+              Capacity: {{ formatCurrency(borrowingCapacity) }}
+            </span>
+            <span class="flex items-center gap-1">
+              <UIcon name="i-heroicons-arrow-trending-up" class="w-4 h-4" />
+              Surplus: {{ formatCurrency(currentMonthlySurplus) }}/mo
+            </span>
           </div>
         </div>
       </UCard>
@@ -163,13 +113,12 @@ const impactLabel = computed(() => {
               <span>TMN Strategy</span>
             </div>
             <p class="text-sm text-indigo-900 dark:text-indigo-100 leading-relaxed">
-              Your <strong>TMN (Total Monthly Needs)</strong> is the core driver of your surplus. 
-              Higher TMN increases your serviceability and DTI (Debt-to-Income) assessment at the bank, 
+              Your <strong>TMN (Total Monthly Needs)</strong> is the core driver of your surplus.
+              Higher TMN increases your serviceability and DTI (Debt-to-Income) assessment at the bank,
               but more importantly, it accelerates your deposit savings.
             </p>
             <p class="text-sm text-indigo-900/70 dark:text-indigo-100/70 leading-relaxed">
-              Use the simulator above to see how small increases in your monthly ministry support can dramatically 
-              shorten your timeline to house purchase.
+              Small increases in your monthly ministry support can dramatically shorten your timeline to house purchase.
             </p>
           </div>
         </UCard>
