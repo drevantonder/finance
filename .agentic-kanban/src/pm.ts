@@ -1,5 +1,7 @@
 import { $ } from "bun";
-import { createTask, findTaskAcrossBuckets } from "./kanban";
+import { join } from "node:path";
+import { writeFile } from "node:fs/promises";
+import { createTask, findTaskAcrossBuckets, listTasks, readTask } from "./kanban";
 import type { Task } from "./schema";
 
 export async function syncEpics() {
@@ -48,6 +50,57 @@ export async function syncEpics() {
   }
 }
 
+export async function createPRs() {
+  console.log("Checking for completed tasks to create PRs...");
+  const complete = await listTasks("complete");
+  
+  for (const filename of complete) {
+    const task = await readTask("complete", filename);
+    
+    if (task.pr_number) {
+      continue;
+    }
+
+    console.log(`Creating PR for task #${task.id}: ${task.title}`);
+    
+    try {
+      const branch = task.branch;
+      if (!branch) {
+        console.error(`Task #${task.id} has no branch metadata`);
+        continue;
+      }
+
+      // Push branch
+      console.log(`Pushing branch ${branch} to origin...`);
+      await $`git push origin ${branch}`.quiet();
+
+      // Create PR
+      const body = `Closes #${task.id}\n\n${task.description}`;
+      const title = `Epic #${task.id}: ${task.title}`;
+      
+      const prOutput = await $`gh pr create --title ${title} --body ${body} --head ${branch}`.text();
+      const prUrl = prOutput.trim();
+      
+      // Extract PR number from URL (e.g., .../pull/123)
+      const prNumber = parseInt(prUrl.split("/").pop() || "0");
+
+      const updatedTask: Task = {
+        ...task,
+        pr_number: prNumber,
+        pr_url: prUrl,
+        updated_at: new Date().toISOString()
+      };
+
+      const completePath = join(process.cwd(), "kanban", "complete", filename);
+      await writeFile(completePath, JSON.stringify(updatedTask, null, 2));
+
+      console.log(`PR created: ${prUrl}`);
+    } catch (err) {
+      console.error(`Failed to create PR for task #${task.id}:`, err);
+    }
+  }
+}
+
 function parseTasks(body: string): string[] {
   const lines = body.split("\n");
   const taskRegex = /^- \[ \] (.*)$/;
@@ -64,7 +117,10 @@ function parseTasks(body: string): string[] {
 }
 
 if (import.meta.main) {
-  syncEpics().then(() => {
+  (async () => {
+    await syncEpics();
+    await createPRs();
+  })().then(() => {
     console.log("<promise>COMPLETE</promise>");
   }).catch(err => {
     console.log(`<promise>BLOCKED: ${err.message}</promise>`);

@@ -74,3 +74,14 @@ Ralph will append entries here as tasks are completed.
 - Verified task #69 successfully moved to needs-review/ with updated metadata.
 - Tests: passing
 - Commit: de264dd
+
+## Ralph Bootstrap | 2026-01-06T23:14:33Z
+### Task 9 & 10: Review workflow and rejection handling
+- Implemented claimReview and finishReview in src/dev-outer.ts.
+- Added logic to ensure reviewers are different from implementers.
+- Implemented approval logic moving tasks to complete/.
+- Implemented rejection logic moving tasks back to unassigned/ with rejection history.
+- Implemented escalation to needs-human/ after 3 rejections.
+- Verified flow with task #69 (claimed by opus-4-5, approved, and moved to complete/).
+- Tests: passing
+- Commit: d9bc7c8

@@ -156,7 +156,7 @@
         "PM keeps task in `complete/` bucket after creating PR",
         "User can verify PR exists on GitHub after PM runs"
       ],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": 12,
