@@ -13,12 +13,14 @@ export function formatCurrency(amount: any, options?: { abbrev?: boolean; decima
   if (abbrev && abs >= 1_000) {
       return '$' + (num / 1_000).toLocaleString(undefined, { minimumFractionDigits: decimals, maximumFractionDigits: decimals }) + 'k'
   }
-  return num.toLocaleString(undefined, {
+  const absValue = Math.abs(num)
+  const formatted = absValue.toLocaleString(undefined, {
     minimumFractionDigits: decimals,
     maximumFractionDigits: decimals,
-    style: 'currency',
-    currency,
   })
+  const sign = num < 0 ? '-' : ''
+  if (currency === 'AUD') return sign + '$' + formatted
+  return sign + currency + '\u00A0' + formatted
 }
 
 export function formatPercentage(p: number, decimals = 1): string {
