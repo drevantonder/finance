@@ -472,7 +472,13 @@ If `git gtr rm` fails due to untracked files:
 
 ## Appendix: Design Rationale & Lessons Learned
 
-### 1. Signal-over-Exit Pattern
+### 7. Portable Bash (macOS Compatibility)
+Scripts in `.opencode/bin/` must remain compatible with **Bash 3.2** (macOS default).
+- **Rule**: Avoid Bash 4+ features like `${VAR^}`, `${VAR,,}`, or associative arrays.
+- **Rule**: Use `sed`, `awk`, or `tr` for string transformations (e.g., `echo "$VAR" | sed 's/./\U&/'` instead of `${VAR^}`).
+- **Rule**: Use standard `while read` loops instead of Bash 4 `mapfile`.
+
+### 8. Signal-over-Exit Pattern
 The harness script (`ralph-harness.sh`) is designed to be "exit-code agnostic." It uses `|| true` when running the agent and relies strictly on the presence of `<promise>` tags in stdout.
 - **Rationale**: This prevents the loop from crashing due to transient CLI errors (like network timeouts) while ensuring that a task is only marked "done" if the agent explicitly signals success.
 
