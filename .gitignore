@@ -28,5 +28,8 @@ backups/
 # Power to Change docs
 docs/Power to Change/
 
+# Test outputs
+playwright-report/
+
 # .ralph folder for ralph loops
 .ralph/

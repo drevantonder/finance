@@ -2,6 +2,12 @@
     "$schema": "https://opencode.ai/config.json",
     "default_agent": "project-manager",
     "model":  "opencode/glm-4.7-free",
+    "permission": {
+      "external_directory": {
+        "*": "ask",
+        "/Users/drevan/projects/finance-worktrees/**": "allow"
+      }
+    },
     "mcp": {
       "nuxt": {
         "type": "remote",

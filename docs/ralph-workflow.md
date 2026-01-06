@@ -209,17 +209,49 @@ Located at `.opencode/bin/ralph-harness.sh`. Manages:
 3. **Ordered**: Consider dependencies (e.g., "Create model" before "Add validation")
 4. **Scoped**: Avoid tasks that touch too many files or systems
 
+### PM Responsibilities (Before Dispatch)
+1. **Sync main**: `git checkout main && git pull`
+2. **Verify .gitignore**: Ensure generated artifacts are covered (playwright-report, .nuxt, etc.)
+3. **Clean state**: No untracked files in main repo
+
 ### For Managing Ralph
 1. **Monitor regularly**: Use `/ralph-status` to check progress
 2. **Respond to blocks quickly**: The sooner you fix blockers, the faster Ralph can resume
 3. **Review branches before PR**: Always check the work before merging
 4. **Clean up worktrees**: After PR merge, remove the worktree
 
+### After PR Merge
+```bash
+# Sync main
+git checkout main && git pull
+
+# Clean up worktree (force due to generated files)
+git gtr rm ralph/alpha-testing --delete-branch --force --yes
+```
+
 ### For Re-triggers
 If Ralph gets blocked or you need to adjust:
 1. Fix the blocker (update issue, fix tests, clarify requirements)
 2. Optionally update `tasks.json` in the worktree
 3. Re-run the harness in the same worktree (Ralph will skip "done" tasks)
+
+## Troubleshooting
+
+### Divergent main after pull
+```bash
+git stash && git pull --rebase && git stash pop
+```
+
+### Conflict in `.opencode/` files
+The harness script may have local customizations. Resolve by:
+1. Keeping your local version (has your customizations like `--title`)
+2. Or pulling upstream and re-applying changes
+
+### Untracked files in worktree after cleanup
+If `git gtr rm` fails due to untracked files:
+1. Check what's untracked: `cd <worktree> && git status`
+2. Add to main `.gitignore` if it's a generated artifact
+3. Use `--force` flag: `git gtr rm <branch> --delete-branch --force --yes`
 
 ## Limitations & Future Enhancements
 
@@ -257,3 +289,8 @@ Spawning Kitty tabs requires the `zsh -ic` (or equivalent) wrapper.
 ### 5. Intelligent Selection
 Ralph is instructed to pick the "highest priority" task, not just the next one in the list.
 - **Benefit**: This allows the agent to recognize if a later task is actually a prerequisite for an earlier one, or if a "refactor" task should happen before a "feature" task to ensure a cleaner implementation.
+
+### 6. Generated Artifacts and .gitignore
+Test outputs (playwright-report, coverage, etc.) must be in `.gitignore`.
+- **PM responsibility**: Verify `.gitignore` covers generated artifacts before dispatch
+- If untracked files appear after a Ralph run, add them to the main `.gitignore`
