@@ -62,18 +62,24 @@ Discuss requirements until you have **Atomic, Testable Issues**.
 
 ### Choosing Junior vs Senior
 
-**Junior-Ralph** (default):
+**Junior-Ralph** (default - use for most tasks):
 - Straightforward implementations
 - Clear acceptance criteria
 - Well-defined patterns
 - No novel security concerns
+- Bug fixes with clear reproduction steps
+- Simple UI changes
+- Routine testing tasks
+- **Start with Junior for most issues unless clearly complex**
 
-**Senior-Ralph** (for):
+**Senior-Ralph** (use when):
 - Complex algorithms or logic
 - Novel security implementations
 - Architectural changes
 - Junior blocked/failed (takeover)
 - Reviews
+- Issues requiring significant investigation
+- Performance problems that need profiling
 
 ### Dispatch Steps
 
