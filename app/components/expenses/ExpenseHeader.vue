@@ -14,7 +14,6 @@ const props = defineProps<{
 
 const emit = defineEmits<{
   (e: 'update:sortOption', value: any): void
-  (e: 'add'): void
   (e: 'toggle-all'): void
 }>()
 
@@ -95,9 +94,6 @@ const displaySortLabel = computed(() => {
           </template>
         </UButton>
       </UDropdownMenu>
-
-      <!-- Add Button -->
-      <slot name="add-button" />
     </div>
   </header>
 </template>
