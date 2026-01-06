@@ -125,7 +125,7 @@ export default defineNitroPlugin((nitroApp) => {
       const attachmentRefs = []
       for (const attachment of (email.attachments || [])) {
         const attachmentId = crypto.randomUUID()
-        const storageKey = `inbox/${id}/${attachment.filename || 'unnamed'}`
+        const storageKey = `inbox/${id}/${attachmentId}/${attachment.filename || 'unnamed'}`
         
         await blob.put(storageKey, attachment.content, {
           contentType: attachment.mimeType,

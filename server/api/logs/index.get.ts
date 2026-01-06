@@ -10,10 +10,10 @@ export default defineEventHandler(async (event) => {
   const correlationId = query.correlationId as string
   const stage = query.stage as string
 
-  // Date range filtering
+  // Date range filtering - createdAt is stored as milliseconds since epoch
   const hours = Number(query.hours)
   const dateFilter = hours
-    ? sql`${activityLog.createdAt} >= datetime('now', '-${hours} hours')`
+    ? sql`${activityLog.createdAt} >= (strftime('%s', 'now', '-${hours} hours') * 1000)`
     : undefined
 
   const filters = []

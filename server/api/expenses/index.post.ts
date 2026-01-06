@@ -64,13 +64,13 @@ export default defineEventHandler(async (event) => {
       }
     }
 
-    // 3. Create DB record
+    // 3. Create DB record with 'processing' status
     const startDb = performance.now()
     const newExpense = {
       id,
       imageKey,
       imageHash,
-      status: 'pending',
+      status: 'processing',
       schemaVersion: 4,
       capturedAt: capturedAt ? new Date(capturedAt) : now,
       createdAt: now,
@@ -92,8 +92,18 @@ export default defineEventHandler(async (event) => {
 
     event.waitUntil((async () => {
       const startGemini = performance.now()
+      const TIMEOUT_MS = 5 * 60 * 1000 // 5 minutes
+
+      // Timeout wrapper
+      const timeoutPromise = new Promise<never>((_, reject) => {
+        setTimeout(() => reject(new Error('Processing timeout')), TIMEOUT_MS)
+      })
+
       try {
-        const extraction = await extractReceiptData(isPdf ? { text: pdfText } : { image: base64Data, mimeType: contentType })
+        const extraction = await Promise.race([
+          extractReceiptData(isPdf ? { text: pdfText } : { image: base64Data, mimeType: contentType }),
+          timeoutPromise
+        ])
         const geminiDuration = Math.round(performance.now() - startGemini)
         
         const startFinish = performance.now()
@@ -158,10 +168,7 @@ export default defineEventHandler(async (event) => {
       }
     })())
 
-    return {
-      ...newExpense,
-      status: 'processing'
-    }
+    return newExpense
   } catch (err: unknown) {
     console.error('Create expense error:', err)
     logActivity({
