@@ -1,7 +1,7 @@
 import { $ } from "bun";
 import { join } from "node:path";
 import { writeFile } from "node:fs/promises";
-import { createTask, findTaskAcrossBuckets, listTasks, readTask } from "./kanban";
+import { createTask, findTaskAcrossBuckets, listTasks, readTask, moveTask } from "./kanban";
 import type { Task } from "./schema";
 
 export async function syncEpics() {
@@ -101,6 +101,70 @@ export async function createPRs() {
   }
 }
 
+export async function monitorPRs() {
+  console.log("Monitoring PRs for status changes...");
+  const complete = await listTasks("complete");
+  
+  for (const filename of complete) {
+    const task = await readTask("complete", filename);
+    
+    if (!task.pr_number) {
+      continue;
+    }
+
+    console.log(`Checking status of PR #${task.pr_number} (Task #${task.id})...`);
+    
+    try {
+      const prOutput = await $`gh pr view ${task.pr_number} --json state,reviews,comments`.text();
+      const pr = JSON.parse(prOutput);
+      
+      if (pr.state === "MERGED") {
+        console.log(`PR #${task.pr_number} merged! Archiving task #${task.id}.`);
+        
+        // Move to archived/
+        await moveTask("complete", "archived", filename);
+        
+        // Remove worktree
+        if (task.worktree_path) {
+          console.log(`Removing worktree at ${task.worktree_path}...`);
+          await $`git worktree remove ${task.worktree_path} --force`.quiet();
+        }
+      } else {
+        // Check for requested changes
+        const requestedChanges = pr.reviews.some((r: any) => r.state === "CHANGES_REQUESTED");
+        
+        if (requestedChanges) {
+          console.log(`PR #${task.pr_number} has requested changes. Moving back to unassigned/.`);
+          
+          // Append feedback to tasks
+          const feedback = pr.reviews
+            .filter((r: any) => r.state === "CHANGES_REQUESTED" && r.body)
+            .map((r: any) => `Review feedback: ${r.body}`);
+          
+          const updatedTask: Task = {
+            ...task,
+            tasks: [
+              ...task.tasks,
+              ...feedback.map((f: string, i: number) => ({
+                id: `${task.id}-fb-${Date.now()}-${i}`,
+                description: f,
+                completed: false
+              }))
+            ],
+            updated_at: new Date().toISOString()
+          };
+          
+          const completePath = join(process.cwd(), "kanban", "complete", filename);
+          await writeFile(completePath, JSON.stringify(updatedTask, null, 2));
+          await moveTask("complete", "unassigned", filename);
+        }
+      }
+    } catch (err) {
+      console.error(`Failed to check PR #${task.pr_number}:`, err);
+    }
+  }
+}
+
 function parseTasks(body: string): string[] {
   const lines = body.split("\n");
   const taskRegex = /^- \[ \] (.*)$/;
@@ -120,6 +184,7 @@ if (import.meta.main) {
   (async () => {
     await syncEpics();
     await createPRs();
+    await monitorPRs();
   })().then(() => {
     console.log("<promise>COMPLETE</promise>");
   }).catch(err => {

@@ -170,7 +170,7 @@
         "PM runs this check every time `bun run ralph-pm` is executed",
         "User can request changes on test PR and verify PM creates fix task on next sync"
       ],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": 13,
