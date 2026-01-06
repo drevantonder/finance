@@ -30,7 +30,8 @@ export function useNavigation() {
     { label: 'Assets', to: '/menu/assets', icon: 'i-heroicons-banknotes', description: 'Cash, Stocks, FHSS', color: 'bg-emerald-500' },
     { label: 'Budget', to: '/menu/budget', icon: 'i-heroicons-chart-pie', description: 'Savings goals, limits', color: 'bg-orange-500' },
     { label: 'Bank Rules', to: '/menu/bank', icon: 'i-heroicons-building-library', description: 'DTI, Serviceability', color: 'bg-indigo-500' },
-    { label: 'Purchase Costs', to: '/menu/costs', icon: 'i-heroicons-calculator', description: 'Stamp duty, Legal fees', color: 'bg-violet-500' }
+    { label: 'Purchase Costs', to: '/menu/costs', icon: 'i-heroicons-calculator', description: 'Stamp duty, Legal fees', color: 'bg-violet-500' },
+    { label: 'Performance', to: '/menu/performance', icon: 'i-heroicons-chart-bar-square', description: 'LCP, load times, cache stats', color: 'bg-teal-500' }
   ]
 
   const systemItems: SubMenuItem[] = [
