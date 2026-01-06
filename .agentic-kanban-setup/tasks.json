@@ -1,0 +1,203 @@
+{
+  "project": "agentic-kanban",
+  "description": "Build the Agentic Kanban system using a Ralph loop",
+  "tasks": [
+    {
+      "id": 1,
+      "title": "Initialize TypeScript project structure",
+      "description": "The .agentic-kanban directory exists with a working TypeScript project",
+      "acceptance_criteria": [
+        "User can run `cd .agentic-kanban && bun install` successfully",
+        "User can run `bun run test` and see 'No test files found' or tests pass",
+        "File `.agentic-kanban/package.json` exists with name '@agentic-kanban/core'",
+        "File `.agentic-kanban/tsconfig.json` exists with strict mode enabled",
+        "Directories exist: `src/`, `agents/`, `kanban/`, `config/`",
+        "All 7 kanban bucket folders exist: `kanban/unassigned/`, `kanban/assigned/`, `kanban/blocked/`, `kanban/needs-review/`, `kanban/needs-human/`, `kanban/complete/`, `kanban/archived/`"
+      ],
+      "status": "done"
+    },
+    {
+      "id": 2,
+      "title": "Kanban file operations work",
+      "description": "Tasks can be created, read, moved between buckets, and listed",
+      "acceptance_criteria": [
+        "Function `createTask(bucket, data)` creates a JSON file in the specified bucket",
+        "Function `readTask(bucket, filename)` reads and parses task JSON",
+        "Function `moveTask(fromBucket, toBucket, filename)` atomically renames the file",
+        "Function `listTasks(bucket)` returns array of task filenames in that bucket",
+        "Function `findTaskAcrossBuckets(epicId)` searches all buckets for an epic's task file",
+        "User can run tests that verify all file operations work correctly"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 3,
+      "title": "Task schema validates and heals JSON",
+      "description": "Task JSON is validated using Zod with self-healing for minor issues",
+      "acceptance_criteria": [
+        "Zod schema `TaskSchema` defines all required and optional fields for tasks",
+        "Reading a task with missing optional fields (e.g., `priority`) adds defaults and rewrites the file",
+        "Reading a task with extra unknown fields strips them and rewrites the file",
+        "Reading a task with coercible type errors (e.g., `epic: '42'` instead of `epic: 42`) coerces and rewrites",
+        "Completely malformed JSON (unparseable) moves the file to `blocked/` with error details",
+        "TypeScript types are inferred from Zod: `type Task = z.infer<typeof TaskSchema>`",
+        "Test suite validates healing behavior with at least 3 malformed examples"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 4,
+      "title": "Agent instruction files exist",
+      "description": "All Ralph agent markdown files are created with clear instructions",
+      "acceptance_criteria": [
+        "File `agents/ralph-pm.md` exists with Project Manager instructions (sync GitHub, create PRs, monitor feedback)",
+        "File `agents/ralph-dev-outer.md` exists with developer outer loop instructions (claim work, setup worktree, run inner loop, handle results)",
+        "File `agents/ralph-dev-inner.md` exists with developer inner loop instructions (implement tasks, run tests, commit, signal completion)",
+        "Each agent file clearly states what signals to output: `<promise>COMPLETE</promise>` or `<promise>BLOCKED: reason</promise>`",
+        "Agent files reference the correct paths for kanban buckets and task JSON locations"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 5,
+      "title": "Project Manager syncs GitHub epics to kanban",
+      "description": "PM detects epic issues and creates task files in unassigned/",
+      "acceptance_criteria": [
+        "User runs `bun run ralph-pm` and it successfully connects to GitHub via `gh` CLI",
+        "PM finds all open issues with label 'epic' using `gh issue list --label epic --json number,title,body`",
+        "PM parses checkbox tasks from epic issue body (lines matching `- [ ]`)",
+        "PM creates `kanban/unassigned/epic-{id}.json` with epic metadata and parsed tasks array",
+        "PM skips epics that already have a task file in any bucket (uses `findTaskAcrossBuckets`)",
+        "User can run PM sync and see test epic #69 appear in `kanban/unassigned/`"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 6,
+      "title": "Developer outer loop claims and prepares work",
+      "description": "Ralph dev can claim a task, set up a worktree, and prepare context for inner loop",
+      "acceptance_criteria": [
+        "User runs `bun run ralph-dev glm-4-7` and the outer loop starts",
+        "Outer loop reads all `kanban/unassigned/*.json` files and prompts LLM: 'Given these tasks, output the filename of the highest priority one'",
+        "Outer loop atomically moves chosen file to `kanban/assigned/` (atomic rename prevents race conditions)",
+        "Outer loop creates git worktree at `../finance-worktrees/feat-epic-{id}` on branch `feat/epic-{id}`",
+        "Outer loop copies task JSON into worktree at `.agentic-task/current.json` for inner loop to read",
+        "Outer loop adds metadata to task JSON: `assigned_to`, `assigned_at`, `branch`, `worktree_path`",
+        "User can verify worktree exists with `git worktree list`"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 7,
+      "title": "Developer inner loop implements tasks",
+      "description": "Ralph implements the checkbox tasks and commits the work",
+      "acceptance_criteria": [
+        "Outer loop spawns inner loop: `opencode run .agentic-kanban/agents/ralph-dev-inner.md` with cwd set to worktree",
+        "Inner loop reads `.agentic-task/current.json` to see the list of checkbox tasks",
+        "Inner loop implements each task, running `bun run test` after each change",
+        "Inner loop commits work with message: `feat(epic-{id}): {task description}`",
+        "Inner loop signals `<promise>COMPLETE</promise>` when all checkbox tasks are done",
+        "Inner loop signals `<promise>BLOCKED: {reason}</promise>` if stuck",
+        "User can verify commits exist in worktree branch after inner loop completes"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 8,
+      "title": "Outer loop handles completion and moves to review",
+      "description": "When inner loop completes, outer loop moves task to needs-review",
+      "acceptance_criteria": [
+        "Outer loop detects `<promise>COMPLETE</promise>` from inner loop output",
+        "Outer loop syncs `.agentic-task/current.json` changes back to the kanban task file",
+        "Outer loop adds `implemented_by: ralph-dev-{model}` metadata to task JSON",
+        "Outer loop moves task from `assigned/` to `needs-review/`",
+        "Outer loop keeps the worktree intact for the reviewer to use",
+        "Outer loop then checks for more work in `unassigned/` or `needs-review/` (review mode)"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 9,
+      "title": "Review workflow validates implementations",
+      "description": "A different Ralph model reviews the code and approves or rejects",
+      "acceptance_criteria": [
+        "Outer loop can claim from `needs-review/` only if `implemented_by` model differs from its own",
+        "Reviewer checks out the existing worktree and runs: `bun run test` and reviews code changes",
+        "If approved: reviewer sets `review.status: 'approved'`, `review.reviewer`, `review.reviewed_at`",
+        "If issues found: reviewer sets `review.status: 'rejected'` with `review.issues` array",
+        "After approved: outer loop moves task from `needs-review/` to `complete/`",
+        "After rejected: outer loop handles rejection (see task 10)"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 10,
+      "title": "Rejection handling escalates to needs-human",
+      "description": "After 3 rejections, task moves to needs-human bucket",
+      "acceptance_criteria": [
+        "When `review.status: 'rejected'`, outer loop increments `rejection_count` in task JSON",
+        "Rejected task moves back to `unassigned/` with `review.issues` appended to tasks array",
+        "The `rejection_count` field remains visible in JSON for tracking across attempts",
+        "If `rejection_count >= 3`, task moves to `kanban/needs-human/` instead",
+        "Task in `needs-human/` includes `escalation_reason` and `rejection_history` array",
+        "All outer loops completely ignore tasks in `needs-human/` bucket"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 11,
+      "title": "Project Manager creates PRs from complete bucket",
+      "description": "PM detects approved tasks and creates GitHub PRs",
+      "acceptance_criteria": [
+        "PM scans `kanban/complete/` for tasks without `pr_number` field",
+        "PM pushes worktree branch to origin: `git push origin {branch}`",
+        "PM creates PR: `gh pr create --title 'Epic #{id}: {title}' --body 'Closes #{epic_id}'`",
+        "PM adds `pr_number` and `pr_url` to task JSON",
+        "PM keeps task in `complete/` bucket after creating PR",
+        "User can verify PR exists on GitHub after PM runs"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 12,
+      "title": "Project Manager monitors PRs for feedback",
+      "description": "PM watches for merge events and requested changes",
+      "acceptance_criteria": [
+        "PM fetches PR status: `gh pr view {pr_number} --json state,reviews,comments`",
+        "If PR state is 'MERGED': PM moves task to `archived/` and removes worktree",
+        "If PR has requested changes: PM appends feedback comments to task's tasks array",
+        "Task with feedback moves back to `unassigned/` (same branch, worktree recreated by next claimer)",
+        "PM runs this check every time `bun run ralph-pm` is executed",
+        "User can request changes on test PR and verify PM creates fix task on next sync"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 13,
+      "title": "Fleet configuration controls Ralph availability",
+      "description": "Config file defines available models and can enable/disable them",
+      "acceptance_criteria": [
+        "File `.agentic-kanban/config/fleet.json` exists with developer configurations array",
+        "Each config has: `name`, `model` (e.g., 'glm-4-7'), `enabled` (boolean)",
+        "CLI script reads fleet.json and validates requested model exists and is enabled",
+        "If model is disabled or not found, script exits with clear error message",
+        "User can modify fleet.json and changes take effect on next loop iteration",
+        "Multiple enabled models can run simultaneously without conflict"
+      ],
+      "status": "pending"
+    },
+    {
+      "id": 14,
+      "title": "CLI scripts launch Ralph instances",
+      "description": "User can run Ralphs via simple bun scripts",
+      "acceptance_criteria": [
+        "User can run `cd .agentic-kanban && bun run ralph-pm` to start Project Manager",
+        "User can run `cd .agentic-kanban && bun run ralph-dev glm-4-7` to start developer",
+        "Each loop runs continuously: check for work → process → sleep if none → repeat",
+        "User can Ctrl+C to stop any loop cleanly (graceful shutdown)",
+        "Console output shows clear status: what's being worked on, sleep duration, errors"
+      ],
+      "status": "pending"
+    }
+  ]
+}

@@ -1,0 +1,4 @@
+# Agentic Kanban Bootstrap Progress
+
+This file tracks the progress of building the Agentic Kanban system.
+Ralph will append entries here as tasks are completed.

@@ -1,0 +1,16 @@
+{
+  "name": "@agentic-kanban/core",
+  "version": "0.1.0",
+  "description": "Agentic Kanban Core",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "bun test"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
