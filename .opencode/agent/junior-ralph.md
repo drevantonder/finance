@@ -1,10 +1,7 @@
 ---
 description: Junior developer - Fast autonomous task execution
 mode: primary
-model: google/gemini-3-flash-preview
-thinkingConfig:
-  thinkingLevel: high
-  includeThoughts: true
+model: z-ai-coding-plan/glm-4.7
 tools:
   bash: true
   read: true
