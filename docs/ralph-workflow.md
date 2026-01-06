@@ -29,7 +29,7 @@ Human ↔ PM (MiniMax M2.1) → Harness (Bash Loop) → Junior/Senior Ralph
 
 ## The `.ralph/` Folder (In Worktree Only!)
 
-**CRITICAL:** The `.ralph/` folder exists **ONLY in worktrees**. It does **NOT** exist in the main repository.
+**CRITICAL:** The `.ralph/` folder exists **ONLY in worktrees**. It does **NOT** exist in the prod repository.
 
 **Main Repo:** `/Users/drevan/projects/finance/` → No `.ralph/` folder
 **Worktree:** `/Users/drevan/projects/finance-worktrees/ralph/alpha-.../.ralph/` → Contains all state
@@ -54,7 +54,7 @@ Human ↔ PM (MiniMax M2.1) → Harness (Bash Loop) → Junior/Senior Ralph
     └── status               # RUNNING | COMPLETE | APPROVED | NEEDS_WORK | BLOCKED
 ```
 
-**Why?** Worktrees are disposable. The `.ralph/` folder contains generated artifacts and state that should never pollute the main branch.
+**Why?** Worktrees are disposable. The `.ralph/` folder contains generated artifacts and state that should never pollute the prod branch.
 
 ### What The PM Does Before Dispatch
 1. Plan tasks in their head (or in a separate file)
@@ -427,9 +427,9 @@ export function formatDateLabel(date: string, format: 'short' | 'full'): string 
 ```
 
 ### PM Responsibilities (Before Dispatch)
-1. **Sync main**: `git checkout main && git pull`
+1. **Sync prod**: `git checkout prod && git pull`
 2. **Verify .gitignore**: Ensure generated artifacts are covered (playwright-report, .nuxt, etc.)
-3. **Clean state**: No untracked files in main repo
+3. **Clean state**: No untracked files in prod repo
 
 ### For Managing Ralph
 1. **Monitor regularly**: Use `/ralph-status` to check progress
@@ -439,8 +439,8 @@ export function formatDateLabel(date: string, format: 'short' | 'full'): string 
 
 ### After PR Merge
 ```bash
-# Sync main
-git checkout main && git pull
+# Sync prod
+git checkout prod && git pull
 
 # Clean up worktree (force due to generated files)
 git gtr rm ralph/alpha-testing --delete-branch --force --yes
@@ -454,7 +454,7 @@ If Ralph gets blocked or you need to adjust:
 
 ## Troubleshooting
 
-### Divergent main after pull
+### Divergent prod after pull
 ```bash
 git stash && git pull --rebase && git stash pop
 ```
@@ -467,7 +467,7 @@ The harness script may have local customizations. Resolve by:
 ### Untracked files in worktree after cleanup
 If `git gtr rm` fails due to untracked files:
 1. Check what's untracked: `cd <worktree> && git status`
-2. Add to main `.gitignore` if it's a generated artifact
+2. Add to prod `.gitignore` if it's a generated artifact
 3. Use `--force` flag: `git gtr rm <branch> --delete-branch --force --yes`
 
 ## Appendix: Design Rationale & Lessons Learned
@@ -494,7 +494,7 @@ The PM is designed to be "idempotent." If a Ralph run fails or is manually inter
 
 ### 4. Terminal Automation (`zsh -ic`)
 Spawning Kitty tabs requires the `zsh -ic` (or equivalent) wrapper.
-- **Reason**: Standard non-interactive shells often do not source profile files, leading to "command not found" errors for `pnpm`, `node`, or `opencode`. The interactive flag ensures the environment is identical to your main terminal.
+- **Reason**: Standard non-interactive shells often do not source profile files, leading to "command not found" errors for `pnpm`, `node`, or `opencode`. The interactive flag ensures the environment is identical to your prod terminal.
 
 ### 5. Intelligent Selection
 Ralph is instructed to pick the "highest priority" task, not just the next one in the list.
@@ -503,4 +503,4 @@ Ralph is instructed to pick the "highest priority" task, not just the next one i
 ### 6. Generated Artifacts and .gitignore
 Test outputs (playwright-report, coverage, etc.) must be in `.gitignore`.
 - **PM responsibility**: Verify `.gitignore` covers generated artifacts before dispatch
-- If untracked files appear after a Ralph run, add them to the main `.gitignore`
+- If untracked files appear after a Ralph run, add them to the prod `.gitignore`
