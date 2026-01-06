@@ -1,5 +1,5 @@
 ---
-description: Start autonomous Ralph loop for curated tasks
+description: Start autonomous Ralph loop for curated tasks in a new Kitty tab
 agent: project-manager
 ---
 
@@ -20,17 +20,18 @@ You are running the `/dispatch` command.
    - Create empty `"$WORKTREE_PATH/.ralph/progress.txt"`.
    - Write `RUNNING` to `"$WORKTREE_PATH/.ralph/status"`.
 
-4. **Launch Loop**:
-   Use the `kitten @` command to spawn a new Kitty tab with the harness.
+4. **Launch Loop in Kitty Tab**:
+   Use the `ralph-dispatch.sh` script to spawn a new Kitty tab:
    ```bash
-   SOCKET=$(ls /tmp/kitty-socket-* | head -1)
-   kitten @ --to unix:$SOCKET launch \
-     --type=tab \
-     --tab-title "Ralph-<Name>" \
-     --cwd "$WORKTREE_PATH" \
-     --copy-env \
-     zsh -ic "bash .opencode/bin/ralph-harness.sh"
+   bash .opencode/bin/ralph-dispatch.sh "$WORKTREE_PATH" "<name>"
    ```
-   ! `bash -c 'SOCKET=$(ls /tmp/kitty-socket-* | head -1); WORKTREE_PATH=$(git gtr go ralph/<name>-<descriptor>); kitten @ --to unix:$SOCKET launch --type=tab --tab-title "Ralph-<Name>" --cwd "$WORKTREE_PATH" --copy-env zsh -ic "bash .opencode/bin/ralph-harness.sh"'`
+   Example:
+   ```bash
+   bash .opencode/bin/ralph-dispatch.sh /Users/drevan/projects/finance-worktrees/ralph/alpha-testing-overhaul alpha
+   ```
 
-Inform the user that the Ralph loop has been dispatched.
+5. **Confirm Launch**:
+   - Tab title should show "ralph-<name>"
+   - Tab runs the harness loop autonomously
+
+Inform the user that the Ralph loop has been dispatched and provide the Kitty tab name.
