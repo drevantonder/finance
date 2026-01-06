@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+# ralph-check-name - Quick availability check for Ralph NATO names
+# Usage: ralph-check-name [name]
+#   If name provided: checks that specific name
+#   If no args: shows all available names
+
+set -euo pipefail
+
+NAMES=(alpha bravo charlie delta echo foxtrot golf hotel india juliet)
+
+# Get active worktrees
+ACTIVE=$(git gtr list --porcelain 2>/dev/null | grep "ralph/" | sed 's|.*/ralph-||' | sed 's/-.*$//' || true)
+
+# If specific name requested
+if [ $# -eq 1 ]; then
+  NAME="$(echo "$1" | tr '[:upper:]' '[:lower:]')"
+  if echo "$ACTIVE" | grep -qi "^${NAME}$"; then
+    echo "❌ ralph-${NAME} is IN USE"
+    exit 1
+  else
+    echo "✅ ralph-${NAME} is AVAILABLE"
+    exit 0
+  fi
+fi
+
+# Otherwise show all
+echo "Ralph Name Availability:"
+echo "========================"
+for name in "${NAMES[@]}"; do
+  if echo "$ACTIVE" | grep -qi "^${name}$"; then
+    echo "❌ ${name} (in use)"
+  else
+    echo "✅ ${name}"
+  fi
+done
+
+# Show next available
+for name in "${NAMES[@]}"; do
+  if ! echo "$ACTIVE" | grep -qi "^${name}$"; then
+    echo ""
+    echo "Next available: ${name}"
+    exit 0
+  fi
+done
+
+echo ""
+echo "⚠️  All names in use!"
+exit 1

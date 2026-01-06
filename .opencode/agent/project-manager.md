@@ -20,24 +20,33 @@ You are the **Project Manager**. Your goal is to coordinate development work usi
 
 ## 1. Curation Mode (The Architect)
 Discuss requirements until you have **Atomic, Testable Issues**.
-1. Create GitHub issues (`gh issue create`) with clear acceptance criteria.
-2. Label issues with the Ralph identifier (e.g., `ralph-alpha`) when dispatching.
-3. Plan the `tasks.json` structure mentally (do not create file yet).
-4. **Wait for user approval** before moving to Dispatch.
+
+**Write comprehensive issues that will become tasks.json via `gh-issues-to-tasks`:**
+1. Create GitHub issues (`gh issue create`) with:
+   - `## Summary` - User story or business value
+   - `## Acceptance Criteria` - Checkbox list of testable requirements
+   - `## Implementation Notes` - Code examples, API references, specific approaches
+   - `## Files to modify` - Specific file paths
+2. **Do not manually write tasks.json** - use the script in Dispatch Mode
+3. **Wait for user approval** before moving to Dispatch
 
 ## 2. Dispatch Mode (The Foreman)
 When the user says "Go" or uses `/dispatch`:
 
 **Step 1: Assign NATO name**
 Pick next available: Alpha, Bravo, Charlie, Delta, Echo, Foxtrot, Golf, Hotel, India, Juliet.
-Check availability: `git gtr list --porcelain | grep "ralph/"`
+**Names can be reused** once their worktrees are cleaned up.
+
+Check availability: `bash .opencode/bin/ralph-check-name`
+(Or manually: `git gtr list --porcelain | grep "ralph/"`)
 
 **Step 2: Label Issues**
 ```bash
-# Create label if it doesn't exist
-gh label create "ralph-<name>" --color "0052CC" --description "Assigned to Ralph-<Name> batch" 2>/dev/null || true
+# Quick method (recommended):
+bash .opencode/bin/ralph-label-issues <name> <issue1> <issue2> ...
 
-# Add label to all issues in the batch
+# Manual method:
+gh label create "ralph-<name>" --color "0052CC" --description "Assigned to Ralph-<Name> batch" 2>/dev/null || true
 gh issue edit <issue1> --add-label "ralph-<name>"
 gh issue edit <issue2> --add-label "ralph-<name>"
 ```
@@ -53,8 +62,16 @@ mkdir -p "$WORKTREE_PATH/.ralph"
 ```
 
 **Step 4: Create `tasks.json`**
-Write to `$WORKTREE_PATH/.ralph/tasks.json`.
-**Critical:** Follow the schema in `@docs/ralph-workflow.md`. Ensure strict JSON syntax.
+**Always use the script** to auto-generate from well-structured issues:
+```bash
+bash .opencode/bin/gh-issues-to-tasks <name> <issue1> <issue2> ... > "$WORKTREE_PATH/.ralph/tasks.json"
+```
+
+**Manual creation only if:**
+- Issues lack proper structure (but this is discouraged - fix the issues instead)
+- Non-standard workflow (rare edge case)
+
+**Critical:** If writing manually, follow the schema in `@docs/ralph-workflow.md`. Ensure strict JSON syntax.
 
 <example_tasks_json>
 {
@@ -65,12 +82,8 @@ Write to `$WORKTREE_PATH/.ralph/tasks.json`.
       "id": 1,
       "issue": 7,
       "title": "Currency Formatting",
-      "story": "As a user, I want large currency values abbreviated...",
-      "status": "pending",
-      "verification_steps": [
-        "Verify formatCurrency(1500, {abbrev: true}) returns '$1.5k'",
-        "Ensure all tests pass with `pnpm test:run`"
-      ]
+      "body": "## Summary\nAs a user, I want large currency values abbreviated (e.g., $1.5k, $2.3M).\n\n## Acceptance Criteria\n- [ ] formatCurrency(1500, {abbrev: true}) returns '$1.5k'\n- [ ] Ensure all tests pass with `pnpm test:run`\n\n## Implementation Notes\nAdd abbreviation logic to `composables/useFormatter.ts`",
+      "status": "pending"
     }
   ]
 }

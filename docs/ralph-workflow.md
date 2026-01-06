@@ -68,7 +68,7 @@ Human ↔ PM (Interactive) → Harness (Bash Loop) → Ralph (Stateless Agent)
 
 ### `tasks.json` Schema
 
-**IMPORTANT**: tasks.json must be detailed enough for Ralph to work independently in a fresh context window. Include explicit step-by-step instructions and test procedures.
+**IMPORTANT**: tasks.json must contain full context from GitHub issues. The `body` field includes all details Ralph needs to work independently in a fresh context window.
 
 ```json
 {
@@ -79,42 +79,15 @@ Human ↔ PM (Interactive) → Harness (Bash Loop) → Ralph (Stateless Agent)
       "id": 1,
       "issue": 42,
       "title": "Create POST /api/login endpoint",
-      "status": "pending",
-      "category": "api",
-      "files": ["server/api/login.post.ts"],
-      "testFile": "test/integration/login.test.ts",
-      "steps": [
-        "Read existing server/api/login.post.ts if exists",
-        "Implement login handler that accepts email/password",
-        "Use jose library to generate JWT token on valid credentials",
-        "Create test/integration/login.test.ts",
-        "Test valid credentials returns 200 with JWT",
-        "Test invalid credentials returns 401",
-        "Test missing credentials returns 400",
-        "Run pnpm test:run and verify tests pass",
-        "Run pnpm nuxt typecheck and verify no errors"
-      ],
-      "acceptance": "Endpoint returns 200 with JWT on valid credentials, all tests pass"
+      "body": "## Summary\nImplement login endpoint that accepts email/password and returns JWT token.\n\n## Acceptance Criteria\n- [ ] POST /api/login with valid creds returns 200 with JWT\n- [ ] POST /api/login with invalid creds returns 401\n- [ ] POST /api/login with missing body returns 400\n- [ ] Run pnpm test:run and verify tests pass\n- [ ] Run pnpm nuxt typecheck and verify no errors\n\n## Implementation Notes\nUse `jose` library to generate JWT tokens:\n```typescript\nimport { SignJWT } from 'jose'\nconst secret = new TextEncoder().encode(process.env.JWT_SECRET)\nconst token = await new SignJWT({ userId: user.id })\n  .setProtectedHeader({ alg: 'HS256' })\n  .setExpirationTime('24h')\n  .sign(secret)\n```\n\n## Files to modify\n- `server/api/login.post.ts` (create new)\n- `test/integration/login.test.ts` (create new)",
+      "status": "pending"
     },
     {
       "id": 2,
       "issue": 43,
       "title": "Add JWT validation middleware",
-      "status": "pending",
-      "category": "api",
-      "files": ["server/middleware/auth.ts"],
-      "testFile": "test/integration/auth-middleware.test.ts",
-      "steps": [
-        "Create server/middleware/auth.ts",
-        "Implement JWT validation using jose library",
-        "Apply middleware to protected routes",
-        "Create tests for valid token access",
-        "Create tests for invalid token returns 401",
-        "Create tests for missing token returns 401",
-        "Run pnpm test:run and verify tests pass",
-        "Run pnpm nuxt typecheck and verify no errors"
-      ],
-      "acceptance": "Protected routes return 401 without valid token, all tests pass"
+      "body": "## Summary\nCreate middleware to validate JWT tokens on protected routes.\n\n## Acceptance Criteria\n- [ ] Protected routes return 401 without valid token\n- [ ] Valid tokens allow access to protected routes\n- [ ] Expired tokens return 401\n- [ ] All tests pass\n\n## Implementation Notes\nUse `jose` for validation:\n```typescript\nimport { jwtVerify } from 'jose'\nconst { payload } = await jwtVerify(token, secret)\n```\n\n## Files to modify\n- `server/middleware/auth.ts` (create new)\n- `test/integration/auth-middleware.test.ts` (create new)",
+      "status": "pending"
     }
   ]
 }
@@ -124,9 +97,15 @@ Human ↔ PM (Interactive) → Harness (Bash Loop) → Ralph (Stateless Agent)
 - `id`: Unique integer per task
 - `issue`: GitHub issue number
 - `title`: Clear task description
+- `body`: **Full GitHub issue body in markdown** (contains summary, acceptance criteria, implementation notes, code examples, etc.)
 - `status`: `pending` | `done` | `blocked`
-- `story`: The "User Story" explaining the intent and value (The "Why")
-- `verification_steps`: **Behavioral assertions that must be true** (The "What")
+
+**Why `body` contains everything:** Ralph is stateless and needs complete context. The issue body should contain:
+- Summary/story (the "why")
+- Acceptance criteria (the "what")
+- Implementation notes (the "how" - approaches, APIs, code examples)
+- Files to modify
+- References/links
 
 **Example:**
 ```json
@@ -135,13 +114,7 @@ Human ↔ PM (Interactive) → Harness (Bash Loop) → Ralph (Stateless Agent)
   "issue": 42,
   "title": "Login Endpoint",
   "status": "pending",
-  "story": "As a frontend app, I need to authenticate users via email/pass so I can get a JWT for secured requests.",
-  "verification_steps": [
-    "POST /api/login with valid creds returns 200 + JWT",
-    "POST /api/login with invalid creds returns 401",
-    "POST /api/login with missing body returns 400",
-    "New tests are passing in CI"
-  ]
+  "body": "## Summary\nAs a frontend app, I need to authenticate users via email/pass so I can get a JWT for secured requests.\n\n## Acceptance Criteria\n- [ ] POST /api/login with valid creds returns 200 + JWT\n- [ ] POST /api/login with invalid creds returns 401\n- [ ] POST /api/login with missing body returns 400\n\n## Implementation Notes\nUse `jose` library for JWT generation:\n```typescript\nimport { SignJWT } from 'jose'\nconst token = await new SignJWT({ userId: user.id }).sign(secret)\n```\n\n## Files to modify\n- `server/api/login.post.ts`"
 }
 ```
 
@@ -184,15 +157,24 @@ The PM discusses features with the user and breaks them into **atomic, testable 
 
 When the user approves (`/dispatch`):
 
-1. **Assign Identity**: Pick next available NATO name (Alpha → Juliet) by checking existing worktrees
+1. **Assign Identity**: Pick next available NATO name (Alpha → Juliet)
+   - **Use script**: `bash .opencode/bin/ralph-check-name` (shows all availability)
+   - Or check manually: `git gtr list --porcelain | grep "ralph/"`
+   
 2. **Label Issues** (REQUIRED):
-   - Create label if missing: `gh label create "ralph-<name>" --color "0052CC" --description "..."`
-   - Apply to ALL issues: `gh issue edit <num> --add-label "ralph-<name>"`
+   - **Use script**: `bash .opencode/bin/ralph-label-issues <name> <issue1> <issue2> ...`
+   - Or label manually: `gh label create "ralph-<name>" --color "0052CC" ...` then `gh issue edit <num> --add-label "ralph-<name>"`
+   
 3. **Create Environment**:
    - `git gtr new ralph/<name>-<descriptor>`
-   - Initialize `.ralph/` folder in the worktree
-   - Write `tasks.json`, create empty `progress.txt`, set status to `RUNNING`
-4. **Launch**: Spawn Kitty tab running `.opencode/bin/ralph-harness.sh`
+   - `WORKTREE_PATH=$(git gtr go ralph/<name>-<descriptor>)`
+   - `mkdir -p "$WORKTREE_PATH/.ralph"`
+   
+4. **Generate tasks.json**:
+   - **Recommended**: `bash .opencode/bin/gh-issues-to-tasks <name> <issue1> ... > "$WORKTREE_PATH/.ralph/tasks.json"`
+   - Or write manually (see schema above)
+   
+5. **Launch**: `bash .opencode/bin/ralph-dispatch.sh "$WORKTREE_PATH" "<name>"`
 
 ### 3. Execution (Ralph Loop)
 
@@ -204,15 +186,19 @@ Ralph operates in a loop managed by the harness. **Every iteration starts fresh 
 2. Read `.ralph/tasks.json` to get task list
 3. Read `.ralph/progress.txt` to understand what's done
 4. Run `git log --oneline -20` to see recent commits
-5. Choose the highest-priority pending task (based on story and logical order)
+5. Choose the highest-priority pending task (based on dependencies and logical order)
 ```
 
 **Implementation Loop:**
 ```
-6. Analyze the `story` and `verification_steps` to understand the goal
+6. Read the task's `body` field (full GitHub issue markdown) to understand:
+   - Summary (the "why")
+   - Acceptance criteria (the "what")
+   - Implementation notes (the "how" - code examples, APIs, approaches)
+   - Files to modify
 7. Read relevant code to orient himself
 8. Implement the behavior
-9. Verify using the `verification_steps` (usually running tests)
+9. Verify implementation matches acceptance criteria (usually by running tests)
 10. If verification fails: Fix and retry (up to 8 attempts total)
 11. If verification passes:
     - Update task.status to "done" in .ralph/tasks.json
@@ -241,7 +227,11 @@ After Ralph exits:
 ### Ralph Names (Sequential Assignment)
 Alpha, Bravo, Charlie, Delta, Echo, Foxtrot, Golf, Hotel, India, Juliet
 
-PM checks existing worktrees and picks the next available name.
+**Names are reusable** - once a worktree is cleaned up, the name becomes available again.
+
+PM checks existing worktrees and picks the next available name:
+- Quick: `bash .opencode/bin/ralph-check-name`
+- Manual: `git gtr list --porcelain | grep "ralph/"`
 
 ### Worktree Isolation
 - Location: Default GTR location (`../finance-worktrees/`)
@@ -255,8 +245,9 @@ PM checks existing worktrees and picks the next available name.
 
 ### GitHub Integration
 - **Labels are REQUIRED** - PM must label issues before dispatch
-- Create label if missing: `gh label create "ralph-<name>" --color "0052CC" ...`
-- Apply label to ALL issues in batch: `gh issue edit <num> --add-label "ralph-<name>"`
+- **Use script**: `bash .opencode/bin/ralph-label-issues <name> <issue1> <issue2> ...`
+- Or manually: `gh label create "ralph-<name>" --color "0052CC" ...` then `gh issue edit <num> --add-label "ralph-<name>"`
+- **Generate tasks.json**: `bash .opencode/bin/gh-issues-to-tasks <name> <issue1> ... > tasks.json`
 - PM creates consolidated PR linking all completed issues
 - PR body format: "Fixes #42, Fixes #43, Fixes #44"
 
@@ -297,6 +288,9 @@ If Ralph encounters a blocker (tests fail after 8 attempts, unclear requirements
 
 | Script | Purpose |
 |--------|---------|
+| `ralph-check-name [name]` | Check Ralph name availability (no args = show all) |
+| `ralph-label-issues <name> <issue1> ...` | Bulk label issues for Ralph batch |
+| `gh-issues-to-tasks <name> <issue1> ...` | Convert GitHub issues to tasks.json (outputs to stdout) |
 | `ralph-pulse` | Show project dashboard |
 | `ralph-status` | Check progress of active Ralph runs |
 | `ralph-details <worktree>` | Show detailed status of a specific worktree |
@@ -315,23 +309,42 @@ Located at `.opencode/bin/ralph-harness.sh`. Manages:
 
 ## Best Practices
 
-### For Curating Tasks
-1. **Behavior-Driven**: Define *what* to verify, not *how* to code.
-2. **Atomic**: Each task should be independently verifiable.
-3. **Explicit Verification**: Verification steps must be clear pass/fail conditions.
-4. **Scoped**: Small enough to fit in one context window iteration.
+### For Curating Tasks (Writing Good Issues)
+Since tasks.json is now auto-generated from issues, focus on writing comprehensive issues:
 
-**Example Task:**
-```json
-{
-  "title": "Date Formatting",
-  "story": "As a user, I need dates displayed as 'Jul 2025' or '1 Jul 2025' depending on context.",
-  "verification_steps": [
-    "Verify formatDateLabel('2025-07-01', 'short') returns 'Jul 2025'",
-    "Verify formatDateLabel('2025-07-01', 'full') returns '1 Jul 2025'",
-    "Unit tests pass"
-  ]
+1. **Include ## Summary** - The "why" (user story or business value)
+2. **Include ## Acceptance Criteria** - Checkbox list of testable requirements
+3. **Include ## Implementation Notes** - Code examples, API references, approaches
+4. **Include ## Files to modify** - Specific file paths to guide Ralph
+5. **Atomic**: Each issue should be independently completable
+6. **Scoped**: Small enough for one Ralph iteration
+
+**Example Issue (becomes task via gh-issues-to-tasks):**
+```markdown
+## Summary
+As a user, I need dates displayed in different formats depending on context.
+
+## Acceptance Criteria
+- [ ] formatDateLabel('2025-07-01', 'short') returns 'Jul 2025'
+- [ ] formatDateLabel('2025-07-01', 'full') returns '1 Jul 2025'
+- [ ] All unit tests pass
+- [ ] pnpm nuxt typecheck passes
+
+## Implementation Notes
+Add to `composables/useFormatter.ts`:
+```typescript
+export function formatDateLabel(date: string, format: 'short' | 'full'): string {
+  const d = new Date(date)
+  const month = d.toLocaleString('en', { month: 'short' })
+  const year = d.getFullYear()
+  if (format === 'short') return `${month} ${year}`
+  return `${d.getDate()} ${month} ${year}`
 }
+```
+
+## Files to modify
+- `composables/useFormatter.ts`
+- `test/unit/formatter.test.ts`
 ```
 
 ### PM Responsibilities (Before Dispatch)

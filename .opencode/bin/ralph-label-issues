@@ -1,0 +1,35 @@
+#!/usr/bin/env bash
+# ralph-label-issues - Bulk label GitHub issues for Ralph batch
+# Usage: ralph-label-issues <name> <issue1> [issue2] [issue3] ...
+# Example: ralph-label-issues alpha 15 16 17
+
+set -euo pipefail
+
+if [ $# -lt 2 ]; then
+  echo "Usage: ralph-label-issues <name> <issue1> [issue2] ..."
+  echo "Example: ralph-label-issues alpha 15 16 17"
+  exit 1
+fi
+
+NAME="$(echo "$1" | tr '[:upper:]' '[:lower:]')"
+shift
+ISSUES=("$@")
+
+LABEL="ralph-${NAME}"
+
+# Create label if it doesn't exist
+NAME_CAPITALIZED="$(echo "${NAME:0:1}" | tr '[:lower:]' '[:upper:]')$(echo "${NAME:1}")"
+gh label create "$LABEL" \
+  --color "0052CC" \
+  --description "Assigned to Ralph-${NAME_CAPITALIZED} batch" \
+  2>/dev/null || true
+
+echo "Labeling ${#ISSUES[@]} issue(s) with '${LABEL}'..."
+
+# Label all issues
+for issue in "${ISSUES[@]}"; do
+  gh issue edit "$issue" --add-label "$LABEL"
+  echo "  ✅ #${issue}"
+done
+
+echo "Done! View at: https://github.com/$(gh repo view --json nameWithOwner -q .nameWithOwner)/labels/${LABEL}"
