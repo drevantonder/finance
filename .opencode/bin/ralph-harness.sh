@@ -13,6 +13,10 @@ if [[ ! -f ".ralph/tasks.json" ]]; then
     exit 1
 fi
 
+# Write PID file for process tracking
+echo $$ > .ralph/pid
+trap 'rm -f .ralph/pid' EXIT
+
 echo "🚀 Starting Ralph-${RALPH_ID} (Max $MAX_ITERATIONS iterations)"
 echo "RUNNING" > .ralph/status
 
