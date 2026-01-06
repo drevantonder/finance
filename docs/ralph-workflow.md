@@ -85,14 +85,14 @@ Human ↔ PM (MiniMax M2.1) → Harness (Bash Loop) → Junior/Senior Ralph
       "id": 1,
       "issue": 42,
       "title": "Create POST /api/login endpoint",
-      "body": "## Summary\nImplement login endpoint that accepts email/password and returns JWT token.\n\n## Acceptance Criteria\n- [ ] POST /api/login with valid creds returns 200 with JWT\n- [ ] POST /api/login with invalid creds returns 401\n- [ ] POST /api/login with missing body returns 400\n- [ ] Run pnpm test:run and verify tests pass\n- [ ] Run pnpm nuxt typecheck and verify no errors\n\n## Implementation Notes\nUse `jose` library to generate JWT tokens:\n```typescript\nimport { SignJWT } from 'jose'\nconst secret = new TextEncoder().encode(process.env.JWT_SECRET)\nconst token = await new SignJWT({ userId: user.id })\n  .setProtectedHeader({ alg: 'HS256' })\n  .setExpirationTime('24h')\n  .sign(secret)\n```\n\n## Files to modify\n- `server/api/login.post.ts` (create new)\n- `test/integration/login.test.ts` (create new)",
+      "body": "## Summary\nImplement login endpoint that accepts email/password and returns JWT token.\n\n## Acceptance Criteria\n- [ ] POST /api/login with valid creds returns 200 with JWT\n- [ ] POST /api/login with invalid creds returns 401\n- [ ] POST /api/login with missing body returns 400\n- [ ] Run pnpm test:run and verify tests pass\n- [ ] Run pnpm nuxt typecheck and verify no errors",
       "status": "pending"
     },
     {
       "id": 2,
       "issue": 43,
       "title": "Add JWT validation middleware",
-      "body": "## Summary\nCreate middleware to validate JWT tokens on protected routes.\n\n## Acceptance Criteria\n- [ ] Protected routes return 401 without valid token\n- [ ] Valid tokens allow access to protected routes\n- [ ] Expired tokens return 401\n- [ ] All tests pass\n\n## Implementation Notes\nUse `jose` for validation:\n```typescript\nimport { jwtVerify } from 'jose'\nconst { payload } = await jwtVerify(token, secret)\n```\n\n## Files to modify\n- `server/middleware/auth.ts` (create new)\n- `test/integration/auth-middleware.test.ts` (create new)",
+      "body": "## Summary\nCreate middleware to validate JWT tokens on protected routes.\n\n## Acceptance Criteria\n- [ ] Protected routes return 401 without valid token\n- [ ] Valid tokens allow access to protected routes\n- [ ] Expired tokens return 401\n- [ ] All tests pass",
       "status": "pending"
     }
   ]
@@ -103,15 +103,12 @@ Human ↔ PM (MiniMax M2.1) → Harness (Bash Loop) → Junior/Senior Ralph
 - `id`: Unique integer per task
 - `issue`: GitHub issue number
 - `title`: Clear task description
-- `body`: **Full GitHub issue body in markdown** (contains summary, acceptance criteria, implementation notes, code examples, etc.)
+- `body`: **Full GitHub issue body in markdown** (contains summary, acceptance criteria, etc.)
 - `status`: `pending` | `done` | `blocked`
 
 **Why `body` contains everything:** Ralph is stateless and needs complete context. The issue body should contain:
 - Summary/story (the "why")
 - Acceptance criteria (the "what")
-- Implementation notes (the "how" - approaches, APIs, code examples)
-- Files to modify
-- References/links
 
 **Example:**
 ```json
@@ -120,7 +117,7 @@ Human ↔ PM (MiniMax M2.1) → Harness (Bash Loop) → Junior/Senior Ralph
   "issue": 42,
   "title": "Login Endpoint",
   "status": "pending",
-  "body": "## Summary\nAs a frontend app, I need to authenticate users via email/pass so I can get a JWT for secured requests.\n\n## Acceptance Criteria\n- [ ] POST /api/login with valid creds returns 200 + JWT\n- [ ] POST /api/login with invalid creds returns 401\n- [ ] POST /api/login with missing body returns 400\n\n## Implementation Notes\nUse `jose` library for JWT generation:\n```typescript\nimport { SignJWT } from 'jose'\nconst token = await new SignJWT({ userId: user.id }).sign(secret)\n```\n\n## Files to modify\n- `server/api/login.post.ts`"
+  "body": "## Summary\nAs a frontend app, I need to authenticate users via email/pass so I can get a JWT for secured requests.\n\n## Acceptance Criteria\n- [ ] POST /api/login with valid creds returns 200 + JWT\n- [ ] POST /api/login with invalid creds returns 401\n- [ ] POST /api/login with missing body returns 400\n\n`"
 }
 ```
 
@@ -472,19 +469,6 @@ If `git gtr rm` fails due to untracked files:
 1. Check what's untracked: `cd <worktree> && git status`
 2. Add to main `.gitignore` if it's a generated artifact
 3. Use `--force` flag: `git gtr rm <branch> --delete-branch --force --yes`
-
-## Limitations & Future Enhancements
-
-### Current Limitations
-- One Ralph at a time (no parallel runs yet)
-- No automatic type checking (only vitest tests)
-- Manual PR creation (not auto-merged)
-
-### Planned Enhancements
-- Parallel Ralph runs (multiple worktrees simultaneously)
-- Integration with CI/CD for auto-merge
-- Smarter task dependency detection
-- Auto-retry on transient failures
 
 ## Appendix: Design Rationale & Lessons Learned
 

@@ -49,8 +49,6 @@ Discuss requirements until you have **Atomic, Testable Issues**.
 1. Create GitHub issues (`gh issue create`) with:
    - `## Summary` - User story or business value
    - `## Acceptance Criteria` - Checkbox list of testable requirements
-   - `## Implementation Notes` - Code examples, API references, approaches
-   - `## Files to modify` - Specific file paths
 
 2. **Consult specialists during planning** if needed (UI patterns, security approaches, etc.)
 
