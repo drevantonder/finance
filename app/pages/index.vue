@@ -4,8 +4,6 @@ import { useSessionStore } from '~/composables/useSessionStore'
 import { useExpensesQuery } from '~/composables/queries'
 import { useProjectionResults } from '~/composables/useProjectionResults'
 import { formatCurrency } from '~/composables/useFormatter'
-import { useQuery } from '@tanstack/vue-query'
-import type { ActivityLog } from '~/types'
 import AssetsChart from '~/components/AssetsChart.vue'
 import BudgetProjectionChart from '~/components/BudgetProjectionChart.vue'
 import FinancialCompositionChart from '~/components/FinancialCompositionChart.vue'
@@ -13,15 +11,6 @@ import FinancialCompositionChart from '~/components/FinancialCompositionChart.vu
 const store = useSessionStore()
 const { data: expenses } = useExpensesQuery()
 const { targetDateLabel, smartResult, chartSeries } = useProjectionResults()
-
-// Fetch recent activity logs
-const { data: recentLogs } = useQuery({
-  queryKey: ['activity-logs-recent'],
-  queryFn: () => $fetch<ActivityLog[]>('/api/logs', {
-    params: { limit: 5 }
-  }),
-  refetchInterval: 60000 // Refresh every minute
-})
 
 // Attention Items
 const attentionItems = computed(() => {
@@ -123,22 +112,6 @@ const attentionItems = computed(() => {
         </template>
         <div class="h-64">
           <BudgetProjectionChart :series="chartSeries" />
-        </div>
-      </UCard>
-
-      <!-- Recent Activity -->
-      <UCard class="lg:col-span-1">
-        <template #header>
-          <div class="flex items-center justify-between">
-            <h3 class="font-semibold">Recent Activity</h3>
-            <NuxtLink to="/menu/logs" class="text-xs text-neutral-500 hover:underline">View All</NuxtLink>
-          </div>
-        </template>
-        <div class="space-y-0 -mx-4">
-          <div v-if="!recentLogs?.length" class="text-sm text-neutral-500 italic py-8 text-center px-4">
-            No recent activity logs.
-          </div>
-          <ActivityLogEntry v-for="log in recentLogs" :key="log.id" :entry="log" />
         </div>
       </UCard>
     </div>
