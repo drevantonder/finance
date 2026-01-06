@@ -1,0 +1,35 @@
+{
+  "id": 69,
+  "title": "[Test Epic] Agentic Kanban Bootstrap Validation",
+  "description": "## Summary\nThis is a test epic to validate the Agentic Kanban PM sync functionality.\n\n## Atomic Tasks\n- [ ] Test task can be parsed from epic body\n- [ ] Test task appears in kanban/unassigned/\n- [ ] Test task can be claimed by a Ralph dev\n\nThis epic will be closed after validation is complete.",
+  "tasks": [
+    {
+      "id": "69-0",
+      "description": "Test task can be parsed from epic body",
+      "completed": true
+    },
+    {
+      "id": "69-1",
+      "description": "Test task appears in kanban/unassigned/",
+      "completed": true
+    },
+    {
+      "id": "69-2",
+      "description": "Test task can be claimed by a Ralph dev",
+      "completed": true
+    }
+  ],
+  "priority": "medium",
+  "rejection_count": 0,
+  "rejection_history": [],
+  "review": {
+    "status": "pending",
+    "issues": []
+  },
+  "created_at": "2026-01-06T23:07:52.243Z",
+  "updated_at": "2026-01-06T23:11:00.000Z",
+  "assigned_to": "ralph-dev-glm-4-7",
+  "assigned_at": "2026-01-06T23:09:17.971Z",
+  "branch": "feat/epic-69",
+  "worktree_path": "/Users/drevan/projects/finance-worktrees/move-to-kanban-workflow/finance-worktrees/feat-epic-69"
+}
