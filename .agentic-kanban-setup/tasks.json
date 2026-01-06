@@ -43,7 +43,7 @@
         "TypeScript types are inferred from Zod: `type Task = z.infer<typeof TaskSchema>`",
         "Test suite validates healing behavior with at least 3 malformed examples"
       ],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": 4,

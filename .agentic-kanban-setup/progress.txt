@@ -11,3 +11,11 @@ Ralph will append entries here as tasks are completed.
 - Verified bun install and bun test execution.
 - Tests: passing (verified test runner starts)
 - Commit: 2f84a0f
+
+## Ralph Bootstrap | 2026-01-06T23:04:50Z
+### Task 2: Kanban file operations work
+- Implemented createTask, readTask, moveTask, listTasks, and findTaskAcrossBuckets in src/kanban.ts.
+- createTask automatically names files as epic-{id}.json.
+- Verified all operations with a Vitest (bun test) suite in src/kanban.test.ts.
+- Tests: passing
+- Commit: 824a03d

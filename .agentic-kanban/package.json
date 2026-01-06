@@ -6,7 +6,9 @@
   "scripts": {
     "test": "bun test"
   },
-  "dependencies": {},
+  "dependencies": {
+    "zod": "^4.3.5"
+  },
   "devDependencies": {
     "@types/bun": "latest"
   },
