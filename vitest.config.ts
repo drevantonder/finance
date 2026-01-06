@@ -24,11 +24,14 @@ export default defineConfig({
         test: {
           name: 'nuxt',
           include: ['test/nuxt/**/*.test.ts'],
-          environment: 'nuxt',
-          environmentOptions: {
-            nuxt: {
-              rootDir: fileURLToPath(new URL('./', import.meta.url)),
-            },
+          environment: 'happy-dom',
+          setupFiles: ['test/nuxt/setup.ts'],
+          globals: true,
+        },
+        resolve: {
+          alias: {
+            '~': resolve(__dirname, 'app'),
+            '~~': resolve(__dirname, '.'),
           },
         },
       },
