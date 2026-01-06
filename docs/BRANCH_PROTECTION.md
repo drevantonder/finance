@@ -10,16 +10,15 @@ This guide explains how to configure branch protection rules for the main branch
 
 The following GitHub Actions workflows must pass before merging to main:
 
-1. **Test workflow** (`.github/workflows/test.yml`)
-   - Type check (`pnpm nuxt typecheck`)
-   - Unit tests (`pnpm test:run`)
-   - E2E tests (`pnpm test:e2e`)
+1. **Cloudflare Workers and Pages** (`.github/workflows/`, auto-generated)
+   - `Cloudflare Workers and Pages / Workers Builds: finance`
 
-2. **Coverage** (informational, generated as part of Test workflow)
+2. **Test workflow** (`.github/workflows/test.yml`)
+   - `Test / Type check`
+   - `Test / Unit tests`
+   - `Test / E2E tests`
 
-3. **Lighthouse CI** (`.github/workflows/lighthouse.yml`, PRs only)
-   - Performance metrics
-   - Accessibility, Best Practices, SEO scores
+3. **Coverage** (informational, generated as part of Test workflow)
 
 ## Setup via GitHub UI
 
@@ -44,8 +43,10 @@ The following GitHub Actions workflows must pass before merging to main:
 
 **Required Status Checks**
 Check the following workflows:
-- `Test / Run tests`
-- `Lighthouse CI / Run Lighthouse` (optional for PRs)
+- `Cloudflare Workers and Pages / Workers Builds: finance`
+- `Test / Type check`
+- `Test / Unit tests`
+- `Test / E2E tests`
 
 **Additional Options**
 - ☑️ Require pull request reviews before merging
@@ -82,7 +83,7 @@ gh api \
   --method PUT \
   -H "Accept: application/vnd.github+json" \
   repos/{owner}/{repo}/protection/branches/main \
-  -f required_status_checks='{"strict":true,"contexts":["Test","Lighthouse CI"]}' \
+  -f required_status_checks='{"strict":true,"contexts":["Cloudflare Workers and Pages / Workers Builds: finance","Test / Type check","Test / Unit tests","Test / E2E tests"]}' \
   -f enforce_admins='false' \
   -f required_pull_request_reviews='{"required_approving_review_count":1,"dismiss_stale_reviews":true,"require_code_owner_reviews":false}' \
   -f restrictions='{"users":[],"teams":[]}' \
