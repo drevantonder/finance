@@ -1,7 +1,7 @@
 ---
 description: Project Manager - Coordinates development workflow
 mode: primary
-model: opencode/minimax-m2.1-free
+model: zai-coding-plan/glm-4.7
 tools:
   bash: true
   read: true
