@@ -100,7 +100,7 @@
         "Inner loop signals `<promise>BLOCKED: {reason}</promise>` if stuck",
         "User can verify commits exist in worktree branch after inner loop completes"
       ],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": 8,
