@@ -56,7 +56,7 @@
         "Each agent file clearly states what signals to output: `<promise>COMPLETE</promise>` or `<promise>BLOCKED: reason</promise>`",
         "Agent files reference the correct paths for kanban buckets and task JSON locations"
       ],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": 5,
