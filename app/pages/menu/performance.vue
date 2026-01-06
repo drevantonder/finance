@@ -97,16 +97,13 @@ const getSwStatus = (metadata: any) => {
 }
 
 // Format date
-const formatDate = (date: string) => {
+const formatDate = (date: string | Date) => {
   return new Date(date).toLocaleString()
 }
 
 // Refresh data when filters change
 watch([selectedDevice, selectedSwStatus, selectedHours], () => {
-  refetch({
-    stage: 'startup',
-    hours: selectedHours.value
-  })
+  refetch()
 })
 
 // Selected log metadata
