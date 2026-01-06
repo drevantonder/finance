@@ -29,13 +29,26 @@ fi
 for ((i=1; i<=MAX_ITERATIONS; i++)); do
     echo "--- Iteration $i ---"
     
-    # Run Ralph agent (capture all output)
+    # Run Ralph agent (stream output AND capture for signal detection)
     # Ralph reads .ralph/tasks.json, executes task, tests, commits, and exits with signal
     # Set session title for visibility in Kitty tabs
-    output=$(opencode run \
+    output_file=$(mktemp)
+    opencode run \
       --agent ralph \
+      --format json \
       --title "ralph-${RALPH_ID}" \
-      "Read .ralph/tasks.json. Execute the highest-priority pending task. Run tests with 'pnpm run test:run'. If all tasks complete, output <promise>COMPLETE</promise>. If blocked, output <promise>BLOCKED:reason</promise>. If successful, commit and output <promise>COMPLETE</promise>." 2>&1 || true)
+      "Read .ralph/tasks.json. Execute the highest-priority pending task. Run tests with 'pnpm run test:run'. If all tasks complete, output <promise>COMPLETE</promise>. If blocked, output <promise>BLOCKED:reason</promise>. If successful, commit and output <promise>COMPLETE</promise>." 2>&1 | \
+      while IFS= read -r line; do
+        echo "$line" >> "$output_file"
+        # Extract and display text from JSON events
+        text=$(echo "$line" | jq -r 'select(.type == "text") | .part.text' 2>/dev/null || true)
+        if [[ -n "$text" ]]; then
+          echo -n "$text"
+        fi
+      done || true
+    echo ""  # Newline after output
+    output=$(cat "$output_file")
+    rm -f "$output_file"
     
     # Check for completion signal
     if echo "$output" | grep -q "<promise>COMPLETE</promise>"; then
