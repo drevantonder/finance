@@ -28,3 +28,12 @@ Ralph will append entries here as tasks are completed.
 - Added src/healing.test.ts to verify all healing and blocking scenarios.
 - Tests: passing
 - Commit: a5012f7
+
+## Ralph Bootstrap | 2026-01-06T23:07:05Z
+### Task 4: Agent instruction files exist
+- Created agents/ralph-pm.md with Project Manager instructions.
+- Created agents/ralph-dev-outer.md with Developer Outer Loop instructions.
+- Created agents/ralph-dev-inner.md with Developer Inner Loop instructions.
+- Verified all files contain required output signals and path references.
+- Tests: passing (files verified to exist)
+- Commit: dd33da2

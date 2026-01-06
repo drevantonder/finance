@@ -4,7 +4,8 @@
   "description": "Agentic Kanban Core",
   "main": "src/index.ts",
   "scripts": {
-    "test": "bun test"
+    "test": "bun test",
+    "ralph-pm": "bun src/pm.ts"
   },
   "dependencies": {
     "zod": "^4.3.5"

@@ -70,7 +70,7 @@
         "PM skips epics that already have a task file in any bucket (uses `findTaskAcrossBuckets`)",
         "User can run PM sync and see test epic #69 appear in `kanban/unassigned/`"
       ],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": 6,
