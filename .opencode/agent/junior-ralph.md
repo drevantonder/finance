@@ -1,7 +1,7 @@
 ---
 description: Junior developer - Fast autonomous task execution
 mode: primary
-model: z-ai-coding-plan/glm-4.7
+model: zai-coding-plan/glm-4.7
 tools:
   bash: true
   read: true
