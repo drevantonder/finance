@@ -9,14 +9,18 @@ for worktree in "$WORKTREES_DIR"/ralph-*/; do
   
   if [[ -f "$worktree/.ralph/status" ]]; then
     status=$(cat "$worktree/.ralph/status")
+    level="junior"
+    if [[ -f "$worktree/.ralph/level" ]]; then
+      level=$(cat "$worktree/.ralph/level")
+    fi
     tasks_json="$worktree/.ralph/tasks.json"
     
     if [[ -f "$tasks_json" ]]; then
       total=$(jq -r '.tasks | length' "$tasks_json")
       done=$(jq -r '[.tasks[] | select(.status == "completed" or .status == "done")] | length' "$tasks_json")
-      echo "$branch: $status ($done/$total tasks)"
+      echo "$branch ($level): $status ($done/$total tasks)"
     else
-      echo "$branch: $status"
+      echo "$branch ($level): $status"
     fi
   fi
 done
