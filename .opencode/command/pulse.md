@@ -15,4 +15,4 @@ Here's the current state:
 </result>
 </injected-shell-output>
 
-Suggest what to do next.
+Suggest what to do next. (Wait for user to approve any direction before proceeding.)
