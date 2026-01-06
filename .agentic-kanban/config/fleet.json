@@ -1,0 +1,19 @@
+{
+  "developers": [
+    {
+      "name": "Junior Ralph",
+      "model": "glm-4-7",
+      "enabled": true
+    },
+    {
+      "name": "Senior Ralph",
+      "model": "opus-4-5",
+      "enabled": true
+    },
+    {
+      "name": "PM Ralph",
+      "model": "minimax-m2.1",
+      "enabled": true
+    }
+  ]
+}

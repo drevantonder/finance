@@ -94,3 +94,12 @@ Ralph will append entries here as tasks are completed.
 - Verified with task #69, which resulted in PR #70 on GitHub.
 - Tests: passing
 - Commit: 20a8b2c
+
+## Ralph Bootstrap | 2026-01-06T23:17:17Z
+### Task 12: Project Manager monitors PRs for feedback
+- Implemented monitorPRs in src/pm.ts.
+- Added logic to archive merged tasks and cleanup worktrees.
+- Added feedback loop logic for CHANGES_REQUESTED status.
+- Verified PM check cycle runs successfully.
+- Tests: passing
+- Commit: 909873a

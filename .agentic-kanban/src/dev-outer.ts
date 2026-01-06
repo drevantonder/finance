@@ -4,8 +4,10 @@ import { writeFile, mkdir, readFile } from "node:fs/promises";
 import { existsSync } from "node:fs";
 import { listTasks, readTask, moveTask, Bucket } from "./kanban";
 import { TaskSchema, type Task } from "./schema";
+import { validateModel } from "./config";
 
 export async function claimTask(modelName: string) {
+  await validateModel(modelName);
   const unassigned = await listTasks("unassigned");
   if (unassigned.length === 0) {
     console.log("No unassigned tasks found.");

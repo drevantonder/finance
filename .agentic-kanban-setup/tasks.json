@@ -184,7 +184,7 @@
         "User can modify fleet.json and changes take effect on next loop iteration",
         "Multiple enabled models can run simultaneously without conflict"
       ],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": 14,
