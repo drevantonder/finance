@@ -108,6 +108,9 @@ importers:
       happy-dom:
         specifier: ^20.0.11
         version: 20.0.11
+      husky:
+        specifier: ^9.1.7
+        version: 9.1.7
       typescript:
         specifier: ^5.9.3
         version: 5.9.3
@@ -4203,6 +4206,11 @@ packages:
   humanize-url@2.1.1:
     resolution: {integrity: sha512-V4nxsPGNE7mPjr1qDp471YfW8nhBiTRWrG/4usZlpvFU8I7gsV7Jvrrzv/snbLm5dWO3dr1ennu2YqnhTWFmYA==}
     engines: {node: '>=8'}
+
+  husky@9.1.7:
+    resolution: {integrity: sha512-5gs5ytaNjBrh5Ow3zrvdUUY+0VxIuWVL4i9irt6friV+BqdCfmV11CQTWMiBYWHbXhco+J1kHfTOUkePhCDvMA==}
+    engines: {node: '>=18'}
+    hasBin: true
 
   ico-endec@0.1.6:
     resolution: {integrity: sha512-ZdLU38ZoED3g1j3iEyzcQj+wAkY2xfWNkymszfJPoxucIUhK7NayQ+/C4Kv0nDFMIsbtbEHldv3V8PU494/ueQ==}
@@ -10917,6 +10925,8 @@ snapshots:
   humanize-url@2.1.1:
     dependencies:
       normalize-url: 4.5.1
+
+  husky@9.1.7: {}
 
   ico-endec@0.1.6: {}
 

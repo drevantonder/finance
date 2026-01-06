@@ -17,7 +17,8 @@
     "db:pull:prod": "./scripts/pull-db.sh",
     "db:push:prod": "./scripts/push-db.sh",
     "blob:pull:prod": "./scripts/pull-blobs.sh",
-    "blob:push:prod": "./scripts/push-blobs.sh"
+    "blob:push:prod": "./scripts/push-blobs.sh",
+    "prepare": "husky"
   },
   "dependencies": {
     "@google/genai": "^1.34.0",
@@ -55,6 +56,7 @@
     "@vitest/coverage-v8": "^4.0.16",
     "drizzle-kit": "^0.31.8",
     "happy-dom": "^20.0.11",
+    "husky": "^9.1.7",
     "typescript": "^5.9.3",
     "vitest": "^4.0.16",
     "wrangler": "^4.56.0"
