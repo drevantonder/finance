@@ -196,13 +196,23 @@ See **docs/DOMAIN.md** for:
 - Australian tax rates and HECS thresholds
 - Common calculation bugs to avoid
 
-## Ralph Workflow
-This project uses an autonomous batch execution model. See:
-- **@docs/ralph-workflow.md** - Complete Ralph-GitHub protocol
-- **@.opencode/skill/git-worktree-runner/SKILL.md** - Git worktree commands
-- **@.opencode/skill/kitty-terminal/SKILL.md** - Kitty terminal integration
+## Documentation Lookup
+Use **Context7** tools for up-to-date library documentation:
 
-Key rules:
+1. `context7_resolve-library-id` → find library ID from package name (e.g., "nuxt", "drizzle-orm")
+2. `context7_query-docs` → query specific topics with the library ID
+
+**Prioritize Context7** over guessing API usage for:
+- Nuxt features, Vue composables
+- Drizzle ORM patterns
+- TanStack Query mutations
+- Nuxt UI v4 components
+- Tailwind CSS utilities
+
+## Ralph Workflow
+This project uses an autonomous batch execution model. See **@docs/ralph-workflow.md** for the complete protocol.
+
+**Key Rules**:
 - Tax/HECS functions expect ANNUAL income (multiply monthly × 12)
 - Percentages stored as decimals (0.05), displayed as %
 - Iterative solvers for circular deps (house price ↔ stamp duty)

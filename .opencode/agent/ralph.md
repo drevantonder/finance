@@ -1,6 +1,7 @@
 ---
 description: Autonomous worker (Ralph) - Executes tasks in isolated worktree
 mode: primary
+model: zai-coding-plan/glm-4.7
 tools:
   bash: true
   read: true

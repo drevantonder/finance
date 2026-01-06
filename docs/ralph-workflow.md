@@ -23,11 +23,43 @@ Human ↔ PM (Interactive) → Harness (Bash Loop) → Ralph (Stateless Agent)
 | **Harness** | Bash Script | Runs Ralph in a loop, manages iterations, captures exit signals |
 | **Ralph** | Stateless Agent | Implements tasks, runs tests, commits code, updates progress |
 
-## The `.ralph/` Folder
+## The `.ralph/` Folder (In Worktree Only!)
 
-Every Ralph worktree contains a `.ralph/` folder (git-ignored) that serves as the state store:
+**CRITICAL:** The `.ralph/` folder exists **ONLY in worktrees**. It does **NOT** exist in the main repository.
+
+**Main Repo:** `/Users/drevan/projects/finance/` → No `.ralph/` folder
+**Worktree:** `/Users/drevan/projects/finance-worktrees/ralph/alpha-.../.ralph/` → Contains all state
 
 ```
+# Main Repo - NO .ralph folder
+/Users/drevan/projects/finance/
+├── .git/
+├── app/
+├── test/
+└── ...
+
+# Worktree - HAS .ralph folder (created during dispatch)
+/Users/drevan/projects/finance-worktrees/ralph/alpha-testing/
+├── .git/                    # Worktree's git repo
+├── app/
+├── test/
+└── .ralph/                  # ← Created by PM during dispatch
+    ├── tasks.json           # Curated task list
+    ├── progress.txt         # Execution log
+    └── status               # RUNNING | COMPLETE | BLOCKED:<reason>
+```
+
+**Why?** Worktrees are disposable. The `.ralph/` folder contains generated artifacts and state that should never pollute the main branch.
+
+### What The PM Does Before Dispatch
+1. Plan tasks in their head (or in a separate file)
+2. When user says `/dispatch`:
+   - Create the worktree
+   - **Create `.ralph/` folder INSIDE the worktree**
+   - Write `tasks.json` to `worktree/.ralph/tasks.json`
+   - Write empty `progress.txt` to `worktree/.ralph/progress.txt`
+   - Write `RUNNING` to `worktree/.ralph/status`
+   - Launch harness
 <worktree>/.ralph/
   ├── tasks.json      # The curated task list (source of truth)
   ├── progress.txt    # Append-only execution log
@@ -35,6 +67,8 @@ Every Ralph worktree contains a `.ralph/` folder (git-ignored) that serves as th
 ```
 
 ### `tasks.json` Schema
+
+**IMPORTANT**: tasks.json must be detailed enough for Ralph to work independently in a fresh context window. Include explicit step-by-step instructions and test procedures.
 
 ```json
 {
@@ -46,15 +80,67 @@ Every Ralph worktree contains a `.ralph/` folder (git-ignored) that serves as th
       "issue": 42,
       "title": "Create POST /api/login endpoint",
       "status": "pending",
-      "acceptance": "Endpoint returns 200 with JWT on valid credentials"
+      "category": "api",
+      "files": ["server/api/login.post.ts"],
+      "testFile": "test/integration/login.test.ts",
+      "steps": [
+        "Read existing server/api/login.post.ts if exists",
+        "Implement login handler that accepts email/password",
+        "Use jose library to generate JWT token on valid credentials",
+        "Create test/integration/login.test.ts",
+        "Test valid credentials returns 200 with JWT",
+        "Test invalid credentials returns 401",
+        "Test missing credentials returns 400",
+        "Run pnpm test:run and verify tests pass",
+        "Run pnpm nuxt typecheck and verify no errors"
+      ],
+      "acceptance": "Endpoint returns 200 with JWT on valid credentials, all tests pass"
     },
     {
       "id": 2,
       "issue": 43,
       "title": "Add JWT validation middleware",
       "status": "pending",
-      "acceptance": "Protected routes return 401 without valid token"
+      "category": "api",
+      "files": ["server/middleware/auth.ts"],
+      "testFile": "test/integration/auth-middleware.test.ts",
+      "steps": [
+        "Create server/middleware/auth.ts",
+        "Implement JWT validation using jose library",
+        "Apply middleware to protected routes",
+        "Create tests for valid token access",
+        "Create tests for invalid token returns 401",
+        "Create tests for missing token returns 401",
+        "Run pnpm test:run and verify tests pass",
+        "Run pnpm nuxt typecheck and verify no errors"
+      ],
+      "acceptance": "Protected routes return 401 without valid token, all tests pass"
     }
+  ]
+}
+```
+
+**Schema Fields:**
+- `id`: Unique integer per task
+- `issue`: GitHub issue number
+- `title`: Clear task description
+- `status`: `pending` | `done` | `blocked`
+- `story`: The "User Story" explaining the intent and value (The "Why")
+- `verification_steps`: **Behavioral assertions that must be true** (The "What")
+
+**Example:**
+```json
+{
+  "id": 1,
+  "issue": 42,
+  "title": "Login Endpoint",
+  "status": "pending",
+  "story": "As a frontend app, I need to authenticate users via email/pass so I can get a JWT for secured requests.",
+  "verification_steps": [
+    "POST /api/login with valid creds returns 200 + JWT",
+    "POST /api/login with invalid creds returns 401",
+    "POST /api/login with missing body returns 400",
+    "New tests are passing in CI"
   ]
 }
 ```
@@ -108,19 +194,32 @@ When the user approves (`/dispatch`):
 
 ### 3. Execution (Ralph Loop)
 
-Ralph operates in a loop managed by the harness:
+Ralph operates in a loop managed by the harness. **Every iteration starts fresh with zero context.**
 
+**Ralph's Startup Sequence (Every Iteration):**
 ```
-1. Read tasks.json and progress.txt (orientation)
-2. Choose highest-priority pending task (intelligent selection)
-3. Implement the task
-4. Run tests: pnpm run test:run
-5. If tests fail: Fix and retry (up to 8 attempts)
-6. If tests pass:
-   - Update task status to "done"
-   - Commit: git commit -am "feat: <title> (#<issue>)"
-   - Append to progress.txt
-7. Loop or exit with signal
+1. Run `pwd` to verify working directory
+2. Read `.ralph/tasks.json` to get task list
+3. Read `.ralph/progress.txt` to understand what's done
+4. Run `git log --oneline -20` to see recent commits
+5. Choose the highest-priority pending task (based on story and logical order)
+```
+
+**Implementation Loop:**
+```
+6. Analyze the `story` and `verification_steps` to understand the goal
+7. Read relevant code to orient himself
+8. Implement the behavior
+9. Verify using the `verification_steps` (usually running tests)
+10. If verification fails: Fix and retry (up to 8 attempts total)
+11. If verification passes:
+    - Update task.status to "done" in .ralph/tasks.json
+    - Commit: git commit -am "<type>: <title> (#<issue>)"
+    - Append detailed summary to .ralph/progress.txt with timestamp
+12. Output signal:
+    - If all tasks done: `<promise>COMPLETE</promise>`
+    - If blocked after 8 attempts: `<promise>BLOCKED: <detailed reason></promise>`
+13. Exit - harness will restart Ralph for next iteration
 ```
 
 **Exit Signals**:
@@ -204,10 +303,23 @@ Located at `.opencode/bin/ralph-harness.sh`. Manages:
 ## Best Practices
 
 ### For Curating Tasks
-1. **Atomic**: Each task should be independently implementable
-2. **Testable**: Clear acceptance criteria that can be verified with tests
-3. **Ordered**: Consider dependencies (e.g., "Create model" before "Add validation")
-4. **Scoped**: Avoid tasks that touch too many files or systems
+1. **Behavior-Driven**: Define *what* to verify, not *how* to code.
+2. **Atomic**: Each task should be independently verifiable.
+3. **Explicit Verification**: Verification steps must be clear pass/fail conditions.
+4. **Scoped**: Small enough to fit in one context window iteration.
+
+**Example Task:**
+```json
+{
+  "title": "Date Formatting",
+  "story": "As a user, I need dates displayed as 'Jul 2025' or '1 Jul 2025' depending on context.",
+  "verification_steps": [
+    "Verify formatDateLabel('2025-07-01', 'short') returns 'Jul 2025'",
+    "Verify formatDateLabel('2025-07-01', 'full') returns '1 Jul 2025'",
+    "Unit tests pass"
+  ]
+}
+```
 
 ### PM Responsibilities (Before Dispatch)
 1. **Sync main**: `git checkout main && git pull`
