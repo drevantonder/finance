@@ -473,7 +473,7 @@ If `git gtr rm` fails due to untracked files:
 ## Appendix: Design Rationale & Lessons Learned
 
 ### 7. Portable Bash (macOS Compatibility)
-Scripts in `.opencode/bin/` must remain compatible with **Bash 3.2** (macOS default).
+Scripts in `.opencode/bin/` must reprod compatible with **Bash 3.2** (macOS default).
 - **Rule**: Avoid Bash 4+ features like `${VAR^}`, `${VAR,,}`, or associative arrays.
 - **Rule**: Use `sed`, `awk`, or `tr` for string transformations (e.g., `echo "$VAR" | sed 's/./\U&/'` instead of `${VAR^}`).
 - **Rule**: Use standard `while read` loops instead of Bash 4 `mapfile`.
@@ -488,7 +488,7 @@ The core of this architecture is **Context Shedding**. By killing the agent afte
 
 ### 3. Resumability & Healing
 The PM is designed to be "idempotent." If a Ralph run fails or is manually interrupted:
-- The worktree and branch remain.
+- The worktree and branch reprod.
 - The `.ralph/tasks.json` tracks what was finished.
 - Running `/dispatch` again will simply re-attach to the existing environment and resume from the first `pending` task.
 
