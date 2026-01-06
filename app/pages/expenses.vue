@@ -255,13 +255,7 @@ function selectAllDuplicates() {
         :is-selection-mode="isSelectionMode"
         @update:sort-option="val => sortOption = val"
         @toggle-all="toggleAll"
-      >
-        <template #add-button>
-          <div class="w-8 h-8 rounded-full bg-primary-100 flex items-center justify-center text-primary-600 hover:bg-primary-200 transition-colors">
-            <UIcon name="i-heroicons-plus" class="w-5 h-5" />
-          </div>
-        </template>
-      </ExpensesExpenseHeader>
+      />
 
       <!-- Loading State -->
       <div v-if="isLoading && (expenses?.length || 0) === 0" class="p-8 text-center">
