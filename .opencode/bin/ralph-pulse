@@ -5,7 +5,7 @@
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 echo "=== GitHub Issues ==="
-gh issue list --json number,title,labels,createdAt --jq '.[] | "\(.number)\t\(.labels[0].name // "-")\t\(.title)"' 2>/dev/null
+gh issue list --json number,title,labels,createdAt --jq '.[] | "\(.number)\t\(.labels | map(.name) | join(", "))\t\(.title)"' 2>/dev/null
 echo ""
 
 echo "=== Ralph Worktrees ==="
