@@ -65,3 +65,12 @@ Ralph will append entries here as tasks are completed.
 - Committed changes in worktree with proper feat(epic-69) prefix.
 - Tests: passing
 - Commit: f819f1a
+
+## Ralph Bootstrap | 2026-01-06T23:13:15Z
+### Task 8: Outer loop handles completion and moves to review
+- Updated src/dev-outer.ts with finishTask logic.
+- Implemented syncing of .agentic-task/current.json from worktree back to kanban.
+- Added implemented_by metadata and moved task to needs-review/ bucket.
+- Verified task #69 successfully moved to needs-review/ with updated metadata.
+- Tests: passing
+- Commit: de264dd

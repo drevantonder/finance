@@ -120,11 +120,128 @@ export async function finishTask(epicId: string | number, modelName: string) {
   console.log(`Task #${epicId} moved to needs-review/.`);
 }
 
+export async function claimReview(modelName: string) {
+  const needsReview = await listTasks("needs-review");
+  if (needsReview.length === 0) {
+    console.log("No tasks in needs-review/.");
+    return null;
+  }
+
+  const tasks = await Promise.all(needsReview.map(f => readTask("needs-review", f)));
+  
+  // Filter out tasks implemented by the same model
+  const claimable = tasks.filter(t => t.implemented_by !== `ralph-dev-${modelName}`);
+
+  if (claimable.length === 0) {
+    console.log("No review tasks claimable by this model.");
+    return null;
+  }
+
+  const chosenTask = claimable[0];
+  const filename = `epic-${chosenTask.id}.json`;
+
+  console.log(`Claiming review for task #${chosenTask.id}: ${chosenTask.title}`);
+
+  // Atomically move to assigned (representing it's being reviewed)
+  // Wait, the criteria says "moves task from needs-review/ to complete/ after approved".
+  // So during review it might stay in needs-review/ or move to assigned/?
+  // Usually, claiming for review should mark it as "under review".
+  // Let's use 'assigned' bucket for the reviewer too, but we need to know it's a review assignment.
+  // Actually, Task 9 doesn't specify a bucket for "under review".
+  // Let's just update the metadata to say it's being reviewed.
+  
+  const updatedTask: Task = {
+    ...chosenTask,
+    review: {
+      ...chosenTask.review,
+      status: "pending",
+      reviewer: `ralph-dev-${modelName}`
+    },
+    updated_at: new Date().toISOString()
+  };
+
+  const reviewPath = join(process.cwd(), "kanban", "needs-review", filename);
+  await writeFile(reviewPath, JSON.stringify(updatedTask, null, 2));
+
+  console.log(`Reviewer ${modelName} assigned to task #${chosenTask.id}.`);
+  return updatedTask;
+}
+
+export async function finishReview(epicId: string | number, status: "approved" | "rejected", issues: string[] = []) {
+  const filename = `epic-${epicId}.json`;
+  const reviewPath = join(process.cwd(), "kanban", "needs-review", filename);
+
+  if (!existsSync(reviewPath)) {
+    throw new Error(`Task #${epicId} not found in needs-review/`);
+  }
+
+  const task = await readTask("needs-review", filename);
+  
+  const finalTask: Task = {
+    ...task,
+    review: {
+      ...task.review,
+      status,
+      reviewed_at: new Date().toISOString(),
+      issues
+    },
+    updated_at: new Date().toISOString()
+  };
+
+  if (status === "approved") {
+    await writeFile(reviewPath, JSON.stringify(finalTask, null, 2));
+    await moveTask("needs-review", "complete", filename);
+    console.log(`Task #${epicId} approved and moved to complete/.`);
+  } else {
+    // Rejection handling (Task 10)
+    finalTask.rejection_count += 1;
+    finalTask.rejection_history.push({
+      reviewer: task.review.reviewer,
+      reviewed_at: new Date().toISOString(),
+      issues
+    });
+    
+    if (finalTask.rejection_count >= 3) {
+      (finalTask as any).escalation_reason = "Max rejections reached (3). Requires human intervention.";
+      await writeFile(reviewPath, JSON.stringify(finalTask, null, 2));
+      await moveTask("needs-review", "needs-human", filename);
+      console.log(`Task #${epicId} rejected 3 times. Moved to needs-human/.`);
+    } else {
+      // Move back to unassigned with issues
+      await writeFile(reviewPath, JSON.stringify(finalTask, null, 2));
+      await moveTask("needs-review", "unassigned", filename);
+      console.log(`Task #${epicId} rejected. Moved back to unassigned/.`);
+    }
+  }
+}
+
 if (import.meta.main) {
-  const mode = process.argv[2]; // claim or finish
+  const mode = process.argv[2]; // claim, finish, claim-review, finish-review
   const modelName = process.argv[3] || "unknown-model";
   
-  if (mode === "finish") {
+  if (mode === "claim-review") {
+    claimReview(modelName).then((task) => {
+      if (task) {
+        console.log("<promise>COMPLETE</promise>");
+      } else {
+        console.log("<promise>COMPLETE</promise>");
+      }
+    }).catch(err => {
+      console.log(`<promise>BLOCKED: ${err.message}</promise>`);
+      process.exit(1);
+    });
+  } else if (mode === "finish-review") {
+    const epicId = process.argv[4];
+    const status = process.argv[5] as "approved" | "rejected";
+    const issues = process.argv.slice(6);
+    
+    finishReview(epicId, status, issues).then(() => {
+      console.log("<promise>COMPLETE</promise>");
+    }).catch(err => {
+      console.log(`<promise>BLOCKED: ${err.message}</promise>`);
+      process.exit(1);
+    });
+  } else if (mode === "finish") {
     const epicId = process.argv[4];
     if (!epicId) {
       console.error("Epic ID required for finish mode");

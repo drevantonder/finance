@@ -128,7 +128,7 @@
         "After approved: outer loop moves task from `needs-review/` to `complete/`",
         "After rejected: outer loop handles rejection (see task 10)"
       ],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": 10,
@@ -142,7 +142,7 @@
         "Task in `needs-human/` includes `escalation_reason` and `rejection_history` array",
         "All outer loops completely ignore tasks in `needs-human/` bucket"
       ],
-      "status": "pending"
+      "status": "done"
     },
     {
       "id": 11,
