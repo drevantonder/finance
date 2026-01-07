@@ -7,3 +7,14 @@
 - Optimized test execution time from ~32s (previously ~2m 30s in CI) to ~22s.
 - Documented changes in `test/e2e/README.md`.
 - Fixed linter errors by installing `@types/node`.
+
+# Iteration 2 (Review) Summary
+- Verified all changes meet requirements:
+  - Global authentication properly configured with storageState
+  - All waitForTimeout() calls removed and replaced with proper assertions
+  - Workers set to 2 in CI environment
+  - Documentation comprehensive and clear
+  - Smoke test correctly disables auth for login page
+- All 22 tests passing in 26.2s (significant improvement from ~2m 30s)
+- Code follows Playwright best practices
+- Ready for approval
