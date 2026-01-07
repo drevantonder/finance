@@ -2,7 +2,7 @@ import { db } from 'hub:db'
 import { blob } from 'hub:blob'
 import { inboxItems, inboxAttachments } from '~~/server/db/schema'
 import { eq } from 'drizzle-orm'
-import { extractReceiptData } from '~~/server/utils/gemini'
+import { extractReceiptData, classifyEmail } from '~~/server/utils/gemini'
 import { createExpenseIfNotDuplicate } from '~~/server/utils/expenses'
 import { extractText, getDocumentProxy } from 'unpdf'
 import { logActivity } from '~~/server/utils/logger'
@@ -50,7 +50,35 @@ export async function processInboxItem(id: string) {
       extractionInput = { text: item.htmlBody || item.textBody || '' }
     }
 
-    // 5. Extract with Gemini
+    // 4b. Classify email to determine if it's a receipt
+    const classification = await classifyEmail(extractionInput)
+    
+    // Log classification decision
+    await logActivity({
+      type: 'pipeline',
+      level: classification.isReceipt ? 'info' : 'warn',
+      message: `Email classification: ${classification.isReceipt ? 'receipt' : 'ignored'} - ${classification.reason}`,
+      correlationId,
+      durationMs: Math.round(performance.now() - startTime),
+      metadata: { 
+        inboxId: id, 
+        isReceipt: classification.isReceipt, 
+        confidence: classification.confidence,
+        reason: classification.reason,
+        suggestedMerchant: classification.suggestedMerchant
+      }
+    })
+
+    // 4c. If not a receipt, mark as ignored and skip extraction
+    if (!classification.isReceipt) {
+      await db.update(inboxItems)
+        .set({ status: 'ignored' })
+        .where(eq(inboxItems.id, id))
+
+      return { success: true, ignored: true, reason: classification.reason }
+    }
+
+    // 5. Extract with Gemini (only for receipts)
     const extraction = await extractReceiptData(extractionInput)
     
     // 6. Create or Update Expense (with duplicate detection)
