@@ -20,6 +20,7 @@ async function selectTaskAgentically(modelName: string): Promise<{ bucket: Bucke
   const needsReviewFiles = await listTasks("needs-review");
   
   if (unassignedFiles.length === 0 && needsReviewFiles.length === 0) {
+    console.log("Result: No tasks found.");
     return null;
   }
 
@@ -157,7 +158,7 @@ async function runRalphLoop(agentFile: string, task: Task, modelName: string, si
     await writeFile(progressPath, `# Progress for Task #${task.id}: ${task.title}\n\n`);
   }
 
-  const MAX_ITERATIONS = 50;
+  const MAX_ITERATIONS = 10;
   for (let i = 1; i <= MAX_ITERATIONS; i++) {
     const progressContent = await readFile(progressPath, "utf-8");
     
@@ -169,6 +170,7 @@ async function runRalphLoop(agentFile: string, task: Task, modelName: string, si
 Task: #${task.id} - ${task.title}
 Role: ${taskName.toUpperCase()}
 Current Model: ${modelName}
+Base Branch: ${getBaseBranch()}
 
 Requirements: See .agentic-task/current.json
 Previous Progress:
