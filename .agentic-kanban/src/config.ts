@@ -44,16 +44,16 @@ export async function getDevelopers(): Promise<DeveloperConfig[]> {
   }));
 }
 
-export async function validateModel(model: string): Promise<DeveloperConfig> {
+export async function validateModelName(name: string): Promise<DeveloperConfig> {
   const developers = await getDevelopers();
-  const dev = developers.find(d => d.model === model);
+  const dev = developers.find(d => d.model === name);
   
   if (!dev) {
-    throw new Error(`Model ${model} not found in configuration.`);
+    throw new Error(`Model ${name} not found in configuration.`);
   }
   
   if (!dev.enabled) {
-    throw new Error(`Model ${model} is currently disabled in models.json.`);
+    throw new Error(`Model ${name} is currently disabled in models.json.`);
   }
   
   return dev;
