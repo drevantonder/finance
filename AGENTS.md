@@ -220,3 +220,14 @@ Use Nuxt and Nuxt UI MCP tools to get Nuxt and Nuxt UI docs. (Much faster and mo
 - Tax/HECS functions expect ANNUAL income (multiply monthly × 12)
 - Percentages stored as decimals (0.05), displayed as %
 - Iterative solvers for circular deps (house price ↔ stamp duty)
+
+## Opencode and the Agentic Kanban Workflow
+
+### `.agentic-kanban/`
+To understand, debug, or develop the agentic kanban workflow located in `.agentic-kanban/` see @.agentic-kanban/README.md
+
+This also uses some of the custom opencode config located in `.opencode/`.
+
+### `.opencode`
+To debug, or develop the opencode config located in `.opencode/` see @.opencode .
+Get the docs using the `context7` MCP tools.
