@@ -30,3 +30,6 @@ docs/Power to Change/
 
 # Test outputs
 playwright-report/
+
+# Agentic Task
+.agentic-task/
