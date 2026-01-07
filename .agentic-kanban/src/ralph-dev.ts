@@ -148,7 +148,7 @@ async function claimAndPrepare(bucket: Bucket, filename: string, modelName: stri
 /**
  * Runs the Ralph loop for a task until completion, rejection, or blockage.
  */
-async function runRalphLoop(agentFile: string, task: Task, modelName: string, signalHandler: { currentProc: Subprocess | null }) {
+async function runRalphLoop(agentFile: string, task: Task, modelName: string, signalHandler: { currentProc: Subprocess | null; running: boolean }) {
   const isReview = agentFile.includes("reviewer");
   const taskName = isReview ? "review" : "implementation";
   const dev = await validateModel(modelName);
@@ -162,6 +162,11 @@ async function runRalphLoop(agentFile: string, task: Task, modelName: string, si
 
   const MAX_ITERATIONS = 10;
   for (let i = 1; i <= MAX_ITERATIONS; i++) {
+    // Check if we should stop before starting a new iteration
+    if (!signalHandler.running) {
+      console.log("\n🛑 Shutdown requested. Stopping iteration loop.");
+      return { status: "BLOCKED", reason: "Shutdown requested by user." };
+    }
     const progressContent = await readFile(progressPath, "utf-8");
     
     console.log(`\n────────────────────────────────────────────────────────────`);
@@ -194,9 +199,8 @@ INSTRUCTIONS:
       prompt
     ];
 
-    const projectRoot = resolve(process.cwd(), "..");
     const proc = Bun.spawn(cmd, {
-      cwd: projectRoot,
+      cwd: task.worktree_path,
       stdout: "pipe",
       stderr: "inherit"
     });
@@ -218,6 +222,12 @@ INSTRUCTIONS:
     const exitInfo = await proc.exited;
     signalHandler.currentProc = null;
 
+    // Check if we were interrupted
+    if (!signalHandler.running) {
+      console.log("\n🛑 Shutdown requested. Stopping iteration loop.");
+      return { status: "BLOCKED", reason: "Shutdown requested by user." };
+    }
+
     if (output.includes("<promise>COMPLETE</promise>") || output.includes("<promise>APPROVED</promise>")) {
       return { status: "COMPLETE", output };
     }
@@ -236,6 +246,12 @@ INSTRUCTIONS:
       console.warn(`\n⚠️ Agent process exited with code ${exitInfo} without signal. Retrying...`);
     } else {
       console.log("\nIteration finished without signal. Continuing...");
+    }
+    
+    // Check again before waiting
+    if (!signalHandler.running) {
+      console.log("\n🛑 Shutdown requested. Stopping iteration loop.");
+      return { status: "BLOCKED", reason: "Shutdown requested by user." };
     }
     
     await new Promise(r => setTimeout(r, 2000));
@@ -317,11 +333,12 @@ if (import.meta.main) {
   const SLEEP_MS = getConfig().sleep.developer;
   let running = true;
   let sleepTimeout: Timer | null = null;
-  const signalHandler = { currentProc: null as Subprocess | null };
+  const signalHandler = { currentProc: null as Subprocess | null, running: true };
 
   process.on("SIGINT", () => {
     console.log("\n🛑 Shutting down Ralph...");
     running = false;
+    signalHandler.running = false;
     if (sleepTimeout) {
       clearTimeout(sleepTimeout);
       sleepTimeout = null;
