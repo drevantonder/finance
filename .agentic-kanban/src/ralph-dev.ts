@@ -101,6 +101,13 @@ async function claimAndPrepare(bucket: Bucket, filename: string, modelName: stri
   try {
     const baseBranch = getBaseBranch();
     
+    // Fetch latest from remote (parse "origin/prod" -> fetch origin prod)
+    const [remote, branch] = baseBranch.split("/");
+    if (remote && branch) {
+      console.log(`Fetching ${baseBranch}...`);
+      await $`git fetch ${remote} ${branch}`.quiet();
+    }
+    
     // Ensure worktree directory is clean
     if (existsSync(worktreePath)) {
       console.log(`Cleaning up existing worktree at ${worktreePath}...`);

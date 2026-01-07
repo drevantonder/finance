@@ -21,7 +21,7 @@ export interface AgenticKanbanConfig {
 
 export const config: AgenticKanbanConfig = {
   // Change this to test on a different branch (e.g., "move-to-kanban-workflow")
-  baseBranch: "prod",
+  baseBranch: "origin/prod",
   
   developers: [
     {
