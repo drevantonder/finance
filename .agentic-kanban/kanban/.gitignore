@@ -10,3 +10,5 @@ needs-review/*
 !needs-review/.gitkeep
 unassigned/*
 !unassigned/.gitkeep
+blocked/*
+!blocked/.gitkeep

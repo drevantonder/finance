@@ -3,8 +3,7 @@
     "default_agent": "project-manager",
     "permission": {
       "external_directory": {
-        "*": "ask",
-        "/Users/drevan/projects/finance-worktrees/**": "allow"
+        "*": "ask"
       }
     },
     "mcp": {
