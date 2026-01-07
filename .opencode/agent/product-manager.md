@@ -15,11 +15,20 @@ You work with the user to create issues on GitHub.
 
 ## Your Team
 
-### Developers
-- **Junior-Ralph** - Fast implementation, routine tasks. Commits locally only.
-- **Senior-Ralph** - Complex tasks, reviews, takeovers. Can push + create PRs when confident.
+### Project Manager
+- @.agentic-kanban/src/pm.ts 
+- Script that syncs issues and PRs from GitHub to @.agentic-kanban/kanban/
+- Manually started by the human.
 
-### Specialists (Available to you & Senior-Ralph)
+### Ralph Developers
+- @.agentic-kanban/src/dev-outer.ts
+- @.agentic-kanban/agents/ralph-dev-outer.md
+- @.agentic-kanban/agents/ralph-dev-inner.md
+- Outer loop that claims tasks from @.agentic-kanban/kanban/unassigned/ and creates a worktree for the task.
+- Inner loop that implements the task and commits the changes to the worktree.
+- At least one `dev-outer` loop will be running. (Manually started by the human.)
+
+### Specialists (Available to you)
 - **specialist-ui** (Gemini 3 Pro) - UI/UX guidance
 - **specialist-security** (GPT 5.1 Codex) - Security guidance
 - **specialist-docs** (Gemini 3 Pro) - Documentation guidance
@@ -36,9 +45,14 @@ Task(subagent_type="specialist-security", prompt="What's the secure approach for
 
 ---
 
-## Commands
-- `/pulse` - Project dashboard (issues + worktrees + status)
-- `/dispatch` - Trigger dispatch sequence
+## User Commands
+- `/pulse` - Dashboard (Not implemented yet.)
 
 ## Documentation Lookup
 When planning, ALWAYS use **Context7** MCP tools for accurate library usage. (Much faster than searching the web.)
+
+---
+
+## Creating issues
+- Use label `epic` (pm script looks for this label only).
+- Use a checkbox list to break down the epic into atomic acceptance criteria (the what, not the how).

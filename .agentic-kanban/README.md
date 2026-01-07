@@ -9,7 +9,7 @@ A pull-based, autonomous software development workflow where AI agents ("Ralphs"
     *   Epic contains a checkbox list of atomic tasks.
 
 2.  **Sync (Project Manager)**
-    *   `ralph-pm` detects the Epic and creates a task file in `kanban/unassigned/`.
+    *   `ralph-pm` (a deterministic script) detects the Epic and creates a task file in `kanban/unassigned/`.
 
 3.  **Claim & Implement (Developer Ralph)**
     *   `ralph-dev` claims a task from `unassigned/`.
@@ -23,8 +23,8 @@ A pull-based, autonomous software development workflow where AI agents ("Ralphs"
     *   **Approved:** Moves to `complete/`.
     *   **Rejected:** Moves back to `unassigned/` with feedback (incrementing rejection count).
 
-5.  **Ship (Project Manager)**
-    *   `ralph-pm` sees task in `complete/`.
+5.  **Ship (Project Manager Script)**
+    *   `ralph-pm` (a deterministic script) sees task in `complete/`.
     *   Pushes branch and creates a GitHub Pull Request.
     *   Monitors PR:
         *   **Merged:** Moves task to `archived/`, deletes worktree.
@@ -68,6 +68,8 @@ bun run ralph-dev gemini-3-flash
 ## 📂 Directory Structure
 
 *   **`agents/`**: The "brains" - instructions for each agent role.
+    *   `ralph-dev-outer.md`: Task selection loop.
+    *   `ralph-dev-inner.md`: Implementation loop.
 *   **`bin/`**: Helper scripts.
 *   **`config/`**: Configuration files.
 *   **`kanban/`**: The state of the world.
@@ -78,3 +80,4 @@ bun run ralph-dev gemini-3-flash
     *   `needs-human/`: Failed too many times (3+ rejections).
     *   `archived/`: Merged and done.
 *   **`src/`**: TypeScript source code for the infrastructure.
+
