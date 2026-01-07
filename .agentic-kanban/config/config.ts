@@ -39,7 +39,7 @@ export const config: AgenticKanbanConfig = {
   ],
   
   sleep: {
-    pm: 60000,        // 1 minute
+    pm: 10000,        // 10 seconds
     developer: 30000  // 30 seconds
   }
 };

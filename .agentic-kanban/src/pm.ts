@@ -79,9 +79,6 @@ export async function createPRs() {
       // Create PR body with agent metadata and acceptance criteria
       const body = `Closes #${task.id}
 
-## Summary
-${task.description}
-
 ## Agent Information
 - **Implemented by**: ${task.implemented_by || "Unknown"}
 - **Review status**: ${task.review.status === "approved" ? "✅ Approved" : "❌ Rejected"}
