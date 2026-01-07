@@ -8,19 +8,31 @@ import { validateModel, getBaseBranch, getConfig } from "./config";
 import type { Subprocess } from "bun";
 
 /**
- * Checks if there's a paused task assigned to this model that should be resumed.
+ * Checks if there's a paused task that should be resumed.
+ * First looks for tasks assigned to this model, then any paused task.
  */
 async function findPausedTask(modelName: string): Promise<Task | null> {
   const assignedFiles = await listTasks("assigned");
   const agentId = `ralph-dev-${modelName}`;
 
+  let anyPausedTask: Task | null = null;
+
   for (const filename of assignedFiles) {
     const task = await readTask("assigned", filename);
-    if (task.assigned_to === agentId && task.paused_at_iteration) {
-      return task;
+    if (task.paused_at_iteration) {
+      // Prefer tasks originally assigned to this model
+      if (task.assigned_to === agentId) {
+        return task;
+      }
+      // Keep track of the first paused task found
+      if (!anyPausedTask) {
+        anyPausedTask = task;
+      }
     }
   }
-  return null;
+  
+  // Return any paused task if none matched this model
+  return anyPausedTask;
 }
 
 /**
@@ -197,10 +209,6 @@ async function runRalphLoop(agent: string, task: Task, modelName: string, signal
       console.log("\n🛑 Shutdown requested. Stopping iteration loop.");
       return { status: "PAUSED", iteration: i };
     }
-    if (!signalHandler.running) {
-      console.log("\n🛑 Shutdown requested. Stopping iteration loop.");
-      return { status: "PAUSED", iteration: i };
-    }
     const progressContent = await readFile(progressPath, "utf-8");
     
     console.log(`\n────────────────────────────────────────────────────────────`);
@@ -259,7 +267,7 @@ INSTRUCTIONS:
     // Check if we were interrupted
     if (!signalHandler.running) {
       console.log("\n🛑 Shutdown requested. Stopping iteration loop.");
-      return { status: "BLOCKED", reason: "Shutdown requested by user." };
+      return { status: "PAUSED", iteration: i }; 
     }
 
     if (output.includes("<promise>COMPLETE</promise>") || output.includes("<promise>APPROVED</promise>")) {
@@ -285,7 +293,7 @@ INSTRUCTIONS:
     // Check again before waiting
     if (!signalHandler.running) {
       console.log("\n🛑 Shutdown requested. Stopping iteration loop.");
-      return { status: "BLOCKED", reason: "Shutdown requested by user." };
+      return { status: "PAUSED", iteration: i };
     }
     
     await new Promise(r => setTimeout(r, 2000));
@@ -402,6 +410,26 @@ if (import.meta.main) {
         
         if (pausedTask) {
           console.log(`\n🔄 Found paused task #${pausedTask.id}. Resuming from iteration ${pausedTask.paused_at_iteration}...`);
+          
+          // Update assignment if a different model is picking this up
+          const newAgentId = `ralph-dev-${modelName}`;
+          if (pausedTask.assigned_to !== newAgentId) {
+            console.log(`   Reassigning from ${pausedTask.assigned_to} to ${newAgentId}...`);
+            pausedTask.assigned_to = newAgentId;
+            pausedTask.assigned_at = new Date().toISOString();
+            pausedTask.updated_at = new Date().toISOString();
+            
+            const filename = `epic-${pausedTask.id}.json`;
+            const assignedPath = join(process.cwd(), "kanban", "assigned", filename);
+            await writeFile(assignedPath, JSON.stringify(pausedTask, null, 2));
+            
+            // Update the inner task context
+            if (pausedTask.worktree_path && existsSync(pausedTask.worktree_path)) {
+              const taskDir = join(pausedTask.worktree_path, ".agentic-task");
+              await writeFile(join(taskDir, "current.json"), JSON.stringify(pausedTask, null, 2));
+            }
+          }
+          
           task = pausedTask;
           isReview = Boolean(pausedTask.implemented_by && pausedTask.implemented_by !== `ralph-dev-${modelName}`);
         } else {
