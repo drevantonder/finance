@@ -5,7 +5,7 @@
   "main": "src/index.ts",
   "scripts": {
     "test": "bun test",
-    "ralph-pm": "bun src/pm.ts",
+    "project-manager": "bun src/project-manager.ts",
     "ralph-dev": "bun src/ralph-dev.ts loop"
   },
   "dependencies": {

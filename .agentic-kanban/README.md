@@ -9,7 +9,7 @@ A pull-based, autonomous software development workflow where AI agents ("Ralphs"
     *   Epic contains a checkbox list of atomic tasks.
 
 2.  **Sync (Project Manager)**
-    *   `ralph-pm` (a deterministic script) detects the Epic and creates a task file in `kanban/unassigned/`.
+    *   `project-manager` (a deterministic script) detects the Epic and creates a task file in `kanban/unassigned/`.
 
 3.  **Claim & Implement/Review (Developer Ralph)**
     *   `ralph-dev` claims a task from `unassigned/` or `needs-review/`.
@@ -25,7 +25,7 @@ A pull-based, autonomous software development workflow where AI agents ("Ralphs"
         *   If not able to complete, moves task back to `needs-review/` with feedback.
 
 4.  **Ship (Project Manager Script)**
-    *   `ralph-pm` (a deterministic script) sees task in `complete/`.
+    *   `project-manager` (a deterministic script) sees task in `complete/`.
     *   Pushes branch and creates a GitHub Pull Request.
     *   Monitors PR:
         *   **Merged:** Moves task to `archived/`, deletes worktree.
@@ -51,7 +51,7 @@ Run these in separate terminal tabs or background processes.
 
 **Project Manager** (The Orchestrator)
 ```bash
-bun run ralph-pm
+bun run project-manager
 ```
 
 **Developer Ralphs** (The Workers)
@@ -84,7 +84,7 @@ bun run ralph-dev gemini-3-flash
     *   `archived/`: Merged and done.
 *   **`src/`**: TypeScript source code for the infrastructure.
     *   `ralph-dev.ts`: The developer loop harness.
-    *   `pm.ts`: The project manager loop harness.
+    *   `project-manager.ts`: The project manager loop harness.
     *   `kanban.ts`: Kanban bucket operations.
     *   `schema.ts`: Task and state schemas.
     *   `config.ts`: Configuration loader.
