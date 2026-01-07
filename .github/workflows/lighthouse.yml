@@ -34,18 +34,85 @@ jobs:
       - name: Build application
         run: pnpm build
 
-      - name: Start preview server in background
-        run: pnpm preview &
+      - name: Create index.html for SPA
+        run: |
+          cat > .output/public/index.html << 'EOF'
+          <!DOCTYPE html>
+          <html>
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>Finance</title>
+            <link rel="icon" href="/icon.svg">
+            <link rel="manifest" href="/manifest.webmanifest">
+          </head>
+          <body>
+            <div id="__nuxt"></div>
+            <script type="module" src="/_nuxt/CaAzaP6d.js"></script>
+          </body>
+          </html>
+          EOF
+
+      - name: Create simple HTTP server
+        run: |
+          cat > .output/server.js << 'EOF'
+          import { createServer } from 'node:http';
+          import { readFileSync } from 'node:fs';
+          import { join } from 'node:path';
+          import { fileURLToPath } from 'node:url';
+
+          const __dirname = fileURLToPath(new URL('.', import.meta.url));
+          const publicDir = join(__dirname, '.output', 'public');
+
+          createServer((req, res) => {
+            let filePath = join(publicDir, req.url === '/' ? 'index.html' : req.url);
+            
+            try {
+              let data = readFileSync(filePath);
+              const ext = filePath.split('.').pop();
+              const contentType = {
+                'html': 'text/html',
+                'js': 'application/javascript',
+                'css': 'text/css',
+                'json': 'application/json',
+                'png': 'image/png',
+                'svg': 'image/svg+xml',
+                'ico': 'image/x-icon',
+                'wasm': 'application/wasm'
+              }[ext] || 'application/octet-stream';
+              
+              res.writeHead(200, { 'Content-Type': contentType });
+              res.end(data);
+            } catch (e) {
+              // SPA fallback - serve index.html for all routes
+              try {
+                const indexHtml = readFileSync(join(publicDir, 'index.html'));
+                res.writeHead(200, { 'Content-Type': 'text/html' });
+                res.end(indexHtml);
+              } catch (e2) {
+                res.writeHead(404);
+                res.end('Not found');
+              }
+            }
+          }).listen(3000, () => {
+            console.log('Server running at http://localhost:3000');
+          });
+
+          // Keep process alive
+          setInterval(() => {}, 1000);
+          EOF
+          
+          node .output/server.js &
         shell: bash
 
       - name: Wait for server to be ready
         run: |
-          for i in {1..30}; do
+          for i in {1..60}; do
             if curl -s http://localhost:3000 > /dev/null; then
               echo "Server is ready"
               break
             fi
-            echo "Waiting for server... ($i/30)"
+            echo "Waiting for server... ($i/60)"
             sleep 2
           done
 
