@@ -10,12 +10,12 @@ import type { Subprocess } from "bun";
 /**
  * Uses an LLM agent to intelligently select the next task to work on.
  */
-async function selectTaskAgentically(modelName: string): Promise<{ bucket: Bucket; filename: string } | null> {
+async function selectTaskAgentically(modelName: string, projectRoot: string): Promise<{ bucket: Bucket; filename: string } | null> {
   console.log(`\n🤖 Ralph (${modelName}) is analyzing the board to select a task...`);
 
   const dev = await validateModel(modelName);
-  const selectorAgent = resolve(process.cwd(), ".agentic-kanban", "agents", "ralph-dev-selector.md");
-  
+  const selectorAgent = resolve(projectRoot, ".agentic-kanban", "agents", "ralph-dev-selector.md");
+
   const unassignedFiles = await listTasks("unassigned");
   const needsReviewFiles = await listTasks("needs-review");
   
@@ -42,7 +42,6 @@ async function selectTaskAgentically(modelName: string): Promise<{ bucket: Bucke
   const prompt = `Current Model: ${modelName}\n\nKANBAN BOARD STATE:\n${boardState}\n\nSelect the next task to work on. Output ONLY the <choice>bucket/file.json</choice> or <choice>NONE</choice>.`;
 
   console.log("────────────────────────────────────────────────────────────");
-  const projectRoot = resolve(process.cwd(), "..");
   const cmd = ["opencode", "run", selectorAgent, "--model", dev.model, prompt];
   const proc = Bun.spawn(cmd, {
     cwd: projectRoot,
@@ -331,6 +330,7 @@ if (import.meta.main) {
   }
 
   const SLEEP_MS = getConfig().sleep.developer;
+  const PROJECT_ROOT = resolve(process.cwd(), "..");
   let running = true;
   let sleepTimeout: Timer | null = null;
   const signalHandler = { currentProc: null as Subprocess | null, running: true };
@@ -352,7 +352,7 @@ if (import.meta.main) {
   (async () => {
     while (running) {
       try {
-        const selection = await selectTaskAgentically(modelName);
+        const selection = await selectTaskAgentically(modelName, PROJECT_ROOT);
         
         if (selection) {
           const task = await claimAndPrepare(selection.bucket, selection.filename, modelName);
@@ -363,9 +363,9 @@ if (import.meta.main) {
             await moveTask("assigned", "needs-review", selection.filename);
             continue;
           }
-          
-          const agentFile = resolve(process.cwd(), ".agentic-kanban", "agents", isReview ? "ralph-dev-reviewer.md" : "ralph-dev-inner.md");
-          
+
+          const agentFile = resolve(PROJECT_ROOT, ".agentic-kanban", "agents", isReview ? "ralph-dev-reviewer.md" : "ralph-dev-inner.md");
+
           const result = await runRalphLoop(agentFile, task, modelName, signalHandler);
           await finalizeTask(task.id, modelName, result.status as any, isReview, (result as any).reason);
           
