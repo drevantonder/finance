@@ -36,7 +36,10 @@ jobs:
 
       - name: Create index.html for SPA
         run: |
-          cat > .output/public/index.html << 'EOF'
+          # Find the largest .js file (main entry point)
+          ENTRY_JS=$(ls -S .output/public/_nuxt/*.js | head -1 | xargs basename)
+          echo "Entry point: ${ENTRY_JS}"
+          cat > .output/public/index.html << EOF
           <!DOCTYPE html>
           <html>
           <head>
@@ -48,7 +51,7 @@ jobs:
           </head>
           <body>
             <div id="__nuxt"></div>
-            <script type="module" src="/_nuxt/CaAzaP6d.js"></script>
+            <script type="module" src="/_nuxt/${ENTRY_JS}"></script>
           </body>
           </html>
           EOF
@@ -62,7 +65,7 @@ jobs:
           import { fileURLToPath } from 'node:url';
 
           const __dirname = fileURLToPath(new URL('.', import.meta.url));
-          const publicDir = join(__dirname, '.output', 'public');
+          const publicDir = join(__dirname, 'public');
 
           createServer((req, res) => {
             let filePath = join(publicDir, req.url === '/' ? 'index.html' : req.url);
