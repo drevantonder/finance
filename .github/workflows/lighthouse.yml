@@ -33,25 +33,43 @@ jobs:
         run: pnpm build
 
       - name: Start preview server in background
-        run: pnpm preview &
+        run: |
+          mkdir -p logs
+          nohup pnpm preview > logs/server.log 2>&1 &
+          echo $! > logs/server.pid
         shell: bash
 
       - name: Wait for server to be ready
         run: |
-          for i in {1..30}; do
-            if curl -s http://localhost:3000 > /dev/null; then
+          for i in {1..60}; do
+            if curl -s http://localhost:3000/login > /dev/null 2>&1; then
               echo "Server is ready"
               break
             fi
-            echo "Waiting for server... ($i/30)"
+            echo "Waiting for server... ($i/60)"
             sleep 2
           done
+          
+          # Show server logs if not ready
+          if [ $i -eq 60 ]; then
+            echo "Server failed to start. Logs:"
+            cat logs/server.log
+            exit 1
+          fi
+
+      - name: Debug server status
+        if: failure()
+        run: |
+          echo "=== Server Logs ==="
+          cat logs/server.log || true
+          echo "=== Process Status ==="
+          ps aux | grep -i "nuxt\|node" || true
 
       - name: Run Lighthouse CI
         uses: treosh/lighthouse-ci-action@v12
         with:
           urls: |
-            http://localhost:3000/
+            http://localhost:3000/login
           uploadArtifacts: true
           temporaryPublicStorage: true
 
@@ -63,3 +81,12 @@ jobs:
           path: .lighthouseci/
           retention-days: 30
 
+      - name: Cleanup background server
+        if: always()
+        run: |
+          if [ -f logs/server.pid ]; then
+            pid=$(cat logs/server.pid)
+            kill $pid 2>/dev/null || true
+            echo "Killed server process (PID: $pid)"
+          fi
+        shell: bash
