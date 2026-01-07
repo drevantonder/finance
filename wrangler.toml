@@ -14,3 +14,6 @@ binding = "DB"
 database_name = "finance-db"
 database_id = "7b47755f-3dff-423b-ab15-c340431622be"
 migrations_dir = "server/db/migrations"
+
+[[triggers]]
+crons = ["0,15,30,45 * * * *"]

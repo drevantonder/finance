@@ -150,7 +150,7 @@ export default defineEventHandler(async (event) => {
         }
       } catch (processErr) {
         console.error('AI Processing error:', processErr)
-        await db.update(expenses).set({ status: 'failed', updatedAt: new Date() }).where(eq(expenses.id, id))
+        await db.update(expenses).set({ status: 'error', updatedAt: new Date() }).where(eq(expenses.id, id))
         
         logActivity({
           type: 'error',

@@ -26,6 +26,7 @@ export const expenses = sqliteTable('expenses', {
   exchangeRate: real('exchange_rate'),
   createdAt: integer('created_at', { mode: 'timestamp' }).notNull(),
   updatedAt: integer('updated_at', { mode: 'timestamp' }).notNull(),
+  retryCount: integer('retry_count').notNull().default(0),
 })
 
 export const categories = sqliteTable('categories', {
