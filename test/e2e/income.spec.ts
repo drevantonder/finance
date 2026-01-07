@@ -12,7 +12,6 @@ test.beforeEach(async ({ page, context }) => {
 test.describe('Income Management Flow', () => {
   test('income page loads successfully', async ({ page }) => {
     await page.goto('/menu/income')
-    await page.waitForTimeout(2000)
 
     // Verify page loaded - check for h1 heading
     await expect(page.locator('h1')).toContainText('Income Strategy')
@@ -25,7 +24,6 @@ test.describe('Income Management Flow', () => {
 
   test('displays income sources list', async ({ page }) => {
     await page.goto('/menu/income')
-    await page.waitForTimeout(2000)
 
     // Check for income sources section
     const pageContent = await page.content()
@@ -37,7 +35,6 @@ test.describe('Income Management Flow', () => {
 
   test('household section displays members', async ({ page }) => {
     await page.goto('/menu/income')
-    await page.waitForTimeout(2000)
 
     // Household section should be visible
     await expect(page.getByText('Household Members').first()).toBeVisible()
@@ -49,7 +46,6 @@ test.describe('Income Management Flow', () => {
 
   test('timeline impact section displays', async ({ page }) => {
     await page.goto('/menu/income')
-    await page.waitForTimeout(2000)
 
     // Check for projected timeline
     await expect(page.getByText('Projected Timeline').first()).toBeVisible()
@@ -63,7 +59,6 @@ test.describe('Income Management Flow', () => {
     // This test requires an income source to exist
     // We'll verify navigation functionality exists
     await page.goto('/menu/income')
-    await page.waitForTimeout(2000)
 
     // Look for edit button in income sources
     const pageContent = await page.content()
@@ -77,7 +72,6 @@ test.describe('Income Management Flow', () => {
 
   test('income strategy displays key metrics', async ({ page }) => {
     await page.goto('/menu/income')
-    await page.waitForTimeout(2000)
 
     // Verify key financial metrics are displayed
     const pageContent = await page.content()
@@ -90,7 +84,6 @@ test.describe('Income Management Flow', () => {
 
   test('displays tmn strategy guidance', async ({ page }) => {
     await page.goto('/menu/income')
-    await page.waitForTimeout(2000)
 
     // Check for TMN Strategy guidance card
     await expect(page.getByText('TMN Strategy')).toBeVisible()
@@ -102,7 +95,6 @@ test.describe('Income Management Flow', () => {
 
   test('displays proper layout for income sources', async ({ page }) => {
     await page.goto('/menu/income')
-    await page.waitForTimeout(2000)
 
     // Verify sections are properly laid out using first() for ambiguous selectors
     const householdSection = page.getByText('Household Members')
@@ -116,7 +108,6 @@ test.describe('Income Management Flow', () => {
 
   test('shows monthly net income summary', async ({ page }) => {
     await page.goto('/menu/income')
-    await page.waitForTimeout(2000)
 
     // The header for Income Sources shows monthly net income
     await expect(page.getByText(/NET/)).toBeVisible()

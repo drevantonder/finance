@@ -14,9 +14,6 @@ test.describe('Dashboard Page', () => {
     await page.goto('/')
 
     // Wait for the dashboard heading to appear
-    await page.waitForSelector('h1', { state: 'visible', timeout: 10000 })
-
-    // Verify page title is visible
     await expect(page.locator('h1')).toContainText('Dashboard')
 
     // Verify main action buttons are visible (use text selector as buttons might have different roles)
@@ -43,7 +40,7 @@ test.describe('Dashboard Page', () => {
     })
 
     await page.goto('/')
-    await page.waitForSelector('h1', { state: 'visible', timeout: 10000 })
+    await expect(page.locator('h1')).toBeVisible()
 
     // Check for critical console errors (excluding auth-related ones)
     expect(errors.filter(e => !e.includes('401'))).toHaveLength(0)
@@ -51,7 +48,7 @@ test.describe('Dashboard Page', () => {
 
   test('displays attention items when applicable', async ({ page }) => {
     await page.goto('/')
-    await page.waitForSelector('h1', { state: 'visible', timeout: 10000 })
+    await expect(page.locator('h1')).toBeVisible()
 
     // Attention items section may or may not be visible depending on data
     // Just verify the page doesn't crash with or without attention items
@@ -61,19 +58,15 @@ test.describe('Dashboard Page', () => {
 
   test('renders charts components', async ({ page }) => {
     await page.goto('/')
-    await page.waitForSelector('h1', { state: 'visible', timeout: 10000 })
-
-    // Wait a bit for charts to render (they may be loading data)
-    await page.waitForTimeout(2000)
+    await expect(page.locator('h1')).toBeVisible()
 
     // Wait for charts to render (check for canvas elements)
-    const canvases = await page.locator('canvas').count()
-    expect(canvases).toBeGreaterThanOrEqual(1) // At least 1 chart should render
+    await expect(page.locator('canvas').first()).toBeVisible()
   })
 
   test('navigation links work', async ({ page }) => {
     await page.goto('/')
-    await page.waitForSelector('h1', { state: 'visible', timeout: 10000 })
+    await expect(page.locator('h1')).toBeVisible()
 
     // Test Update Assets button/link
     await page.getByText('Update Assets').click()
@@ -82,7 +75,7 @@ test.describe('Dashboard Page', () => {
 
     // Go back to dashboard
     await page.goto('/')
-    await page.waitForSelector('h1', { state: 'visible', timeout: 10000 })
+    await expect(page.locator('h1')).toBeVisible()
 
     // Test View Goal button/link
     await page.getByText('View Goal').click()

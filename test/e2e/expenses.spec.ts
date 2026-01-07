@@ -30,7 +30,9 @@ test.describe('Expenses CRUD Flow', () => {
 
     // Navigate to expenses page
     await page.goto('/expenses')
-    await page.waitForTimeout(5000) // Wait for data to load
+
+    // Wait for expense list to appear
+    await expect(page.locator('div[class*="group"][class*="cursor-pointer"]').first()).toBeVisible()
 
     // The expense was successfully created - verify by checking we're not in empty state
     const pageContent = await page.content()
@@ -53,7 +55,6 @@ test.describe('Expenses CRUD Flow', () => {
 
     // Navigate to expenses page
     await page.goto('/expenses')
-    await page.waitForTimeout(3000)
 
     // Click on expense item
     const expenseItems = page.locator('div[class*="group"][class*="cursor-pointer"]')
@@ -61,7 +62,7 @@ test.describe('Expenses CRUD Flow', () => {
     await expenseItems.first().click()
 
     // Verify detail view opened with expected fields
-    await expect(page.getByText('Merchant')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Merchant')).toBeVisible()
     await expect(page.getByText('Tax')).toBeVisible()
     await expect(page.getByText('Total')).toBeVisible()
   })
@@ -90,24 +91,23 @@ test.describe('Expenses CRUD Flow', () => {
 
     // Navigate to expenses page
     await page.goto('/expenses')
-    await page.waitForTimeout(3000)
 
     // Verify list shows expenses
     const expenseItems = page.locator('div[class*="group"][class*="cursor-pointer"]')
+    await expect(expenseItems.first()).toBeVisible()
     const count = await expenseItems.count()
     expect(count).toBeGreaterThanOrEqual(2)
 
     // Click first expense
     await expenseItems.first().click()
-    await expect(page.getByText('Merchant')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Merchant')).toBeVisible()
 
     // Close detail - refresh page instead of clicking close button
     await page.goto('/expenses')
-    await page.waitForTimeout(2000)
 
     // Click second expense (now it's first since we refreshed)
     await expenseItems.first().click()
-    await expect(page.getByText('Merchant')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Merchant')).toBeVisible()
   })
 
   test('can delete an expense', async ({ page, context }) => {
@@ -129,14 +129,13 @@ test.describe('Expenses CRUD Flow', () => {
 
     // Navigate to expenses page
     await page.goto('/expenses')
-    await page.waitForTimeout(3000)
 
     // Click on expense item
     const expenseItems = page.locator('div[class*="group"][class*="cursor-pointer"]')
     await expenseItems.first().click()
 
     // Wait for detail view
-    await expect(page.getByText('Delete')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Delete')).toBeVisible()
 
     // Handle confirmation dialog
     page.on('dialog', async dialog => {
@@ -145,10 +144,9 @@ test.describe('Expenses CRUD Flow', () => {
 
     // Delete expense
     await page.getByText('Delete').click()
-    await page.waitForTimeout(3000) // Wait for deletion to complete
 
     // Verify we're back at list
-    expect(page.url()).toContain('/expenses')
+    await expect(page).toHaveURL(/\/expenses/)
 
     // Try to delete via API to verify it's gone
     const deleteResponse = await context.request.delete(`/api/expenses/${expense.id}`)
@@ -171,7 +169,6 @@ test.describe('Expenses CRUD Flow', () => {
 
     // Navigate to expenses page
     await page.goto('/expenses')
-    await page.waitForTimeout(3000)
 
     // Verify expense list item shows key info
     const firstExpense = page.locator('div[class*="group"][class*="cursor-pointer"]').first()
@@ -197,7 +194,6 @@ test.describe('Expenses CRUD Flow', () => {
 
     // Navigate to expenses page
     await page.goto('/expenses')
-    await page.waitForTimeout(3000)
 
     // Check for sort functionality in the page
     const pageContent = await page.content()
