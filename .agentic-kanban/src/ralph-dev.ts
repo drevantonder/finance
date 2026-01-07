@@ -176,7 +176,7 @@ async function claimAndPrepare(bucket: Bucket, filename: string, modelName: stri
  * Runs the Ralph loop for a task until completion, rejection, or blockage.
  */
 async function runRalphLoop(agent: string, task: Task, modelName: string, signalHandler: { currentProc: Subprocess | null; running: boolean }) {
-  const isReview = agentFile.includes("reviewer");
+  const isReview = agent === "ralph-dev-reviewer";
   const taskName = isReview ? "review" : "implementation";
   const dev = await validateModel(modelName);
   
