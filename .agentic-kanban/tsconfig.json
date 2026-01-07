@@ -11,8 +11,6 @@
     "strict": true,
     "downlevelIteration": true,
     "skipLibCheck": true,
-    "elementNamesAreLowercase": true,
-    "slotNamesAreLowercase": true,
     "allowSyntheticDefaultImports": true,
     "forceConsistentCasingInFileNames": true,
     "allowJs": true,

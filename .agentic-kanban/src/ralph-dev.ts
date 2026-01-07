@@ -178,7 +178,7 @@ ${progressContent}
 
 INSTRUCTIONS:
 1. Work on the task.
-2. Run tests to verify.
+2. Run and/or write tests to verify.
 3. Commit your work.
 4. APPEND a concise summary of this iteration to .agentic-task/progress.txt.
 5. If complete, output <promise>COMPLETE</promise> (or <promise>APPROVED</promise> if reviewing).
@@ -337,6 +337,13 @@ if (import.meta.main) {
         if (selection) {
           const task = await claimAndPrepare(selection.bucket, selection.filename, modelName);
           const isReview = selection.bucket === "needs-review";
+          
+          if (isReview && task.implemented_by === `ralph-dev-${modelName}`) {
+            console.log(`⛔ Agent ${modelName} implemented this task. Cannot self-review. Returning to needs-review/`);
+            await moveTask("assigned", "needs-review", selection.filename);
+            continue;
+          }
+          
           const agentFile = resolve(process.cwd(), "agents", isReview ? "ralph-dev-reviewer.md" : "ralph-dev-inner.md");
           
           const result = await runRalphLoop(agentFile, task, modelName, signalHandler);

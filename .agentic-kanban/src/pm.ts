@@ -54,6 +54,7 @@ export async function syncEpics() {
 export async function createPRs() {
   console.log("Checking for completed tasks to create PRs...");
   const complete = await listTasks("complete");
+  const baseBranch = getConfig().baseBranch;
   
   for (const filename of complete) {
     const task = await readTask("complete", filename);
@@ -75,11 +76,28 @@ export async function createPRs() {
       console.log(`Pushing branch ${branch} to origin...`);
       await $`git push origin ${branch}`.quiet();
 
-      // Create PR
-      const body = `Closes #${task.id}\n\n${task.description}`;
+      // Create PR body with agent metadata and acceptance criteria
+      const body = `Closes #${task.id}
+
+## Summary
+${task.description}
+
+## Agent Information
+- **Implemented by**: ${task.implemented_by || "Unknown"}
+- **Review status**: ${task.review.status === "approved" ? "✅ Approved" : "❌ Rejected"}
+- **Reviewed by**: ${task.review.reviewer || "Unknown"}
+- **Reviewed at**: ${task.review.reviewed_at || "Pending"}
+
+## Acceptance Criteria
+${task.tasks.map(t => `- [${t.completed ? "x" : " "}] ${t.description}`).join("\n")}${task.rejection_count > 0 ? `
+
+## Review History
+${task.rejection_history.map(r => `**${r.reviewer}** (${r.reviewed_at}): ${r.issues.join(", ")}`).join("\n")}
+` : ""}`;
+      
       const title = `Epic #${task.id}: ${task.title}`;
       
-      const prOutput = await $`gh pr create --title ${title} --body ${body} --head ${branch}`.text();
+      const prOutput = await $`gh pr create --title ${title} --body ${body} --head ${branch} --base ${baseBranch}`.text();
       const prUrl = prOutput.trim();
       
       // Extract PR number from URL (e.g., .../pull/123)
