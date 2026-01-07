@@ -119,8 +119,8 @@ export async function monitorPRs() {
       const prOutput = await $`gh pr view ${task.pr_number} --json state,reviews,comments`.text();
       const pr = JSON.parse(prOutput);
       
-      if (pr.state === "MERGED") {
-        console.log(`PR #${task.pr_number} merged! Archiving task #${task.id}.`);
+      if (pr.state === "MERGED" || pr.state === "CLOSED") {
+        console.log(`PR #${task.pr_number} is ${pr.state}. Archiving task #${task.id}.`);
         
         // Move to archived/
         await moveTask("complete", "archived", filename);
