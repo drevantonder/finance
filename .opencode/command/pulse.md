@@ -1,16 +1,16 @@
 ---
-description: Show comprehensive project status dashboard
-agent: project-manager
+description: Show comprehensive status dashboard
+agent: product-manager
 ---
 
-Here's the current project pulse:
+Here's the current pulse:
 
 <injected-shell-output>
 ```bash
-.opencode/bin/pulse
+echo 'not implemented yet'
 ```
 <result>
-!`.opencode/bin/pulse`
+!`echo 'not implemented yet'`
 </result>
 </injected-shell-output>
 
