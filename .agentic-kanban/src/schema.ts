@@ -19,6 +19,7 @@ export const TaskSchema = z.object({
   rejection_count: z.number().default(0),
   rejection_history: z.array(z.any()).default([]),
   escalation_reason: z.string().optional(),
+  paused_at_iteration: z.number().optional(),
   review: z.object({
     status: z.enum(["approved", "rejected", "pending"]).default("pending"),
     reviewer: z.string().optional(),

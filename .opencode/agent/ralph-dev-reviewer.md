@@ -7,6 +7,9 @@ tools:
   edit: true
   glob: true
   grep: true
+permission:
+  external_directory: deny
+  doom_loop: deny
 ---
 
 # Ralph Developer Reviewer

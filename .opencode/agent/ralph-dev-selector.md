@@ -4,6 +4,9 @@ mode: primary
 tools:
   read: true
   glob: true
+permission:
+  external_directory: deny
+  doom_loop: deny
 ---
 
 # Ralph Developer Selector

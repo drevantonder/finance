@@ -8,31 +8,52 @@ import { validateModel, getBaseBranch, getConfig } from "./config";
 import type { Subprocess } from "bun";
 
 /**
+ * Checks if there's a paused task assigned to this model that should be resumed.
+ */
+async function findPausedTask(modelName: string): Promise<Task | null> {
+  const assignedFiles = await listTasks("assigned");
+  const agentId = `ralph-dev-${modelName}`;
+
+  for (const filename of assignedFiles) {
+    const task = await readTask("assigned", filename);
+    if (task.assigned_to === agentId && task.paused_at_iteration) {
+      return task;
+    }
+  }
+  return null;
+}
+
+/**
  * Uses an LLM agent to intelligently select the next task to work on.
  */
 async function selectTaskAgentically(modelName: string, projectRoot: string): Promise<{ bucket: Bucket; filename: string } | null> {
   console.log(`\n🤖 Ralph (${modelName}) is analyzing the board to select a task...`);
 
   const dev = await validateModel(modelName);
-  const selectorAgent = resolve(projectRoot, ".agentic-kanban", "agents", "ralph-dev-selector.md");
+  const agentId = `ralph-dev-${modelName}`;
 
   const unassignedFiles = await listTasks("unassigned");
   const needsReviewFiles = await listTasks("needs-review");
-  
-  if (unassignedFiles.length === 0 && needsReviewFiles.length === 0) {
-    console.log("Result: No tasks found.");
-    return null;
-  }
 
   // Gather board state to provide as context
   const unassignedTasks = await Promise.all(unassignedFiles.map(async f => ({ 
     path: `unassigned/${f}`, 
     content: await readTask("unassigned", f) 
   })));
-  const needsReviewTasks = await Promise.all(needsReviewFiles.map(async f => ({ 
+  const needsReviewTasksRaw = await Promise.all(needsReviewFiles.map(async f => ({ 
     path: `needs-review/${f}`, 
     content: await readTask("needs-review", f) 
   })));
+
+  // Filter out tasks that were implemented by the same model (self-review prevention)
+  const needsReviewTasks = needsReviewTasksRaw.filter(
+    task => task.content.implemented_by !== agentId
+  );
+  
+  if (unassignedTasks.length === 0 && needsReviewTasks.length === 0) {
+    console.log("Result: No tasks found.");
+    return null;
+  }
 
   const boardState = JSON.stringify({ 
     unassigned: unassignedTasks, 
@@ -42,7 +63,7 @@ async function selectTaskAgentically(modelName: string, projectRoot: string): Pr
   const prompt = `Current Model: ${modelName}\n\nKANBAN BOARD STATE:\n${boardState}\n\nSelect the next task to work on. Output ONLY the <choice>bucket/file.json</choice> or <choice>NONE</choice>.`;
 
   console.log("────────────────────────────────────────────────────────────");
-  const cmd = ["opencode", "run", selectorAgent, "--model", dev.model, prompt];
+  const cmd = ["opencode", "run", "--agent", "ralph-dev-selector", "--model", dev.model, prompt];
   const proc = Bun.spawn(cmd, {
     cwd: projectRoot,
     stdout: "pipe",
@@ -154,8 +175,8 @@ async function claimAndPrepare(bucket: Bucket, filename: string, modelName: stri
 /**
  * Runs the Ralph loop for a task until completion, rejection, or blockage.
  */
-async function runRalphLoop(agentFile: string, task: Task, modelName: string, signalHandler: { currentProc: Subprocess | null; running: boolean }) {
-  const isReview = agentFile.includes("reviewer");
+async function runRalphLoop(agent: string, task: Task, modelName: string, signalHandler: { currentProc: Subprocess | null; running: boolean }) {
+  const isReview = agent === "ralph-dev-reviewer";
   const taskName = isReview ? "review" : "implementation";
   const dev = await validateModel(modelName);
   
@@ -167,11 +188,18 @@ async function runRalphLoop(agentFile: string, task: Task, modelName: string, si
   }
 
   const MAX_ITERATIONS = 10;
-  for (let i = 1; i <= MAX_ITERATIONS; i++) {
-    // Check if we should stop before starting a new iteration
+  const startIteration = task.paused_at_iteration || 1;
+  for (let i = startIteration; i <= MAX_ITERATIONS; i++) {
+    if (i > startIteration) {
+      await writeFile(join(task.worktree_path!, ".agentic-task", "state.json"), JSON.stringify({ iteration: i }, null, 2));
+    }
     if (!signalHandler.running) {
       console.log("\n🛑 Shutdown requested. Stopping iteration loop.");
-      return { status: "BLOCKED", reason: "Shutdown requested by user." };
+      return { status: "PAUSED", iteration: i };
+    }
+    if (!signalHandler.running) {
+      console.log("\n🛑 Shutdown requested. Stopping iteration loop.");
+      return { status: "PAUSED", iteration: i };
     }
     const progressContent = await readFile(progressPath, "utf-8");
     
@@ -200,7 +228,7 @@ INSTRUCTIONS:
 
     const cmd = [
       "opencode", "run",
-      agentFile,
+      "--agent", agent,
       "--model", dev.model,
       prompt
     ];
@@ -266,7 +294,7 @@ INSTRUCTIONS:
   return { status: "BLOCKED", reason: "Max iterations reached without completion signal." };
 }
 
-export async function finalizeTask(epicId: string | number, modelName: string, status: "COMPLETE" | "REJECTED" | "BLOCKED", isReview: boolean, reason?: string) {
+export async function finalizeTask(epicId: string | number, modelName: string, status: "COMPLETE" | "REJECTED" | "BLOCKED" | "PAUSED", isReview: boolean, reason?: string, iteration?: number) {
   const filename = `epic-${epicId}.json`;
   const assignedPath = join(process.cwd(), "kanban", "assigned", filename);
   const task = await readTask("assigned", filename);
@@ -280,6 +308,15 @@ export async function finalizeTask(epicId: string | number, modelName: string, s
   }
 
   finalData.updated_at = new Date().toISOString();
+
+  if (status === "PAUSED") {
+    finalData.paused_at_iteration = iteration;
+    await writeFile(assignedPath, JSON.stringify(finalData, null, 2));
+    console.log(`⏸️  Task paused at iteration ${iteration}. Will resume on restart.`);
+    return;
+  }
+
+  finalData.paused_at_iteration = undefined;
 
   if (status === "COMPLETE") {
     if (isReview) {
@@ -359,32 +396,41 @@ if (import.meta.main) {
   (async () => {
     while (running) {
       try {
-        const selection = await selectTaskAgentically(modelName, PROJECT_ROOT);
+        const pausedTask = await findPausedTask(modelName);
+        let task: Task;
+        let isReview: boolean;
         
-        if (selection) {
-          const task = await claimAndPrepare(selection.bucket, selection.filename, modelName, PROJECT_ROOT);
-          const isReview = selection.bucket === "needs-review";
+        if (pausedTask) {
+          console.log(`\n🔄 Found paused task #${pausedTask.id}. Resuming from iteration ${pausedTask.paused_at_iteration}...`);
+          task = pausedTask;
+          isReview = Boolean(pausedTask.implemented_by && pausedTask.implemented_by !== `ralph-dev-${modelName}`);
+        } else {
+          const selection = await selectTaskAgentically(modelName, PROJECT_ROOT);
+          
+          if (!selection) {
+            console.log(`💤 No work found for ${modelName}. Sleeping for ${SLEEP_MS / 1000}s...`);
+            if (running) {
+              await new Promise(r => {
+                sleepTimeout = setTimeout(r, SLEEP_MS);
+              });
+            }
+            continue;
+          }
+
+          task = await claimAndPrepare(selection.bucket, selection.filename, modelName, PROJECT_ROOT);
+          isReview = selection.bucket === "needs-review";
           
           if (isReview && task.implemented_by === `ralph-dev-${modelName}`) {
             console.log(`⛔ Agent ${modelName} implemented this task. Cannot self-review. Returning to needs-review/`);
             await moveTask("assigned", "needs-review", selection.filename);
             continue;
           }
-
-          const agentFile = resolve(PROJECT_ROOT, ".agentic-kanban", "agents", isReview ? "ralph-dev-reviewer.md" : "ralph-dev-inner.md");
-
-          const result = await runRalphLoop(agentFile, task, modelName, signalHandler);
-          await finalizeTask(task.id, modelName, result.status as any, isReview, (result as any).reason);
-          
-          console.log(`✅ Finished task #${task.id} with status: ${result.status}`);
-        } else {
-          console.log(`💤 No work found for ${modelName}. Sleeping for ${SLEEP_MS / 1000}s...`);
-          if (running) {
-            await new Promise(r => {
-              sleepTimeout = setTimeout(r, SLEEP_MS);
-            });
-          }
         }
+
+        const result = await runRalphLoop(isReview ? "ralph-dev-reviewer" : "ralph-dev-inner", task, modelName, signalHandler);
+        await finalizeTask(task.id, modelName, result.status as any, isReview, (result as any).reason, (result as any).iteration);
+        
+        console.log(`✅ Finished task #${task.id} with status: ${result.status}`);
       } catch (err) {
         console.error("💥 Error in Ralph loop:", err);
         if (running) await new Promise(r => setTimeout(r, 5000));
