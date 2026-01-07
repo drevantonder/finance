@@ -1,2 +1,9 @@
 # Progress for Task #71: Optimize e2e test performance (currently ~2m 30s)
 
+# Iteration 1 Summary
+- Implemented global authentication in `test/e2e/auth.setup.ts` to reuse session state.
+- Removed all hardcoded `page.waitForTimeout()` calls, replacing them with robust assertions.
+- Increased Playwright workers in CI to 2 for better parallelism.
+- Optimized test execution time from ~32s (previously ~2m 30s in CI) to ~22s.
+- Documented changes in `test/e2e/README.md`.
+- Fixed linter errors by installing `@types/node`.
