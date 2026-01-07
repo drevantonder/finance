@@ -1,14 +1,5 @@
 import { test, expect } from '@playwright/test'
 
-// Setup authentication before each test
-test.beforeEach(async ({ page, context }) => {
-  // Call test login endpoint to create mock session
-  const response = await context.request.post('/api/auth/test-login')
-  const data = await response.json()
-  expect(response.ok()).toBe(true)
-  expect(data.success).toBe(true)
-})
-
 test.describe('Dashboard Page', () => {
   test('loads successfully', async ({ page }) => {
     await page.goto('/')
@@ -63,11 +54,11 @@ test.describe('Dashboard Page', () => {
     await page.goto('/')
     await page.waitForSelector('h1', { state: 'visible', timeout: 10000 })
 
-    // Wait a bit for charts to render (they may be loading data)
-    await page.waitForTimeout(2000)
-
     // Wait for charts to render (check for canvas elements)
-    const canvases = await page.locator('canvas').count()
+    const chartCanvas = page.locator('canvas')
+    await expect(chartCanvas.first()).toBeVisible({ timeout: 10000 })
+    
+    const canvases = await chartCanvas.count()
     expect(canvases).toBeGreaterThanOrEqual(1) // At least 1 chart should render
   })
 

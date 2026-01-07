@@ -1,14 +1,5 @@
 import { test, expect } from '@playwright/test'
 
-// Setup authentication before each test
-test.beforeEach(async ({ page, context }) => {
-  // Call test login endpoint to create mock session
-  const response = await context.request.post('/api/auth/test-login')
-  const data = await response.json()
-  expect(response.ok()).toBe(true)
-  expect(data.success).toBe(true)
-})
-
 test.describe('Expenses CRUD Flow', () => {
   test('can create a new expense', async ({ page, context }) => {
     // Create a test expense via API (simulating UI upload)
@@ -30,11 +21,12 @@ test.describe('Expenses CRUD Flow', () => {
 
     // Navigate to expenses page
     await page.goto('/expenses')
-    await page.waitForTimeout(5000) // Wait for data to load
+    
+    // Wait for the expenses list or empty state to appear
+    await expect(page.locator('h1')).toContainText('Expenses', { timeout: 10000 })
 
     // The expense was successfully created - verify by checking we're not in empty state
-    const pageContent = await page.content()
-    expect(pageContent).not.toContain('No receipts yet')
+    await expect(page.getByText('No receipts yet')).not.toBeVisible()
   })
 
   test('displays expense details when clicked', async ({ page, context }) => {
@@ -53,11 +45,12 @@ test.describe('Expenses CRUD Flow', () => {
 
     // Navigate to expenses page
     await page.goto('/expenses')
-    await page.waitForTimeout(3000)
+    
+    // Wait for the list to load
+    const expenseItems = page.locator('div[class*="group"][class*="cursor-pointer"]')
+    await expect(expenseItems.first()).toBeVisible({ timeout: 10000 })
 
     // Click on expense item
-    const expenseItems = page.locator('div[class*="group"][class*="cursor-pointer"]')
-    await expect(expenseItems.first()).toBeVisible()
     await expenseItems.first().click()
 
     // Verify detail view opened with expected fields
@@ -90,10 +83,10 @@ test.describe('Expenses CRUD Flow', () => {
 
     // Navigate to expenses page
     await page.goto('/expenses')
-    await page.waitForTimeout(3000)
-
+    
     // Verify list shows expenses
     const expenseItems = page.locator('div[class*="group"][class*="cursor-pointer"]')
+    await expect(expenseItems.first()).toBeVisible({ timeout: 10000 })
     const count = await expenseItems.count()
     expect(count).toBeGreaterThanOrEqual(2)
 
@@ -103,7 +96,7 @@ test.describe('Expenses CRUD Flow', () => {
 
     // Close detail - refresh page instead of clicking close button
     await page.goto('/expenses')
-    await page.waitForTimeout(2000)
+    await expect(expenseItems.first()).toBeVisible({ timeout: 10000 })
 
     // Click second expense (now it's first since we refreshed)
     await expenseItems.first().click()
@@ -129,10 +122,10 @@ test.describe('Expenses CRUD Flow', () => {
 
     // Navigate to expenses page
     await page.goto('/expenses')
-    await page.waitForTimeout(3000)
-
+    
     // Click on expense item
     const expenseItems = page.locator('div[class*="group"][class*="cursor-pointer"]')
+    await expect(expenseItems.first()).toBeVisible({ timeout: 10000 })
     await expenseItems.first().click()
 
     // Wait for detail view
@@ -145,7 +138,9 @@ test.describe('Expenses CRUD Flow', () => {
 
     // Delete expense
     await page.getByText('Delete').click()
-    await page.waitForTimeout(3000) // Wait for deletion to complete
+    
+    // Wait for the detail view to close or list to refresh
+    await expect(page.getByText('Delete')).not.toBeVisible({ timeout: 10000 })
 
     // Verify we're back at list
     expect(page.url()).toContain('/expenses')
@@ -171,11 +166,10 @@ test.describe('Expenses CRUD Flow', () => {
 
     // Navigate to expenses page
     await page.goto('/expenses')
-    await page.waitForTimeout(3000)
-
+    
     // Verify expense list item shows key info
     const firstExpense = page.locator('div[class*="group"][class*="cursor-pointer"]').first()
-    await expect(firstExpense).toBeVisible()
+    await expect(firstExpense).toBeVisible({ timeout: 10000 })
 
     // Check that merchant text is present
     const content = await firstExpense.textContent()
@@ -197,7 +191,7 @@ test.describe('Expenses CRUD Flow', () => {
 
     // Navigate to expenses page
     await page.goto('/expenses')
-    await page.waitForTimeout(3000)
+    await expect(page.locator('h1')).toContainText('Expenses', { timeout: 10000 })
 
     // Check for sort functionality in the page
     const pageContent = await page.content()

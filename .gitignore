@@ -30,6 +30,7 @@ docs/Power to Change/
 
 # Test outputs
 playwright-report/
+playwright/.auth/
 
 # .ralph folder for ralph loops
 .ralph/

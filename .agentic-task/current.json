@@ -1,0 +1,45 @@
+{
+  "id": 71,
+  "title": "Optimize e2e test performance (currently ~2m 30s)",
+  "description": "## Problem\ne2e tests take ~2m 30sec to run, slowing down pull requests and merges.\n\n## Acceptance Criteria\n- [ ] Profile current e2e test execution to identify bottlenecks\n- [ ] Implement parallel test execution if possible\n- [ ] Optimize test setup/teardown processes\n- [ ] Target sub-1 minute runtime for complete e2e test suite\n- [ ] Document any changes to test configuration\n\n## Labels\nepic",
+  "tasks": [
+    {
+      "id": "71-0",
+      "description": "Profile current e2e test execution to identify bottlenecks",
+      "completed": false
+    },
+    {
+      "id": "71-1",
+      "description": "Implement parallel test execution if possible",
+      "completed": false
+    },
+    {
+      "id": "71-2",
+      "description": "Optimize test setup/teardown processes",
+      "completed": false
+    },
+    {
+      "id": "71-3",
+      "description": "Target sub-1 minute runtime for complete e2e test suite",
+      "completed": false
+    },
+    {
+      "id": "71-4",
+      "description": "Document any changes to test configuration",
+      "completed": false
+    }
+  ],
+  "priority": "medium",
+  "branch": "feat/epic-71",
+  "worktree_path": "/Users/drevan/projects/finance-worktrees/move-to-kanban-workflow/finance-worktrees/feat-epic-71",
+  "rejection_count": 0,
+  "rejection_history": [],
+  "review": {
+    "status": "pending",
+    "issues": []
+  },
+  "created_at": "2026-01-07T00:49:38.701Z",
+  "updated_at": "2026-01-07T01:48:00.177Z",
+  "assigned_to": "ralph-dev-gemini-3-flash",
+  "assigned_at": "2026-01-07T01:48:00.177Z"
+}

@@ -1,0 +1,2 @@
+# Progress for Task #71: Optimize e2e test performance (currently ~2m 30s)
+
