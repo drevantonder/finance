@@ -30,7 +30,3 @@ docs/Power to Change/
 
 # Test outputs
 playwright-report/
-
-# .ralph folder for ralph loops
-.ralph/
-finance-worktrees/

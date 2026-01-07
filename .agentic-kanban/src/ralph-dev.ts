@@ -85,7 +85,7 @@ async function selectTaskAgentically(modelName: string, projectRoot: string): Pr
 /**
  * Claims a task and prepares the worktree.
  */
-async function claimAndPrepare(bucket: Bucket, filename: string, modelName: string): Promise<Task> {
+async function claimAndPrepare(bucket: Bucket, filename: string, modelName: string, projectRoot: string): Promise<Task> {
   const task = await readTask(bucket, filename);
   const epicId = task.id;
 
@@ -94,7 +94,7 @@ async function claimAndPrepare(bucket: Bucket, filename: string, modelName: stri
   // Move to assigned/
   await moveTask(bucket, "assigned", filename);
 
-  const worktreeRoot = resolve(process.cwd(), "..", "finance-worktrees");
+  const worktreeRoot = resolve(projectRoot, ".worktrees");
   const worktreePath = join(worktreeRoot, `feat-epic-${epicId}`);
   const branchName = `feat/epic-${epicId}`;
 
@@ -355,7 +355,7 @@ if (import.meta.main) {
         const selection = await selectTaskAgentically(modelName, PROJECT_ROOT);
         
         if (selection) {
-          const task = await claimAndPrepare(selection.bucket, selection.filename, modelName);
+          const task = await claimAndPrepare(selection.bucket, selection.filename, modelName, PROJECT_ROOT);
           const isReview = selection.bucket === "needs-review";
           
           if (isReview && task.implemented_by === `ralph-dev-${modelName}`) {
