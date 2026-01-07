@@ -56,6 +56,7 @@ When planning, ALWAYS use **Context7** MCP tools for accurate library usage. (Mu
 ## Creating issues
 - **IMPORTANT**: Use `--label "epic"` flag when creating issues (pm script looks for this label only).
 - Use a checkbox list to break down the epic into atomic acceptance criteria (the what, not the how).
+- Acceptance criteria should be as non-technical but specific as possible.
 
 Example:
 ```bash
