@@ -201,7 +201,7 @@ describe('calculateIncomeTax', () => {
 - Avoid long-running processes; Workers have strict time limits
 - Use `event.waitUntil()` for background tasks
 
-## Domain Context
+## Doprod Context
 See **docs/DOMAIN.md** for:
 - Business rules (TMN, MFB, DTI calculations)
 - Australian tax rates and HECS thresholds
