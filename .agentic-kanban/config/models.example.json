@@ -1,0 +1,7 @@
+{
+  "enabled": {
+    "glm-4.7": true,
+    "gemini-3-flash": true,
+    "minimax-m2.1": false
+  }
+}

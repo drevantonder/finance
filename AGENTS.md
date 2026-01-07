@@ -1,24 +1,5 @@
 # Agent Instructions
 
-## Agent Architecture
-
-This project uses a **seniority-based autonomous coding team**:
-
-| Agent | Model | Role |
-|-------|-------|------|
-| **Project Manager** | MiniMax M2.1 Free | Coordinates workflow, assigns tasks, manages GitHub |
-| **Junior-Ralph** | GLM 4.7 | Fast implementation of routine tasks |
-| **Senior-Ralph** | Opus 4.5 | Complex tasks, reviews, rescues, has specialist access |
-| **Specialist-UI** | Gemini 3 Pro | UI/UX expertise (advise, review, ideate) |
-| **Specialist-Security** | GPT 5.1 Codex | Security expertise (advise, audit, ideate) |
-| **Specialist-Docs** | Gemini 3 Pro | Documentation expertise (advise, review, ideate) |
-
-See **@docs/ralph-workflow.md** for the complete workflow protocol.
-
----
-
-# Agent Instructions
-
 ## <injected-shell-output>
 When you see `<injected-shell-output>`. The command has been executed and the result has been injected into your prompt/response. (The results are accurate to the time of the prompt.)
 
@@ -227,22 +208,26 @@ See **docs/DOMAIN.md** for:
 - Common calculation bugs to avoid
 
 ## Documentation Lookup
-Use **Context7** tools for up-to-date library documentation:
-
-1. `context7_resolve-library-id` → find library ID from package name (e.g., "nuxt", "drizzle-orm")
-2. `context7_query-docs` → query specific topics with the library ID
+Use **Context7** MCP tools for up-to-date library documentation. (Much faster and more accurate than searching the web.)
+Use Nuxt and Nuxt UI MCP tools to get Nuxt and Nuxt UI docs. (Much faster and more accurate than searching the web.)
 
 **Prioritize Context7** over guessing API usage for:
-- Nuxt features, Vue composables
 - Drizzle ORM patterns
 - TanStack Query mutations
-- Nuxt UI v4 components
 - Tailwind CSS utilities
-
-## Ralph Workflow
-This project uses an autonomous batch execution model. See **@docs/ralph-workflow.md** for the complete protocol.
 
 **Key Rules**:
 - Tax/HECS functions expect ANNUAL income (multiply monthly × 12)
 - Percentages stored as decimals (0.05), displayed as %
 - Iterative solvers for circular deps (house price ↔ stamp duty)
+
+## Opencode and the Agentic Kanban Workflow
+
+### `.agentic-kanban/`
+To understand, debug, or develop the agentic kanban workflow located in `.agentic-kanban/` see @.agentic-kanban/README.md
+
+This also uses some of the custom opencode config located in `.opencode/`.
+
+### `.opencode`
+To debug, or develop the opencode config located in `.opencode/` see @.opencode .
+Get the docs using the `context7` MCP tools.

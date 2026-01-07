@@ -1,0 +1,12 @@
+archived/*
+!archived/.gitkeep
+assigned/*
+!assigned/.gitkeep
+complete/*
+!complete/.gitkeep
+needs-human/*
+!needs-human/.gitkeep
+needs-review/*
+!needs-review/.gitkeep
+unassigned/*
+!unassigned/.gitkeep

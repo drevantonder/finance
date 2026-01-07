@@ -1,0 +1,20 @@
+{
+  "name": "@agentic-kanban/core",
+  "version": "0.1.0",
+  "description": "Agentic Kanban Core",
+  "main": "src/index.ts",
+  "scripts": {
+    "test": "bun test",
+    "ralph-pm": "bun src/pm.ts",
+    "ralph-dev": "bun src/ralph-dev.ts loop"
+  },
+  "dependencies": {
+    "zod": "^4.3.5"
+  },
+  "devDependencies": {
+    "@types/bun": "latest"
+  },
+  "peerDependencies": {
+    "typescript": "^5.0.0"
+  }
+}
