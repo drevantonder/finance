@@ -56,6 +56,11 @@ export async function createPRs() {
   const complete = await listTasks("complete");
   const baseBranch = getConfig().baseBranch;
   
+  // Strip "origin/" prefix if present for git commands
+  const baseBranchName = baseBranch.replace(/^origin\//, "");
+  // Keep the full remote ref for comparisons
+  const baseBranchRef = baseBranch.startsWith("origin/") ? baseBranch : `origin/${baseBranch}`;
+  
   for (const filename of complete) {
     const task = await readTask("complete", filename);
     
@@ -72,25 +77,38 @@ export async function createPRs() {
         continue;
       }
 
-      // Check if branch has commits that differ from base
+      // Push branch first
+      console.log(`Pushing branch ${branch} to origin...`);
       try {
-        const commitCount = await $`git rev-list --count ${baseBranch}..${branch}`.text();
-        const count = parseInt(commitCount.trim());
-        
-        if (count === 0) {
-          console.log(`Skipping task #${task.id}: branch ${branch} has no new commits`);
-          continue;
-        }
-        
-        console.log(`Branch ${branch} has ${count} new commit(s)`);
+        await $`git push origin ${branch}`.quiet();
       } catch (err) {
-        console.error(`Failed to check commits for branch ${branch}:`, err);
+        console.error(`Failed to push branch ${branch}:`, err);
         continue;
       }
 
-      // Push branch
-      console.log(`Pushing branch ${branch} to origin...`);
-      await $`git push origin ${branch}`.quiet();
+      // Fetch latest remote state
+      try {
+        await $`git fetch origin ${baseBranchName} ${branch}`.quiet();
+      } catch (err) {
+        console.error(`Failed to fetch remote refs:`, err);
+        continue;
+      }
+
+      // Check if remote branch has commits that differ from remote base
+      try {
+        const commitCount = await $`git rev-list --count ${baseBranchRef}..origin/${branch}`.text();
+        const count = parseInt(commitCount.trim());
+        
+        if (count === 0) {
+          console.log(`Skipping task #${task.id}: remote branch origin/${branch} has no new commits compared to ${baseBranchRef}`);
+          continue;
+        }
+        
+        console.log(`Remote branch origin/${branch} has ${count} new commit(s)`);
+      } catch (err) {
+        console.error(`Failed to check commits for remote branch ${branch}:`, err);
+        continue;
+      }
 
       // Create PR body with agent metadata and acceptance criteria
       const body = `Closes #${task.id}
@@ -110,8 +128,15 @@ ${task.rejection_history.map(r => `**${r.reviewer}** (${r.reviewed_at}): ${r.iss
       
       const title = `Epic #${task.id}: ${task.title}`;
       
-      const prOutput = await $`gh pr create --title ${title} --body ${body} --head ${branch} --base ${baseBranch}`.text();
+      // Write body to temp file to avoid shell escaping issues
+      const tempFile = `/tmp/pr-body-${task.id}.md`;
+      await writeFile(tempFile, body);
+      
+      const prOutput = await $`gh pr create --title ${title} --body-file ${tempFile} --head ${branch} --base ${baseBranchName}`.text();
       const prUrl = prOutput.trim();
+      
+      // Clean up temp file
+      await $`rm ${tempFile}`.quiet();
       
       // Extract PR number from URL (e.g., .../pull/123)
       const prNumber = parseInt(prUrl.split("/").pop() || "0");
