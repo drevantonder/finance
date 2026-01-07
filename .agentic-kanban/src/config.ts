@@ -44,7 +44,7 @@ export async function getDevelopers(): Promise<DeveloperConfig[]> {
   }));
 }
 
-export async function validateModelName(name: string): Promise<DeveloperConfig> {
+export async function validateModel(name: string): Promise<DeveloperConfig> {
   const developers = await getDevelopers();
   const dev = developers.find(d => d.name === name);
   

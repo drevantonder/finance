@@ -11,19 +11,20 @@ A pull-based, autonomous software development workflow where AI agents ("Ralphs"
 2.  **Sync (Project Manager)**
     *   `ralph-pm` (a deterministic script) detects the Epic and creates a task file in `kanban/unassigned/`.
 
-3.  **Claim & Implement (Developer Ralph)**
-    *   `ralph-dev` claims a task from `unassigned/`.
-    *   Moves it to `assigned/` and creates a git worktree (`feat/epic-123`).
-    *   Implements features, runs tests, and commits work.
-    *   When done, moves task to `needs-review/`.
+3.  **Claim & Implement/Review (Developer Ralph)**
+    *   `ralph-dev` claims a task from `unassigned/` or `needs-review/`.
+    *   `unassigned/`:
+        *   Moves it to `assigned/` and creates a git worktree (`feat/epic-123`).
+        *   Implements features, runs tests, and commits work.
+        *   When done, moves task to `needs-review/`.
+        *   If not able to complete, moves task back to `unassigned/` with feedback.
+    *   `review`:
+        *   Opens or creates a git worktree (`feat/epic-123`). (if a branch/worktree doesn't exist yet.)
+        *   Reviews code, runs tests, and commits work.
+        *   When done, moves task to `complete/`.
+        *   If not able to complete, moves task back to `needs-review/` with feedback.
 
-4.  **Review (Reviewer Ralph)**
-    *   A *different* Ralph model claims the task from `needs-review/`.
-    *   Reviews code, runs tests.
-    *   **Approved:** Moves to `complete/`.
-    *   **Rejected:** Moves back to `unassigned/` with feedback (incrementing rejection count).
-
-5.  **Ship (Project Manager Script)**
+4.  **Ship (Project Manager Script)**
     *   `ralph-pm` (a deterministic script) sees task in `complete/`.
     *   Pushes branch and creates a GitHub Pull Request.
     *   Monitors PR:
@@ -68,8 +69,10 @@ bun run ralph-dev gemini-3-flash
 ## 📂 Directory Structure
 
 *   **`agents/`**: The "brains" - instructions for each agent role.
-    *   `ralph-dev-outer.md`: Task selection loop.
-    *   `ralph-dev-inner.md`: Implementation loop.
+    *   `product-manager.md`: Interactive planning agent.
+    *   `ralph-dev-selector.md`: Task selection agent.
+    *   `ralph-dev-inner.md`: Implementation loop agent.
+    *   `ralph-dev-reviewer.md`: Review loop agent.
 *   **`bin/`**: Helper scripts.
 *   **`config/`**: Configuration files.
 *   **`kanban/`**: The state of the world.
@@ -80,4 +83,9 @@ bun run ralph-dev gemini-3-flash
     *   `needs-human/`: Failed too many times (3+ rejections).
     *   `archived/`: Merged and done.
 *   **`src/`**: TypeScript source code for the infrastructure.
+    *   `ralph-dev.ts`: The developer loop harness.
+    *   `pm.ts`: The project manager loop harness.
+    *   `kanban.ts`: Kanban bucket operations.
+    *   `schema.ts`: Task and state schemas.
+    *   `config.ts`: Configuration loader.
 

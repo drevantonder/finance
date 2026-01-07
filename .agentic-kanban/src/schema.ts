@@ -13,6 +13,7 @@ export const TaskSchema = z.object({
   assigned_to: z.string().optional(),
   assigned_at: z.string().optional(),
   implemented_by: z.string().optional(),
+  blocked_reason: z.string().optional(),
   branch: z.string().optional(),
   worktree_path: z.string().optional(),
   rejection_count: z.number().default(0),
