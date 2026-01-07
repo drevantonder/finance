@@ -31,24 +31,30 @@ async function selectTaskAgentically(modelName: string, projectRoot: string): Pr
 
   const dev = await validateModel(modelName);
   const selectorAgent = resolve(projectRoot, ".agentic-kanban", "agents", "ralph-dev-selector.md");
+  const agentId = `ralph-dev-${modelName}`;
 
   const unassignedFiles = await listTasks("unassigned");
   const needsReviewFiles = await listTasks("needs-review");
-  
-  if (unassignedFiles.length === 0 && needsReviewFiles.length === 0) {
-    console.log("Result: No tasks found.");
-    return null;
-  }
 
   // Gather board state to provide as context
   const unassignedTasks = await Promise.all(unassignedFiles.map(async f => ({ 
     path: `unassigned/${f}`, 
     content: await readTask("unassigned", f) 
   })));
-  const needsReviewTasks = await Promise.all(needsReviewFiles.map(async f => ({ 
+  const needsReviewTasksRaw = await Promise.all(needsReviewFiles.map(async f => ({ 
     path: `needs-review/${f}`, 
     content: await readTask("needs-review", f) 
   })));
+
+  // Filter out tasks that were implemented by the same model (self-review prevention)
+  const needsReviewTasks = needsReviewTasksRaw.filter(
+    task => task.content.implemented_by !== agentId
+  );
+  
+  if (unassignedTasks.length === 0 && needsReviewTasks.length === 0) {
+    console.log("Result: No tasks found.");
+    return null;
+  }
 
   const boardState = JSON.stringify({ 
     unassigned: unassignedTasks, 
