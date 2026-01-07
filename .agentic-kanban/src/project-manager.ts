@@ -72,6 +72,22 @@ export async function createPRs() {
         continue;
       }
 
+      // Check if branch has commits that differ from base
+      try {
+        const commitCount = await $`git rev-list --count ${baseBranch}..${branch}`.text();
+        const count = parseInt(commitCount.trim());
+        
+        if (count === 0) {
+          console.log(`Skipping task #${task.id}: branch ${branch} has no new commits`);
+          continue;
+        }
+        
+        console.log(`Branch ${branch} has ${count} new commit(s)`);
+      } catch (err) {
+        console.error(`Failed to check commits for branch ${branch}:`, err);
+        continue;
+      }
+
       // Push branch
       console.log(`Pushing branch ${branch} to origin...`);
       await $`git push origin ${branch}`.quiet();
