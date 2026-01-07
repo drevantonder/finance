@@ -24,6 +24,7 @@ export function useNavigation() {
   ]
 
   const strategyItems: SubMenuItem[] = [
+    { label: 'Performance', to: '/menu/performance', icon: 'i-heroicons-presentation-chart-bar', description: 'LCP, load times, cache hits', color: 'bg-rose-500' },
     { label: 'House Goal', to: '/goal', icon: 'i-heroicons-home-modern', description: 'Path to home ownership', color: 'bg-indigo-600' },
     { label: 'Income Strategy', to: '/menu/income', icon: 'i-heroicons-user-group', description: 'TMN, Salary, Household', color: 'bg-blue-500' },
     { label: 'Expense Categories', to: '/menu/categories', icon: 'i-heroicons-tag', description: 'Receipt categorization', color: 'bg-amber-500' },
