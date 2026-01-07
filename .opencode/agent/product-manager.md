@@ -1,7 +1,6 @@
 ---
 description: Product Manager
 mode: primary
-model: zai-coding-plan/glm-4.7
 tools:
   bash: true
   read: true
