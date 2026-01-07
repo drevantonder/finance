@@ -30,7 +30,6 @@ async function selectTaskAgentically(modelName: string, projectRoot: string): Pr
   console.log(`\n🤖 Ralph (${modelName}) is analyzing the board to select a task...`);
 
   const dev = await validateModel(modelName);
-  const selectorAgent = resolve(projectRoot, ".agentic-kanban", "agents", "ralph-dev-selector.md");
   const agentId = `ralph-dev-${modelName}`;
 
   const unassignedFiles = await listTasks("unassigned");
@@ -64,7 +63,7 @@ async function selectTaskAgentically(modelName: string, projectRoot: string): Pr
   const prompt = `Current Model: ${modelName}\n\nKANBAN BOARD STATE:\n${boardState}\n\nSelect the next task to work on. Output ONLY the <choice>bucket/file.json</choice> or <choice>NONE</choice>.`;
 
   console.log("────────────────────────────────────────────────────────────");
-  const cmd = ["opencode", "run", selectorAgent, "--model", dev.model, prompt];
+  const cmd = ["opencode", "run", "--agent", "ralph-dev-selector", "--model", dev.model, prompt];
   const proc = Bun.spawn(cmd, {
     cwd: projectRoot,
     stdout: "pipe",
@@ -176,7 +175,7 @@ async function claimAndPrepare(bucket: Bucket, filename: string, modelName: stri
 /**
  * Runs the Ralph loop for a task until completion, rejection, or blockage.
  */
-async function runRalphLoop(agentFile: string, task: Task, modelName: string, signalHandler: { currentProc: Subprocess | null; running: boolean }) {
+async function runRalphLoop(agent: string, task: Task, modelName: string, signalHandler: { currentProc: Subprocess | null; running: boolean }) {
   const isReview = agentFile.includes("reviewer");
   const taskName = isReview ? "review" : "implementation";
   const dev = await validateModel(modelName);
@@ -229,7 +228,7 @@ INSTRUCTIONS:
 
     const cmd = [
       "opencode", "run",
-      agentFile,
+      "--agent", agent,
       "--model", dev.model,
       prompt
     ];
@@ -428,9 +427,7 @@ if (import.meta.main) {
           }
         }
 
-        const agentFile = resolve(PROJECT_ROOT, ".agentic-kanban", "agents", isReview ? "ralph-dev-reviewer.md" : "ralph-dev-inner.md");
-
-        const result = await runRalphLoop(agentFile, task, modelName, signalHandler);
+        const result = await runRalphLoop(isReview ? "ralph-dev-reviewer" : "ralph-dev-inner", task, modelName, signalHandler);
         await finalizeTask(task.id, modelName, result.status as any, isReview, (result as any).reason, (result as any).iteration);
         
         console.log(`✅ Finished task #${task.id} with status: ${result.status}`);
