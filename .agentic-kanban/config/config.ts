@@ -35,6 +35,22 @@ export const config: AgenticKanbanConfig = {
     {
       name: "minimax-m2.1",
       model: "opencode/minimax-m2.1-free"
+    },
+    {
+      name: "big-pickle",
+      model: "opencode/big-pickle"
+    },
+    {
+      name: "grok-code",
+      model: "opencode/grok-code"
+    },
+    {
+      name: "glm-4.7-free",
+      model: "opencode/glm-4.7-free"
+    },
+    {
+      name: "sonnet-4.5",
+      model: "anthropic/claude-sonnet-4-5"
     }
   ],
   

@@ -33,3 +33,5 @@ playwright-report/
 
 # Agentic Task
 .agentic-task/
+.worktrees/feat-epic-90/.data
+.worktrees/feat-epic-71/.data
